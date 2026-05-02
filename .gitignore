@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-firefox/
+coverage/
+.env
+.env.local
+*.local
+.DS_Store
+.vitest-cache/
+
+# Extension signing key. Private key in .key/extension.pem must never be committed;
+# the matching public-key SPKI lives in manifest.json::key.
+.key/
+
+# Local-only artifacts
+.bak/
+.codex-runs/
+.claude/agent-status/
+.claude/routing-metrics.jsonl
+worktrees/

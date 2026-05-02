@@ -1,0 +1,38 @@
+{
+  "name": "auto-rebaser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome extension that auto-rebases your open GitHub PRs when they fall behind",
+  "scripts": {
+    "build": "vite build",
+    "build:chrome": "vite build",
+    "build:firefox": "TARGET=firefox vite build",
+    "build:all": "vite build && TARGET=firefox vite build",
+    "build:icons": "node scripts/build-icons.mjs",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "6.4.6",
+    "@testing-library/react": "16.0.0",
+    "@types/chrome": "0.0.268",
+    "@types/node": "^20.19.39",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@vitejs/plugin-react": "4.3.1",
+    "@vitest/coverage-v8": "1.6.0",
+    "jsdom": "24.1.1",
+    "sharp": "^0.34.5",
+    "typescript": "5.5.3",
+    "vite": "5.4.1",
+    "vitest": "1.6.0"
+  }
+}
