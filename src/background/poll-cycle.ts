@@ -354,8 +354,10 @@ async function runAutomationsPass(
     const now = Date.now();
     const cycleEntries: ActivityEntry[] = [...rebaseActivityEntries];
 
+    // Track 1C will replace `autoMergeMethod` with `mergeMethodPreference`.
+    // Until then, read the existing single-value setting.
     const autoMergeMethod: ActivityEntry['mergeMethod'] | undefined =
-      settings.mergeMethodPreference?.[0];
+      settings.autoMergeMethod;
 
     for (const { prId, patch } of result.prUpdates) {
       const pr = prMap.get(prId);

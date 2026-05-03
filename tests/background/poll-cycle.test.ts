@@ -887,10 +887,7 @@ describe('activity log', () => {
 
     await runPollCycle();
 
-    // appendActivity must be called exactly once for the 'activity' key
-    const activityCalls = (appendActivity as ReturnType<typeof vi.fn>).mock.calls.filter(
-      (call: unknown[]) => Array.isArray(call[0])
-    );
+    // appendActivity must be called exactly once per cycle.
     expect(appendActivity).toHaveBeenCalledTimes(1);
   });
 
