@@ -35,6 +35,10 @@ vi.mock('../../src/github/endpoints/notifications', () => ({
   unsubscribeThread: vi.fn(),
 }));
 
+vi.mock('../../src/core/activity-log', () => ({
+  appendActivity: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { searchAuthoredPRs, getPR, updateBranch } from '../../src/github/endpoints';
 import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../../src/core/pr-store';
@@ -43,6 +47,8 @@ import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '
 import { runAllAutomations } from '../../src/background/automations/orchestrator';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
 import type { PRStore, SearchResult, PullRequest } from '../../src/core/types';
+import { appendActivity } from '../../src/core/activity-log';
+import type { ActivityEntry } from '../../src/core/activity-log-types';
 
 const EMPTY_STORE: PRStore = { prs: [], lastPollAt: null };
 
@@ -824,5 +830,167 @@ describe('ignoredRepos filter', () => {
     await runPollCycle();
 
     expect((getPR as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+});
+
+// ── Activity log integration ─────────────────────────────────────────────────
+
+describe('activity log', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue({ ...EMPTY_STORE });
+    (saveStore as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (upsertPRs as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (pruneStale as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (stampPollTime as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (updateBranch as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+    });
+    (getResolvedThreads as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    (appendActivity as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
+      summary: {
+        ranAt: 1000, rebased: 0, branchesDeleted: 0,
+        autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0,
+      },
+      prUpdates: [],
+      resolvedThreads: {},
+    });
+  });
+
+  it('calls appendActivity EXACTLY ONCE per cycle even with multiple write actions', async () => {
+    // Cycle: 1 rebase + 1 branch-delete + 1 auto-merge-enabled.
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult(
+        { id: 1, number: 1, title: 'Rebase PR' },
+        { id: 2, number: 2, title: 'Merge PR' },
+        { id: 3, number: 3, title: 'AutoMerge PR' },
+      )
+    );
+    (getPR as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'clean' }))
+      .mockResolvedValueOnce(makePR({ id: 3, number: 3, mergeable_state: 'clean' }));
+
+    (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
+      summary: {
+        ranAt: 1000, rebased: 0, branchesDeleted: 1,
+        autoMergeEnabled: 1, threadsResolved: 0, notificationsDismissed: 0, errors: 0,
+      },
+      prUpdates: [
+        { prId: 2, patch: { branchDeleted: true } },
+        { prId: 3, patch: { autoMergeEnabled: true } },
+      ],
+      resolvedThreads: {},
+    });
+
+    await runPollCycle();
+
+    // appendActivity must be called exactly once per cycle.
+    expect(appendActivity).toHaveBeenCalledTimes(1);
+  });
+
+  it('activity entries include rebase and branch_deleted', async () => {
+    // Simple scenario: 1 rebase PR in search, 1 merged PR (with headRef) triggers branch delete.
+    // The merged PR (id=2) is NOT in the current search → ends up in toReprocess.
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1, title: 'Rebase Me' })
+    );
+    // getPR calls: first for id=1 (search loop), second for id=2 (transition reprocess)
+    (getPR as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(
+        makePR({ id: 2, number: 2, title: 'Delete Branch',
+          state: 'closed', merged: true, merged_at: '2024-01-01T00:00:00Z',
+          head: { ref: 'feat/x', repo: { full_name: 'org/repo' } } } as PullRequest)
+      );
+    // Store has a merged PR that still needs branch deletion.
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue({
+      prs: [
+        { id: 2, number: 2, title: 'Delete Branch', repo: 'org/repo',
+          url: 'http://u', state: 'merged', lastUpdated: 1, mergedAt: 1000,
+          headRef: 'feat/x' },
+      ],
+      lastPollAt: null,
+    });
+
+    (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
+      summary: {
+        ranAt: 1000, rebased: 0, branchesDeleted: 1,
+        autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0,
+      },
+      prUpdates: [{ prId: 2, patch: { branchDeleted: true } }],
+      resolvedThreads: {},
+    });
+
+    await runPollCycle();
+
+    const entries = (appendActivity as ReturnType<typeof vi.fn>).mock.calls[0][0] as ActivityEntry[];
+    const rebaseEntry = entries.find((e) => e.action === 'rebase');
+    const deleteEntry = entries.find((e) => e.action === 'branch_deleted');
+
+    expect(rebaseEntry).toBeDefined();
+    expect(rebaseEntry?.prTitle).toBe('Rebase Me');
+    expect(rebaseEntry?.result).toBe('success');
+
+    expect(deleteEntry).toBeDefined();
+    expect(deleteEntry?.prTitle).toBe('Delete Branch');
+    expect(deleteEntry?.result).toBe('success');
+    expect(deleteEntry?.branchRef).toBe('feat/x');
+  });
+
+  it('storage write failure in appendActivity is non-fatal — cycle completes normally', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ id: 1, number: 1, mergeable_state: 'clean' })
+    );
+    (appendActivity as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('quota exceeded')
+    );
+
+    // Cycle should complete without throwing.
+    await expect(runPollCycle()).resolves.toBeUndefined();
+  });
+
+  it('rebase failure is recorded as failed activity entry', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1, title: 'Behind PR' })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ id: 1, number: 1, mergeable_state: 'behind' })
+    );
+    (updateBranch as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('HTTP_422: Unprocessable')
+    );
+
+    await runPollCycle();
+
+    const entries = (appendActivity as ReturnType<typeof vi.fn>).mock.calls[0][0] as ActivityEntry[];
+    const rebaseEntry = entries.find((e) => e.action === 'rebase');
+    expect(rebaseEntry?.result).toBe('failed');
+    expect(rebaseEntry?.errorMessage).toBeDefined();
+  });
+
+  it('no activity entries written when cycle has no write actions', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ id: 1, number: 1, mergeable_state: 'clean' })
+    );
+
+    await runPollCycle();
+
+    // appendActivity is still called with an empty array (no-op inside implementation).
+    // Or not called at all — both are acceptable. What matters: no entries written.
+    const calls = (appendActivity as ReturnType<typeof vi.fn>).mock.calls;
+    const entryCount = calls.reduce(
+      (sum: number, call: unknown[]) => sum + ((call[0] as ActivityEntry[]).length ?? 0),
+      0
+    );
+    expect(entryCount).toBe(0);
   });
 });

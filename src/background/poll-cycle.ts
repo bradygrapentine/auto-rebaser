@@ -16,6 +16,8 @@ import { runAllAutomations, type OrchestratorDeps } from './automations/orchestr
 import type { PullRequestDetail } from './automations/adapters';
 import { clearBadge, setBadgeCount } from './badge';
 import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './state-machine';
+import { appendActivity } from '../core/activity-log';
+import type { ActivityEntry } from '../core/activity-log-types';
 
 const ABORT_ERRORS = new Set(['AUTH_ERROR', 'NOT_AUTHENTICATED', 'RATE_LIMITED']);
 
@@ -71,6 +73,8 @@ async function runPollCycleInner(): Promise<void> {
   const processedPRs: PRRecord[] = [];
   const prDetails = new Map<number, PullRequest>();
   let updatedCount = 0;
+  // Collect per-PR rebase activity entries for the activity log.
+  const rebaseActivityEntries: ActivityEntry[] = [];
 
   for (const item of searchResult.items) {
     // Parse repo
@@ -122,6 +126,14 @@ async function runPollCycleInner(): Promise<void> {
         await updateBranch(owner, repo, item.number);
         finalState = 'updated';
         updatedCount++;
+        rebaseActivityEntries.push({
+          at: Date.now(),
+          action: 'rebase',
+          repo: fullName,
+          prNumber: item.number,
+          prTitle: item.title,
+          result: 'success',
+        });
       } catch (err) {
         let mapped;
         try {
@@ -132,6 +144,15 @@ async function runPollCycleInner(): Promise<void> {
         }
         finalState = mapped.state;
         errorMessage = mapped.errorMessage;
+        rebaseActivityEntries.push({
+          at: Date.now(),
+          action: 'rebase',
+          repo: fullName,
+          prNumber: item.number,
+          prTitle: item.title,
+          result: 'failed',
+          errorMessage: mapped.errorMessage,
+        });
       }
     }
 
@@ -235,7 +256,7 @@ async function runPollCycleInner(): Promise<void> {
   await stampPollTime();
 
   // Step 4.5: phase-2 automations (best-effort; never blocks the next poll)
-  await runAutomationsPass(processedPRs, prDetails, updatedCount);
+  await runAutomationsPass(processedPRs, prDetails, updatedCount, rebaseActivityEntries);
 
   // Step 5: badge
   setBadgeCount(updatedCount);
@@ -250,6 +271,7 @@ async function runAutomationsPass(
   processedPRs: PRRecord[],
   prDetails: Map<number, PullRequest>,
   rebasedCount: number,
+  rebaseActivityEntries: ActivityEntry[] = [],
 ): Promise<void> {
   try {
     const settings = await getAutomationSettings();
@@ -326,6 +348,49 @@ async function runAutomationsPass(
     await saveStore(next);
 
     console.log('automations: ran', { ...next.lastPollSummary, errors: result.summary.errors });
+
+    // ── Mint ActivityEntry[] from this cycle's results (one write per cycle) ──
+    const prMap = new Map<number, PRRecord>(processedPRs.map((p) => [p.id, p]));
+    const now = Date.now();
+    const cycleEntries: ActivityEntry[] = [...rebaseActivityEntries];
+
+    // Track 1C will replace `autoMergeMethod` with `mergeMethodPreference`.
+    // Until then, read the existing single-value setting.
+    const autoMergeMethod: ActivityEntry['mergeMethod'] | undefined =
+      settings.autoMergeMethod;
+
+    for (const { prId, patch } of result.prUpdates) {
+      const pr = prMap.get(prId);
+      if (!pr) continue;
+
+      if (patch.branchDeleted === true) {
+        const extended = pr as PRRecord & PRRecordPhaseTwo;
+        cycleEntries.push({
+          at: now,
+          action: 'branch_deleted',
+          repo: pr.repo,
+          prNumber: pr.number,
+          prTitle: pr.title,
+          result: 'success',
+          ...(extended.headRef ? { branchRef: extended.headRef } : {}),
+        });
+      }
+
+      if (patch.autoMergeEnabled === true) {
+        cycleEntries.push({
+          at: now,
+          action: 'auto_merge_enabled',
+          repo: pr.repo,
+          prNumber: pr.number,
+          prTitle: pr.title,
+          result: 'success',
+          ...(autoMergeMethod ? { mergeMethod: autoMergeMethod } : {}),
+        });
+      }
+    }
+
+    // Write all this cycle's entries in one storage call.
+    await appendActivity(cycleEntries);
   } catch (err) {
     console.error('[poll-cycle] automation pass failed:', err);
     // Swallow — next cycle will retry.

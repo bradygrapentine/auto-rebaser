@@ -9,9 +9,10 @@ interface Props {
   user?: { login: string; avatarUrl: string };
   onSettings: () => void;
   onSignOut: () => void;
+  onOpenActivity?: (todayOnly: boolean) => void;
 }
 
-export function PRListView({ user, onSettings, onSignOut }: Props) {
+export function PRListView({ user, onSettings, onSignOut, onOpenActivity }: Props) {
   const store = usePRStore();
   const { prs, lastPollAt, pollInProgress } = store;
   const { settings } = useAutomationSettings();
@@ -52,7 +53,7 @@ export function PRListView({ user, onSettings, onSignOut }: Props) {
       </div>
       <footer className="popup-footer">
         <span className="popup-footer__line">{lastPollText}</span>
-        <PollSummaryFooter />
+        <PollSummaryFooter onOpenActivity={onOpenActivity} />
       </footer>
     </div>
   );
