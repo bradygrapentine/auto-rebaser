@@ -6,7 +6,7 @@
  * `docs/runbooks/github-app-setup.md` §1. No client_secret is needed —
  * Device Flow is designed for public clients.
  */
-export const GITHUB_APP_CLIENT_ID = '__dev__';
+export const GITHUB_APP_CLIENT_ID = 'Iv23li3r2f7tdhkYEB6P';
 
 /** Base origin for GitHub OAuth + Device Flow endpoints. */
 export const GITHUB_DEVICE_FLOW_BASE = 'https://github.com';
