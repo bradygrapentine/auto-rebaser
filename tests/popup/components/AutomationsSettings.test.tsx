@@ -35,7 +35,7 @@ describe('AutomationsSettings', () => {
     // 3 merge-method preference checkboxes (one per method, in the expanded
     // auto-merge section). Sub-toggle for unsubscribe is hidden when 2.9 is off.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(11);
+    expect(checkboxes).toHaveLength(12);
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
     expect(screen.getByLabelText(/Auto-resolve outdated review threads/)).not.toBeChecked();
@@ -111,13 +111,30 @@ describe('AutomationsSettings', () => {
     );
   });
 
-  it('unsubscribe sub-toggle hidden when 2.9 is off', async () => {
+  it('unsubscribe sub-toggle visible regardless of 2.9 (turning it on auto-enables 2.9)', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
       DEFAULT_AUTOMATION_SETTINGS
     );
     render(<AutomationsSettings />);
     await flush();
-    expect(screen.queryByText('Also unsubscribe')).not.toBeInTheDocument();
+    expect(screen.getByText('Also unsubscribe')).toBeInTheDocument();
+  });
+
+  it('flipping unsubscribe ON also enables Dismiss stale PR notifications', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+      DEFAULT_AUTOMATION_SETTINGS,
+    );
+    render(<AutomationsSettings />);
+    await flush();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/Also unsubscribe/));
+    });
+    expect(saveAutomationSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        autoDismissStaleNotifications: true,
+        unsubscribeStalePRNotifications: true,
+      }),
+    );
   });
 
   it('unsubscribe sub-toggle visible when 2.9 is on', async () => {

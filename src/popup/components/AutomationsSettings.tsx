@@ -161,6 +161,25 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
     chrome.runtime.sendMessage({ type: 'REAUTH', scopes: ['notifications'] });
   };
 
+  /**
+   * Sub-toggle behaviour:
+   * - flipping ON also turns the parent section ON (otherwise enabling a
+   *   sub-option would silently do nothing while the parent was off).
+   * - flipping OFF only flips the sub itself; the parent stays ON so the
+   *   user doesn't accidentally collapse the entire section.
+   */
+  const subToggle = <K extends keyof typeof settings>(
+    parentKey: keyof typeof settings,
+    subKey: K,
+    nextValue: typeof settings[K],
+  ) => {
+    if (nextValue) {
+      save({ [parentKey]: true, [subKey]: nextValue } as Partial<typeof settings>);
+    } else {
+      save({ [subKey]: nextValue } as Partial<typeof settings>);
+    }
+  };
+
   return (
     <section data-testid="automations-settings" className="settings-group">
       <h2 className="settings__heading">automations</h2>
@@ -289,16 +308,18 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
         </div>
         {expanded.dismiss && (
           <>
-            {settings.autoDismissStaleNotifications && (
-              <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
-                <span>Also unsubscribe</span>
-                <input
-                  type="checkbox"
-                  checked={settings.unsubscribeStalePRNotifications}
-                  onChange={(e) => save({ unsubscribeStalePRNotifications: e.target.checked })}
-                />
-              </label>
-            )}
+            <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
+              <span>Also unsubscribe</span>
+              <input
+                type="checkbox"
+                checked={settings.unsubscribeStalePRNotifications}
+                onChange={(e) => subToggle(
+                  'autoDismissStaleNotifications',
+                  'unsubscribeStalePRNotifications',
+                  e.target.checked,
+                )}
+              />
+            </label>
             {settings.autoDismissStaleNotifications && authMethod === 'github_app' && (
               <p
                 className="muted"
@@ -354,10 +375,10 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
               <span className="toggle-sub__label">Idle threshold</span>
               <select
                 value={settings.staleThresholdDays}
-                disabled={!settings.enableStaleBadge}
-                onChange={(e) =>
-                  save({ staleThresholdDays: Number(e.target.value) as StaleThresholdDays })
-                }
+                onChange={(e) => save({
+                  enableStaleBadge: true,
+                  staleThresholdDays: Number(e.target.value) as StaleThresholdDays,
+                })}
                 aria-label="Idle threshold (days)"
                 className="select select--small toggle-sub__select"
               >
@@ -371,8 +392,7 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
               <input
                 type="checkbox"
                 checked={settings.staleCountsAsAttention}
-                disabled={!settings.enableStaleBadge}
-                onChange={(e) => save({ staleCountsAsAttention: e.target.checked })}
+                onChange={(e) => subToggle('enableStaleBadge', 'staleCountsAsAttention', e.target.checked)}
               />
             </label>
             <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
@@ -380,7 +400,7 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
               <input
                 type="checkbox"
                 checked={settings.enablePingReviewers}
-                onChange={(e) => save({ enablePingReviewers: e.target.checked })}
+                onChange={(e) => subToggle('enableStaleBadge', 'enablePingReviewers', e.target.checked)}
               />
             </label>
             {settings.enablePingReviewers && (
