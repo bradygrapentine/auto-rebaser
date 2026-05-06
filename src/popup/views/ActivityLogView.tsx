@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useActivityLog } from '../hooks/useActivityLog';
+import { useAutomationSettings } from '../hooks/useAutomationSettings';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import type { ActivityAction, ActivityEntry } from '../../core/activity-log-types';
 
 interface Props {
@@ -45,6 +47,11 @@ function entryDetails(e: ActivityEntry): string {
 
 export function ActivityLogView({ onBack, initialFilter }: Props) {
   const { entries, loading, clear } = useActivityLog();
+  const { settings: automation } = useAutomationSettings();
+  useKeyboardShortcuts({
+    enabled: automation.enableKeyboardShortcuts,
+    bindings: { Escape: onBack },
+  });
   const [actionFilter, setActionFilter] = useState<'all' | ActivityAction>('all');
   const [repoFilter, setRepoFilter] = useState<string>('all');
   const [todayOnly, setTodayOnly] = useState<boolean>(initialFilter?.todayOnly ?? false);

@@ -1,5 +1,7 @@
 import { useSettings } from '../hooks/useSettings';
 import { AutomationsSettings } from '../components/AutomationsSettings';
+import { useAutomationSettings } from '../hooks/useAutomationSettings';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import type { IntervalMinutes } from '../../core/types';
 
 interface Props {
@@ -20,6 +22,11 @@ const INTERVALS: Array<{ value: IntervalMinutes; label: string }> = [
 
 export function SettingsView({ onBack }: Props) {
   const { settings, saveSettings } = useSettings();
+  const { settings: automation } = useAutomationSettings();
+  useKeyboardShortcuts({
+    enabled: automation.enableKeyboardShortcuts,
+    bindings: { Escape: onBack },
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = Number(e.target.value) as IntervalMinutes;

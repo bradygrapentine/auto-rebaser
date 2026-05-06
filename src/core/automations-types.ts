@@ -34,6 +34,9 @@ export interface AutomationSettings {
   autoDismissOptOutRepos: string[];
   /** True when the OAuth token was minted with the `notifications` scope. */
   notificationsScopeGranted: boolean;
+
+  /** Story 5.5 — popup keyboard shortcuts (r/s/?/j/k/Enter/Esc). Default ON. */
+  enableKeyboardShortcuts: boolean;
 }
 
 export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
@@ -49,6 +52,7 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   unsubscribeStalePRNotifications: false,
   autoDismissOptOutRepos: [],
   notificationsScopeGranted: false,
+  enableKeyboardShortcuts: true,
 };
 
 export type PhaseTwoPRState =

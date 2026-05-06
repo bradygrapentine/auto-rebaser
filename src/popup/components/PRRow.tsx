@@ -4,9 +4,11 @@ import { StatusBadge } from './StatusBadge';
 
 interface Props {
   pr: PRRecord;
+  /** Story 5.5 — true when this row is the keyboard-focused one. */
+  focused?: boolean;
 }
 
-export function PRRow({ pr }: Props) {
+export function PRRow({ pr, focused }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
   return (
@@ -15,6 +17,7 @@ export function PRRow({ pr }: Props) {
       target="_blank"
       rel="noreferrer"
       className="pr-row"
+      data-focused={focused ? 'true' : undefined}
       title={pr.errorMessage}
     >
       <span className="pr-row__num" aria-hidden>#{pr.number}</span>

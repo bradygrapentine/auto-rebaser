@@ -4,10 +4,9 @@ import { SignInView } from './views/SignInView';
 import { PRListView } from './views/PRListView';
 import { SettingsView } from './views/SettingsView';
 import { ActivityLogView } from './views/ActivityLogView';
+import { HelpView } from './views/HelpView';
 
-// View routing — extend cases as new top-level views ship (Story 5.5 'help'
-// and others will add to this union).
-type View = 'list' | 'settings' | 'activity-log';
+type View = 'list' | 'settings' | 'activity-log' | 'help';
 
 export function App() {
   const auth = useAuth();
@@ -41,12 +40,15 @@ export function App() {
           initialFilter={activityFilter}
         />
       );
+    case 'help':
+      return <HelpView onBack={() => setView('list')} />;
     default:
       return (
         <PRListView
           user={auth.user}
           onSettings={() => setView('settings')}
           onSignOut={auth.signOut}
+          onHelp={() => setView('help')}
           onOpenActivity={(todayOnly) => {
             setActivityFilter({ todayOnly });
             setView('activity-log');

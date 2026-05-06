@@ -102,6 +102,7 @@ describe('automations-store', () => {
       unsubscribeStalePRNotifications: true,
       autoDismissOptOutRepos: [],
       notificationsScopeGranted: true,
+      enableKeyboardShortcuts: false,
     };
     chrome.storage.sync.get = vi
       .fn()

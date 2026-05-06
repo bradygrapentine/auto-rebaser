@@ -71,6 +71,7 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   unsubscribeStalePRNotifications: false,
   autoDismissOptOutRepos: [],
   notificationsScopeGranted: true,
+  enableKeyboardShortcuts: true,
 };
 
 function makeGithubDeps(): OrchestratorDeps {
