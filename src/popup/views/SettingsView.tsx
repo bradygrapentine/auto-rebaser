@@ -6,6 +6,10 @@ import type { IntervalMinutes } from '../../core/types';
 
 interface Props {
   onBack: () => void;
+  /** Story 4.4 — current auth method, drives the Account section. */
+  authMethod?: 'github_app' | 'pat';
+  /** Story 4.4 — sign out, returning the user to the choice screen. */
+  onSignOut?: () => void;
 }
 
 const INTERVALS: Array<{ value: IntervalMinutes; label: string }> = [
@@ -20,7 +24,7 @@ const INTERVALS: Array<{ value: IntervalMinutes; label: string }> = [
   { value: 240, label: '4h'  },
 ];
 
-export function SettingsView({ onBack }: Props) {
+export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
   const { settings, saveSettings } = useSettings();
   const { settings: automation } = useAutomationSettings();
   useKeyboardShortcuts({
@@ -32,6 +36,8 @@ export function SettingsView({ onBack }: Props) {
     const val = Number(e.target.value) as IntervalMinutes;
     saveSettings({ ...settings, intervalMinutes: val });
   };
+
+  const otherMethodLabel = authMethod === 'github_app' ? 'PAT' : 'GitHub App';
 
   return (
     <div className="popup-root">
@@ -55,7 +61,32 @@ export function SettingsView({ onBack }: Props) {
             ))}
           </select>
         </div>
-        <AutomationsSettings />
+
+        {authMethod && (
+          <section className="settings-group" data-testid="account-section">
+            <h2 className="settings__heading">account</h2>
+            <div className="settings-row">
+              <span className="settings-row__label">auth_method</span>
+              <span className="muted">
+                {authMethod === 'github_app' ? 'GitHub App' : 'Personal Access Token (legacy)'}
+              </span>
+            </div>
+            {onSignOut && (
+              <div className="settings-row">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={onSignOut}
+                  data-testid="switch-method"
+                >
+                  switch to {otherMethodLabel}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        <AutomationsSettings authMethod={authMethod} />
       </div>
     </div>
   );

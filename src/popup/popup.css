@@ -321,6 +321,22 @@ code, .mono {
 }
 .muted { color: var(--term-fg-muted); }
 
+.migration-banner {
+  border: 1px solid rgba(86, 212, 221, 0.45);
+  background: rgba(86, 212, 221, 0.06);
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+.migration-banner p { margin: 0 0 6px 0; }
+.migration-banner__actions { display: flex; gap: 6px; }
+
+.popup-footer__via {
+  font-size: 10px;
+  color: var(--term-fg-muted);
+  margin-left: 6px;
+}
+
 .device-code {
   display: flex;
   align-items: center;

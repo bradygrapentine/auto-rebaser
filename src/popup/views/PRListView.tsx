@@ -4,6 +4,7 @@ import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { Header } from '../components/Header';
 import { RepoGroup } from '../components/RepoGroup';
 import { PollSummaryFooter } from '../components/PollSummaryFooter';
+import { MigrationBanner } from '../components/MigrationBanner';
 import { usePRStore } from '../hooks/usePRStore';
 import { useGroupedPRs } from '../hooks/useGroupedPRs';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
@@ -12,6 +13,8 @@ import { usePingedStore } from '../hooks/usePingedStore';
 
 interface Props {
   user?: { login: string; avatarUrl: string };
+  /** Story 4.4 — auth method drives the migration banner + footer "via X" line. */
+  authMethod?: 'github_app' | 'pat';
   onSettings: () => void;
   onSignOut: () => void;
   onHelp?: () => void;
@@ -20,7 +23,7 @@ interface Props {
 }
 
 export function PRListView({
-  user, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
+  user, authMethod, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
 }: Props) {
   const store = usePRStore();
   const { prs, lastPollAt, pollInProgress } = store;
@@ -123,6 +126,9 @@ export function PRListView({
         polling={pollInProgress === true}
       />
       <div className="view-body">
+        {authMethod === 'pat' && (
+          <MigrationBanner onSwitchToApp={onSignOut} />
+        )}
         {groups.length === 0 ? (
           <p className="empty-state">no open prs found.</p>
         ) : (
@@ -146,6 +152,11 @@ export function PRListView({
       </div>
       <footer className="popup-footer">
         <span className="popup-footer__line">{lastPollText}</span>
+        {authMethod && (
+          <span className="popup-footer__via" data-testid="auth-method-line">
+            via {authMethod === 'github_app' ? 'GitHub App' : 'PAT'}
+          </span>
+        )}
         <PollSummaryFooter onOpenActivity={onOpenActivity} />
         {onHelp && (
           <button

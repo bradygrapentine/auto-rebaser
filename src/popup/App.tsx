@@ -41,7 +41,16 @@ export function App() {
   // signed-in
   switch (view) {
     case 'settings':
-      return <SettingsView onBack={() => setView('list')} />;
+      return (
+        <SettingsView
+          onBack={() => setView('list')}
+          authMethod={auth.method}
+          onSignOut={async () => {
+            await auth.signOut();
+            setView('list');
+          }}
+        />
+      );
     case 'activity-log':
       return (
         <ActivityLogView
@@ -74,6 +83,7 @@ export function App() {
       return (
         <PRListView
           user={auth.user}
+          authMethod={auth.method}
           onSettings={() => setView('settings')}
           onSignOut={auth.signOut}
           onHelp={() => setView('help')}
