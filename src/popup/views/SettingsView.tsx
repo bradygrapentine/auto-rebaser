@@ -138,7 +138,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
         <section className="settings-group" data-testid="enterprise-section">
           <h2 className="settings__heading">enterprise</h2>
-          <div className="settings-row settings-row--end">
+          <div className="enterprise-row">
             <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
             <input
               id="ghes-host"
@@ -151,7 +151,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
             />
           </div>
           {hostDraft.trim() && (
-            <div className="settings-row settings-row--end">
+            <div className="enterprise-row">
               <label htmlFor="ghes-client-id" className="settings-row__label">
                 github_app_client_id
               </label>

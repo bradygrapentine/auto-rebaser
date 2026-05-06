@@ -8,7 +8,6 @@ import { MigrationBanner } from '../components/MigrationBanner';
 import type { Installation } from '../../github/endpoints/installations';
 import {
   coverageFor,
-  installationsDisplay,
   getInstallRequestUrl,
 } from '../../core/installations-helpers';
 import { usePRStore } from '../hooks/usePRStore';
@@ -34,7 +33,7 @@ export function PRListView({
   user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
 }: Props) {
   const store = usePRStore();
-  const { prs, lastPollAt, pollInProgress } = store;
+  const { prs, pollInProgress } = store;
   const { settings } = useAutomationSettings();
   const ignored = new Set(settings.ignoredRepos);
   const visiblePRs = prs.filter((pr) => !ignored.has(pr.repo));
@@ -129,10 +128,6 @@ export function PRListView({
     },
   });
 
-  const lastPollText = lastPollAt
-    ? `Last poll: ${new Date(lastPollAt).toLocaleTimeString()}`
-    : 'Last poll: never';
-
   return (
     <div className="popup-root">
       <Header
@@ -190,7 +185,7 @@ export function PRListView({
       </div>
       <footer className="popup-footer">
         <div className="popup-footer__top">
-          <span className="popup-footer__line">{lastPollText}</span>
+          <PollSummaryFooter onOpenActivity={onOpenActivity} />
           {onHelp && (
             <button
               type="button"
@@ -203,15 +198,6 @@ export function PRListView({
             </button>
           )}
         </div>
-        {authMethod && (
-          <span className="popup-footer__via" data-testid="auth-method-line">
-            via {authMethod === 'github_app' ? 'GitHub App' : 'PAT'}
-            {authMethod === 'github_app' && installations && installations.length > 0 && (
-              <> on {installationsDisplay(installations)}</>
-            )}
-          </span>
-        )}
-        <PollSummaryFooter onOpenActivity={onOpenActivity} />
       </footer>
     </div>
   );

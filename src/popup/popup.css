@@ -325,11 +325,13 @@ code, .mono {
 .muted { color: var(--term-fg-muted); }
 
 .empty-installations {
-  border: 1px dashed var(--term-border);
-  padding: 10px;
-  margin: 8px 0;
+  border-bottom: 1px dashed var(--term-border);
+  padding: 10px 14px;
+  margin: 0 0 8px;
   font-size: 12px;
+  background: var(--term-bg-alt);
 }
+.view-body > .empty-installations:first-child { margin-top: -4px; }
 .empty-installations p { margin: 0 0 8px 0; }
 .empty-installations__actions { display: flex; gap: 6px; }
 
@@ -522,22 +524,28 @@ code, .mono {
   margin-left: auto;
   text-align: left;
 }
-.settings-row--end {
+.enterprise-row {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
   flex-wrap: nowrap;
 }
-.settings-row--end .settings-row__label {
+.enterprise-row .settings-row__label {
   color: var(--term-fg-dim);
   flex: 0 0 auto;
   white-space: nowrap;
 }
-.settings-row--end .enterprise-input {
-  flex: 0 1 160px;
-  width: auto;
-  min-width: 100px;
+.enterprise-row .enterprise-input {
+  flex: 0 0 160px;
+  width: 160px;
   max-width: 160px;
-  margin-left: 0 !important;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 16px;
 }
 .settings-row--action {
   justify-content: flex-start;
