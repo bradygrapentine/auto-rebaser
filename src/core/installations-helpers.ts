@@ -3,6 +3,9 @@
 // (gating automations against suspended owners).
 
 import type { Installation } from '../github/endpoints/installations';
+import { getOriginBase } from './host-config';
+
+const APP_SLUG = 'auto-rebaser';
 
 export type Coverage = 'active' | 'suspended' | 'not-installed';
 
@@ -37,4 +40,16 @@ export function installationsDisplay(installations: Installation[] | undefined):
   return installations.map((i) => i.account.login).join(', ');
 }
 
-export const INSTALL_REQUEST_URL = 'https://github.com/apps/auto-rebaser/installations/new';
+/**
+ * Audit B3 — derive the install-request URL from the configured host. On
+ * github.com this is `https://github.com/apps/auto-rebaser/installations/new`;
+ * on a GHES instance it must point at the GHES host since the App lives in
+ * a separate registry.
+ */
+export async function getInstallRequestUrl(): Promise<string> {
+  const origin = await getOriginBase();
+  return `${origin}/apps/${APP_SLUG}/installations/new`;
+}
+
+/** @deprecated Use `getInstallRequestUrl()` so GHES users get the right host. */
+export const INSTALL_REQUEST_URL = `https://github.com/apps/${APP_SLUG}/installations/new`;

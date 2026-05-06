@@ -111,8 +111,23 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
       for (const prId of result.unsupportedPRs) {
         prUpdates.push({ prId, patch: { autoMergeUnsupported: true } });
       }
+      const noAllowedSet = new Set(result.noAllowedMethodPRs);
       for (const prId of result.noAllowedMethodPRs) {
         prUpdates.push({ prId, patch: { autoMergeSkipReason: 'no-allowed-method' } });
+      }
+      // Audit B4 / Story 5.4 — when a previously-flagged PR resolves to an
+      // allowed method (settings changed OR repo flipped on a method), clear
+      // the inline badge. We only see "evaluated" PRs in step 1, so this is
+      // safe: any PR not in noAllowedSet that we DID consider should be
+      // un-flagged.
+      const consideredIds = new Set(eligiblePRs.map((p) => p.id));
+      for (const pr of prs) {
+        const ext = pr as PRRecord & PRRecordPhaseTwo;
+        if (ext.autoMergeSkipReason === 'no-allowed-method'
+          && consideredIds.has(pr.id)
+          && !noAllowedSet.has(pr.id)) {
+          prUpdates.push({ prId: pr.id, patch: { autoMergeSkipReason: undefined } });
+        }
       }
     } catch (err) {
       errors++;

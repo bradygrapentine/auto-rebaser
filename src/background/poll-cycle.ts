@@ -1,8 +1,9 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
 import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
 import { computeIdleDays, resolveThreshold } from '../core/staleness';
-import { getAuth } from '../core/auth-store';
+import { getAuth, setInstallations } from '../core/auth-store';
 import { suspendedOwners } from '../core/installations-helpers';
+import { getUserInstallations } from '../github/endpoints/installations';
 import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../core/pr-store';
 import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../core/automations-store';
 import { searchAuthoredPRs, getPR, updateBranch } from '../github/endpoints';
@@ -87,11 +88,24 @@ async function runPollCycleInner(): Promise<void> {
   // Story 4.5 — owners whose GitHub App installation is suspended. PRs in
   // these repos still display in the popup but DON'T get rebased / merged /
   // branch-deleted until the org admin re-approves the install.
+  //
+  // Audit B2 — refresh the installations list each poll so re-approval picks
+  // up without forcing the user to sign out / sign in. Best-effort: a failed
+  // fetch falls back to the cached list, treating its (possibly stale) state
+  // as the current truth rather than blocking the cycle.
   let suspendedOwnerSet = new Set<string>();
   try {
     const auth = await getAuth();
     if (auth?.method === 'github_app') {
-      suspendedOwnerSet = suspendedOwners(auth.installations);
+      try {
+        const fresh = await getUserInstallations();
+        await setInstallations(fresh);
+        suspendedOwnerSet = suspendedOwners(fresh);
+      } catch (err) {
+        // Network / auth error — fall back to whatever we have stored.
+        suspendedOwnerSet = suspendedOwners(auth.installations);
+        console.warn('[poll-cycle] installations refresh failed; using cached list', err);
+      }
     }
   } catch (err) {
     console.warn('[poll-cycle] could not read installations; treating all as active', err);

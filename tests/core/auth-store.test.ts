@@ -161,6 +161,18 @@ describe('auth-store', () => {
       expect(chrome.storage.sync.remove).toHaveBeenCalledWith(STORAGE_KEYS.token);
     });
 
+    // Audit cleanup — sign-out drops per-account state to prevent cross-account
+    // leakage on shared devices.
+    it('also removes pingedPRs and resolved_threads from local', async () => {
+      chrome.storage.local.remove = vi.fn().mockResolvedValue(undefined);
+      chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
+      await clearAuth();
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith([
+        'pingedPRs',
+        'resolved_threads',
+      ]);
+    });
+
     it('clearToken is an alias for clearAuth', async () => {
       chrome.storage.local.remove = vi.fn().mockResolvedValue(undefined);
       chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);

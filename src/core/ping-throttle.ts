@@ -12,10 +12,30 @@ export async function getPingedStore(): Promise<PingedStore> {
   return (result[STORAGE_KEY] as PingedStore) ?? {};
 }
 
+/**
+ * Audit P1 — drop entries past the throttle window. Called from `recordPing`
+ * so the store stays bounded without a separate sweep.
+ */
+function prune(store: PingedStore, now: number): PingedStore {
+  const cutoff = now - PING_THROTTLE_MS;
+  const out: PingedStore = {};
+  for (const key of Object.keys(store)) {
+    const id = Number(key);
+    const entry = store[id];
+    if (entry && entry.at >= cutoff) out[id] = entry;
+  }
+  return out;
+}
+
 export async function recordPing(prId: number, now: number = Date.now()): Promise<void> {
-  const store = await getPingedStore();
+  const store = prune(await getPingedStore(), now);
   store[prId] = { at: now };
   await chrome.storage.local.set({ [STORAGE_KEY]: store });
+}
+
+/** Sign-out cleanup — drops the throttle map entirely. */
+export async function clearPingedStore(): Promise<void> {
+  await chrome.storage.local.remove(STORAGE_KEY);
 }
 
 export function isThrottled(

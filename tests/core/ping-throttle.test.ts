@@ -53,6 +53,31 @@ describe('hoursSinceLastPing', () => {
   });
 });
 
+describe('prune (audit P1)', () => {
+  it('drops entries older than the throttle window when recordPing runs', async () => {
+    const now = 1_700_000_000_000;
+    const old = now - (25 * 60 * 60 * 1000); // 25h ago — past throttle
+    const recent = now - (60 * 60 * 1000);   // 1h ago — within throttle
+    const data: Record<string, unknown> = {
+      pingedPRs: { 1: { at: old }, 2: { at: recent } },
+    };
+    chrome.storage.local.get = vi.fn().mockImplementation(async (key: string) => ({
+      [key]: data[key],
+    }));
+    chrome.storage.local.set = vi.fn().mockImplementation(async (obj: Record<string, unknown>) => {
+      Object.assign(data, obj);
+    });
+
+    const { recordPing } = await import('../../src/core/ping-throttle');
+    await recordPing(99, now);
+
+    const stored = data.pingedPRs as Record<number, { at: number }>;
+    expect(stored[1]).toBeUndefined(); // pruned
+    expect(stored[2]).toEqual({ at: recent });
+    expect(stored[99]).toEqual({ at: now });
+  });
+});
+
 describe('storage round-trip', () => {
   it('recordPing writes the entry, getPingedStore reads it back', async () => {
     const data: Record<string, unknown> = {};

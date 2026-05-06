@@ -375,6 +375,37 @@ describe('runAllAutomations', () => {
     ]);
   });
 
+  // Audit B4 / Story 5.4 — when a previously-flagged PR resolves to an
+  // allowed method on a subsequent cycle, the inline badge must clear.
+  it('clears autoMergeSkipReason when noAllowedMethodPRs no longer reports the PR', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 1,
+      skipped: 0,
+      unsupportedPRs: [],
+      noAllowedMethodPRs: [],
+      enabledPRs: [{ prId: 1, method: 'SQUASH' }],
+      failed: [],
+    });
+
+    // Previous cycle marked PR id=1 with the skip reason.
+    const previouslySkipped = makePR();
+    (previouslySkipped as PRRecord & { autoMergeSkipReason?: string }).autoMergeSkipReason = 'no-allowed-method';
+
+    const result = await runAllAutomations({
+      prs: [previouslySkipped],
+      prDetails: new Map([[1, makeDetail()]]),
+      settings: ALL_ON_SETTINGS,
+      resolvedThreads: {},
+      github: makeGithubDeps(),
+    });
+
+    const clearPatch = result.prUpdates.find(
+      (u) => u.prId === 1 && Object.prototype.hasOwnProperty.call(u.patch, 'autoMergeSkipReason')
+        && u.patch.autoMergeSkipReason === undefined,
+    );
+    expect(clearPatch).toBeDefined();
+  });
+
   it('resolvedThreads from resolveObsoleteThreads is returned', async () => {
     const updatedStore = { 'thread-1': 9999 };
     mockResolveObsoleteThreads.mockResolvedValue({
