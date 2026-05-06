@@ -200,15 +200,17 @@ export function PRListView({
         )}
         <PollSummaryFooter onOpenActivity={onOpenActivity} />
         {onHelp && (
-          <button
-            type="button"
-            className="popup-footer__shortcuts"
-            onClick={onHelp}
-            data-testid="help-link"
-            aria-label="Show keyboard shortcuts"
-          >
-            shortcuts
-          </button>
+          <div className="popup-footer__shortcuts-row">
+            <button
+              type="button"
+              className="btn"
+              onClick={onHelp}
+              data-testid="help-link"
+              aria-label="Show keyboard shortcuts"
+            >
+              shortcuts
+            </button>
+          </div>
         )}
       </footer>
     </div>
