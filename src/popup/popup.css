@@ -550,6 +550,12 @@ code, .mono {
 .enterprise-row select.enterprise-input {
   padding-right: 22px;
 }
+.enterprise-row .enterprise-input--select {
+  flex: 0 0 160px;
+  width: 160px;
+  max-width: 160px;
+  padding: 0;
+}
 .enterprise-row .settings-row__sep {
   margin: 0 2px;
   color: var(--term-fg-muted);

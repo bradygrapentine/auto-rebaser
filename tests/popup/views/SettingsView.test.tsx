@@ -59,15 +59,14 @@ describe('SettingsView', () => {
 
   it('shows current interval in dropdown', () => {
     render(<SettingsView onBack={vi.fn()} />);
-    // First combobox is the interval picker (merge-method comes from AutomationsSettings).
-    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    expect(selects[0].value).toBe('5');
+    const trigger = screen.getByRole('button', { name: /github_poll_interval/i });
+    expect(trigger).toHaveTextContent('5m');
   });
 
   it('changing dropdown calls saveSettings', () => {
     render(<SettingsView onBack={vi.fn()} />);
-    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    fireEvent.change(selects[0], { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: /github_poll_interval/i }));
+    fireEvent.click(screen.getByRole('option', { name: '15m' }));
     expect(mockSaveSettings).toHaveBeenCalledWith({ intervalMinutes: 15 });
   });
 
@@ -80,6 +79,7 @@ describe('SettingsView', () => {
 
   it('shows all interval options', () => {
     render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /github_poll_interval/i }));
     expect(screen.getByRole('option', { name: '1m' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '5m' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '15m' })).toBeInTheDocument();
