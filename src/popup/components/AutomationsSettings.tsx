@@ -86,7 +86,7 @@ function MergeMethodPreferenceEditor({
       role="list"
       aria-label="Merge method preference"
     >
-      <div className="merge-method-preference__hint">preference order</div>
+      <div className="merge-method-preference__hint">Preference order</div>
       {ordered.map((method, idx) => {
         const isActive = idx < preference.length;
         const canMoveUp = isActive && idx > 0;

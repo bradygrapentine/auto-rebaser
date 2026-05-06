@@ -344,12 +344,13 @@ code, .mono {
 .repo-group__coverage-badge--suspended { color: #d24f4f; border-color: rgba(210, 79, 79, 0.45); }
 
 .migration-banner {
-  border: 1px solid rgba(86, 212, 221, 0.45);
+  border-bottom: 1px solid rgba(86, 212, 221, 0.45);
   background: rgba(86, 212, 221, 0.06);
-  padding: 8px 10px;
-  margin: 8px 0;
+  padding: 8px 14px;
+  margin: 0 0 8px;
   font-size: 11px;
 }
+.view-body > .migration-banner:first-child { margin-top: -4px; }
 .migration-banner p { margin: 0 0 6px 0; }
 .migration-banner__actions { display: flex; gap: 6px; }
 
@@ -510,7 +511,11 @@ code, .mono {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
+.settings-row__value > .muted { white-space: nowrap; }
+.settings-row__value > .btn { white-space: nowrap; }
 .settings-row .input--small { flex: 1; max-width: 240px; }
 .enterprise-apply-row {
   margin-top: 4px;
@@ -597,6 +602,7 @@ code, .mono {
 
 .merge-method-preference {
   margin-top: 6px;
+  margin-left: 18px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -710,13 +716,13 @@ code, .mono {
 .popup-footer {
   font-size: 11px;
   color: var(--term-fg-dim);
-  padding: 6px 14px;
+  padding: 8px 14px;
   border-top: 1px solid var(--term-border);
   background: var(--term-bg-alt);
 }
 .popup-footer__line { color: var(--term-fg-dim); }
 .popup-footer__line::before { content: "» "; color: var(--term-fg-muted); }
-.popup-footer__delta { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.popup-footer__delta { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .popup-footer__delta strong { color: var(--term-green); font-weight: 700; }
 .popup-footer__counter,
 .popup-footer__view-activity {
@@ -768,16 +774,14 @@ code, .mono {
   gap: 8px;
 }
 .activity-toolbar__today {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
   font-size: 12px;
   color: var(--term-fg-dim);
-  gap: 6px;
+  gap: 8px;
   margin: 0;
 }
-.activity-toolbar__today > span { order: 1; }
-.activity-toolbar__today > input { order: 2; }
 .activity-confirm {
   margin: 8px 0;
   padding: 8px;

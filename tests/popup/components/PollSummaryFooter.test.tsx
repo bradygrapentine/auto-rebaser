@@ -75,7 +75,7 @@ describe('PollSummaryFooter', () => {
     render(<PollSummaryFooter onOpenActivity={onOpenActivity} />);
     await act(async () => {});
     const link = screen.getByTestId('view-activity');
-    expect(link).toHaveTextContent('view activity (2)');
+    expect(link).toHaveTextContent('View activity (2)');
     fireEvent.click(link);
     expect(onOpenActivity).toHaveBeenCalledWith(false);
   });
