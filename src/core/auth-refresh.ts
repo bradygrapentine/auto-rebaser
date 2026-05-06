@@ -11,10 +11,9 @@
 // the new token replaces the old one in one chrome.storage.local.set call,
 // matching the GitHub server-side rotation policy.
 
-import { GITHUB_APP_CLIENT_ID, GITHUB_DEVICE_FLOW_BASE } from './auth-constants';
+import { getOAuthClientId, getOriginBase } from './host-config';
 import { clearAuth, getAuth, setAuthGitHubApp } from './auth-store';
 
-const REFRESH_URL = `${GITHUB_DEVICE_FLOW_BASE}/login/oauth/access_token`;
 const REFRESH_GRANT_TYPE = 'refresh_token';
 
 /** Refresh when this close to access-token expiry (or already past it). */
@@ -65,14 +64,16 @@ function refreshSharedFlight(refreshToken: string): Promise<string> {
 }
 
 async function doRefresh(refreshToken: string): Promise<string> {
-  const res = await fetch(REFRESH_URL, {
+  const origin = await getOriginBase();
+  const clientId = await getOAuthClientId();
+  const res = await fetch(`${origin}/login/oauth/access_token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
     },
     body: new URLSearchParams({
-      client_id: GITHUB_APP_CLIENT_ID,
+      client_id: clientId,
       grant_type: REFRESH_GRANT_TYPE,
       refresh_token: refreshToken,
     }).toString(),

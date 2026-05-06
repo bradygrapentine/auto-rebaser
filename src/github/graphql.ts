@@ -27,6 +27,7 @@ export async function graphql<T>(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables: variables ?? {} }),
+    useGraphQL: true,
   });
 
   if (result.errors && result.errors.length > 0) {

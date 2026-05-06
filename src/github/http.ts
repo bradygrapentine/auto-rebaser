@@ -1,10 +1,16 @@
 import { clearToken } from '../core/auth-store';
 import { ensureFreshToken, forceRefresh } from '../core/auth-refresh';
 import { getEntry, setEntry } from '../core/etag-cache';
-import { GITHUB_API_BASE } from '../core/constants';
+import { getApiBase, getGraphQLEndpoint } from '../core/host-config';
 
 export interface RequestOptions extends RequestInit {
   useETag?: boolean;
+  /**
+   * Story 4.6 — when true, the request targets the GraphQL endpoint instead
+   * of the REST API base. The cloud endpoints alias to the same origin, but
+   * on GHES they live at different paths (`/api/v3` vs `/api/graphql`).
+   */
+  useGraphQL?: boolean;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -13,8 +19,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const token = await ensureFreshToken();
   if (!token) throw new Error('NOT_AUTHENTICATED');
 
-  const { useETag, ...fetchOptions } = options;
-  const url = GITHUB_API_BASE + path;
+  const { useETag, useGraphQL, ...fetchOptions } = options;
+  const url = useGraphQL
+    ? await getGraphQLEndpoint()
+    : (await getApiBase()) + path;
 
   const baseHeaders: Record<string, string> = {
     Authorization: `Bearer ${token}`,
