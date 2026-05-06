@@ -97,13 +97,13 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
       <div className="settings">
         <h2 className="settings__heading">general</h2>
-        <div className="settings-row">
+        <div className="enterprise-row">
           <span className="settings-row__label">github_poll_interval</span>
+          <span className="settings-row__sep" aria-hidden>—</span>
           <select
             value={settings.intervalMinutes}
             onChange={handleChange}
-            className="select select--small"
-            style={{ width: 'auto' }}
+            className="select select--small enterprise-input"
           >
             {INTERVALS.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>
@@ -140,6 +140,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
           <h2 className="settings__heading">enterprise</h2>
           <div className="enterprise-row">
             <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
+            <span className="settings-row__sep" aria-hidden>—</span>
             <input
               id="ghes-host"
               type="text"
@@ -155,6 +156,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
               <label htmlFor="ghes-client-id" className="settings-row__label">
                 github_app_client_id
               </label>
+              <span className="settings-row__sep" aria-hidden>—</span>
               <input
                 id="ghes-client-id"
                 type="text"
