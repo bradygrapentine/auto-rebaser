@@ -31,6 +31,7 @@ describe('enablePullRequestAutoMerge', () => {
     expect(await enablePullRequestAutoMerge('PR_x', 'SQUASH')).toEqual({
       enabled: false,
       unsupported: true,
+      reason: 'Squash merging is not allowed in this repository',
     });
   });
 

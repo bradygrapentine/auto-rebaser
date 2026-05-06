@@ -105,7 +105,7 @@ beforeEach(() => {
   mockEnableAutoMerge.mockResolvedValue({
     enabled: 2,
     skipped: 0,
-    unsupportedPRs: [],
+    unsupportedPRs: [], unsupportedReasons: {},
     noAllowedMethodPRs: [],
     enabledPRs: [{ prId: 1, method: 'SQUASH' }],
     failed: [],
@@ -343,7 +343,7 @@ describe('runAllAutomations', () => {
     const callOrder: string[] = [];
     mockEnableAutoMerge.mockImplementation(async () => {
       callOrder.push('enableAutoMerge');
-      return { enabled: 0, skipped: 0, unsupportedPRs: [], noAllowedMethodPRs: [], enabledPRs: [], failed: [] };
+      return { enabled: 0, skipped: 0, unsupportedPRs: [], unsupportedReasons: {}, noAllowedMethodPRs: [], enabledPRs: [], failed: [] };
     });
     mockDeleteMergedBranch.mockImplementation(async () => {
       callOrder.push('deleteMergedBranch');
@@ -383,7 +383,7 @@ describe('runAllAutomations', () => {
     mockEnableAutoMerge.mockResolvedValue({
       enabled: 1,
       skipped: 0,
-      unsupportedPRs: [],
+      unsupportedPRs: [], unsupportedReasons: {},
       noAllowedMethodPRs: [],
       enabledPRs: [{ prId: 1, method: 'SQUASH' }],
       failed: [],

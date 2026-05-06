@@ -6,6 +6,8 @@ export interface EnableAutoMergeResult {
   enabled: boolean;
   /** True when the repo doesn't allow the requested merge method. */
   unsupported: boolean;
+  /** Original GraphQL error message, when unsupported is true. */
+  reason?: string;
 }
 
 const MUTATION = `
@@ -32,7 +34,7 @@ export async function enablePullRequestAutoMerge(
         /does not support/i.test(msg) ||
         /clean status/i.test(msg)
       ) {
-        return { enabled: false, unsupported: true };
+        return { enabled: false, unsupported: true, reason: msg };
       }
     }
     throw err;
