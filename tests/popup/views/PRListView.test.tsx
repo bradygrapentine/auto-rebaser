@@ -64,10 +64,17 @@ describe('PRListView', () => {
     expect(headers[1]).toHaveTextContent(/zzz\/aaa/);
   });
 
-  it('does not render the "Last poll" footer line (removed in favour of activity log)', () => {
+  it('shows "Last poll: never" when lastPollAt is null', () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
-    expect(screen.queryByText(/last poll/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/last poll: never/i)).toBeInTheDocument();
+  });
+
+  it('shows formatted time when lastPollAt is set', () => {
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [], lastPollAt: 1000 });
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    expect(screen.getByText(/last poll:/i)).toBeInTheDocument();
+    expect(screen.queryByText(/never/i)).not.toBeInTheDocument();
   });
 
   it('Poll now button sends POLL_NOW message', () => {
