@@ -33,6 +33,8 @@ export interface ResolveObsoleteThreadsResult {
   failed: Array<{ threadId: string; error: string }>;
   /** Updated store — caller persists. */
   resolvedStore: ResolvedThreadsStore;
+  /** Per-thread detail for activity-log entries. */
+  resolvedEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
 }
 
 export async function runResolveObsoleteThreads(
@@ -47,6 +49,7 @@ export async function runResolveObsoleteThreads(
     skipped: 0,
     failed: [],
     resolvedStore: { ...store },
+    resolvedEntries: [],
   };
 
   if (!settings.enabled) return result;
@@ -78,6 +81,7 @@ export async function runResolveObsoleteThreads(
         await deps.resolveThread(t.id);
         result.resolved++;
         result.resolvedStore[t.id] = now();
+        result.resolvedEntries.push({ threadId: t.id, repo: pr.repo, prNumber: pr.number });
       } catch (err) {
         result.failed.push({
           threadId: t.id,
