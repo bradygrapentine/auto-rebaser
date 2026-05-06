@@ -27,7 +27,7 @@ export function PollSummaryFooter({ onOpenActivity }: Props = {}) {
         onClick={() => onOpenActivity(false)}
         data-testid="view-activity"
       >
-        view activity ({total})
+        View activity ({total})
       </button>
     </div>
   );

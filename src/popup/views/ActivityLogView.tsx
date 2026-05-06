@@ -39,7 +39,7 @@ function isToday(at: number, now: number = Date.now()): boolean {
 
 function entryDetails(e: ActivityEntry): string {
   const parts: string[] = [];
-  if (e.branchRef) parts.push(`'${e.branchRef}'`);
+  if (e.branchRef) parts.push(`'${e.branchRef}' #${e.prNumber}`);
   if (e.mergeMethod) parts.push(e.mergeMethod.toLowerCase());
   if (e.threadId) parts.push(e.threadId);
   if (e.reviewers && e.reviewers.length) parts.push(e.reviewers.map((r) => `@${r}`).join(', '));
@@ -159,12 +159,10 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
               data-repo={e.repo}
             >
               <span className="activity-entry__time">{formatTime(e.at)}</span>
-              <span className="activity-entry__repo">
-                {e.repo} #{e.prNumber}
-              </span>
+              <span className="activity-entry__repo">{e.repo}</span>
               <span className="activity-entry__action">
                 {e.action} · {e.result}
-                {entryDetails(e) && <> · {entryDetails(e)}</>}
+                {entryDetails(e) ? <> · {entryDetails(e)}</> : <> · #{e.prNumber}</>}
               </span>
               {e.errorMessage && (
                 <span className="activity-entry__error">"{e.errorMessage}"</span>

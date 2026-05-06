@@ -40,11 +40,11 @@ export function Header({ user, onSignOut, onSettings, onPollNow, polling = false
           type="button"
           aria-label="Show keyboard shortcuts"
           onClick={onHelp}
-          className="ar-icon-button"
+          className="ar-icon-button ar-icon-button--lg"
           title="Keyboard shortcuts"
           data-testid="help-link"
         >
-          <span aria-hidden>?</span>
+          <span aria-hidden>⌨</span>
         </button>
       )}
       {user && (
