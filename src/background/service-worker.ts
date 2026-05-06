@@ -9,5 +9,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) void runPollCycle();
 });
 
-chrome.runtime.onInstalled.addListener(() => setupAlarm());
-chrome.runtime.onStartup.addListener(() => setupAlarm());
+// On install / browser startup: configure the alarm AND fire an
+// immediate poll so the popup has data on first open instead of waiting
+// out the configured interval (default 5 min).
+chrome.runtime.onInstalled.addListener(() => {
+  setupAlarm();
+  void runPollCycle();
+});
+chrome.runtime.onStartup.addListener(() => {
+  setupAlarm();
+  void runPollCycle();
+});
