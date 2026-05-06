@@ -35,6 +35,8 @@ export interface ResolveObsoleteThreadsResult {
   resolvedStore: ResolvedThreadsStore;
   /** Per-thread detail for activity-log entries. */
   resolvedEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
+  /** Per-thread failure detail for activity-log entries. */
+  failedEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
 }
 
 export async function runResolveObsoleteThreads(
@@ -50,6 +52,7 @@ export async function runResolveObsoleteThreads(
     failed: [],
     resolvedStore: { ...store },
     resolvedEntries: [],
+    failedEntries: [],
   };
 
   if (!settings.enabled) return result;
@@ -83,9 +86,13 @@ export async function runResolveObsoleteThreads(
         result.resolvedStore[t.id] = now();
         result.resolvedEntries.push({ threadId: t.id, repo: pr.repo, prNumber: pr.number });
       } catch (err) {
-        result.failed.push({
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        result.failed.push({ threadId: t.id, error: errorMsg });
+        result.failedEntries.push({
           threadId: t.id,
-          error: err instanceof Error ? err.message : String(err),
+          repo: pr.repo,
+          prNumber: pr.number,
+          error: errorMsg,
         });
       }
     }

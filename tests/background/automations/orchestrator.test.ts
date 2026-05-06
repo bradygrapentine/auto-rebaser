@@ -121,7 +121,7 @@ beforeEach(() => {
     skipped: 0,
     failed: [],
     resolvedStore: { t1: 1000 },
-    resolvedEntries: [],
+    resolvedEntries: [], failedEntries: [],
   });
   mockDismissStaleNotifs.mockResolvedValue({
     dismissed: 4,
@@ -129,7 +129,7 @@ beforeEach(() => {
     skipped: 0,
     failed: [],
     scopeMissing: false,
-    dismissedEntries: [],
+    dismissedEntries: [], failedEntries: [],
   });
 });
 
@@ -351,11 +351,11 @@ describe('runAllAutomations', () => {
     });
     mockResolveObsoleteThreads.mockImplementation(async () => {
       callOrder.push('resolveObsoleteThreads');
-      return { resolved: 0, skipped: 0, failed: [], resolvedStore: {}, resolvedEntries: [] };
+      return { resolved: 0, skipped: 0, failed: [], resolvedStore: {}, resolvedEntries: [], failedEntries: [] };
     });
     mockDismissStaleNotifs.mockImplementation(async () => {
       callOrder.push('dismissStaleNotifs');
-      return { dismissed: 0, unsubscribed: 0, skipped: 0, failed: [], scopeMissing: false, dismissedEntries: [] };
+      return { dismissed: 0, unsubscribed: 0, skipped: 0, failed: [], scopeMissing: false, dismissedEntries: [], failedEntries: [] };
     });
 
     const mergedPR = makePR({ id: 1, mergedAt: 1000 } as Parameters<typeof makePR>[0]);
@@ -415,7 +415,7 @@ describe('runAllAutomations', () => {
       skipped: 0,
       failed: [],
       resolvedStore: updatedStore,
-      resolvedEntries: [],
+      resolvedEntries: [], failedEntries: [],
     });
 
     const opts: OrchestratorOpts = {

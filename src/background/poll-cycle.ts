@@ -476,6 +476,19 @@ async function runAutomationsPass(
         threadId: t.threadId,
       });
     }
+    for (const t of result.failedThreadEntries ?? []) {
+      const pr = prByRepoNumber.get(`${t.repo}#${t.prNumber}`);
+      cycleEntries.push({
+        at: now,
+        action: 'thread_resolved',
+        repo: t.repo,
+        prNumber: t.prNumber,
+        prTitle: pr?.title ?? '',
+        result: 'failed',
+        threadId: t.threadId,
+        errorMessage: t.error,
+      });
+    }
 
     // Story 2.9 — notification_dismissed entries.
     for (const d of result.dismissedNotifEntries ?? []) {
@@ -488,6 +501,19 @@ async function runAutomationsPass(
         prTitle: pr?.title ?? '',
         result: 'success',
         threadId: d.threadId,
+      });
+    }
+    for (const d of result.failedNotifEntries ?? []) {
+      const pr = prByRepoNumber.get(`${d.repo}#${d.prNumber}`);
+      cycleEntries.push({
+        at: now,
+        action: 'notification_dismissed',
+        repo: d.repo,
+        prNumber: d.prNumber,
+        prTitle: pr?.title ?? '',
+        result: 'failed',
+        threadId: d.threadId,
+        errorMessage: d.error,
       });
     }
 

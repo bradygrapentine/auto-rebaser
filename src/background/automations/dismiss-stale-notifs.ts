@@ -32,6 +32,8 @@ export interface DismissStaleNotifsResult {
   scopeMissing: boolean;
   /** Per-notification detail for activity-log entries. */
   dismissedEntries: Array<{ threadId: string; repo: string; prNumber: number; unsubscribed: boolean }>;
+  /** Per-notification failure detail for activity-log entries. */
+  failedEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
 }
 
 const PR_URL_RE =
@@ -50,6 +52,7 @@ export async function runDismissStaleNotifs(
     failed: [],
     scopeMissing: false,
     dismissedEntries: [],
+    failedEntries: [],
   };
 
   if (!settings.enabled) return result;
@@ -92,9 +95,13 @@ export async function runDismissStaleNotifs(
           result.unsubscribed++;
           didUnsubscribe = true;
         } catch (err) {
-          result.failed.push({
+          const errorMsg = `unsubscribe: ${err instanceof Error ? err.message : String(err)}`;
+          result.failed.push({ threadId: n.threadId, error: errorMsg });
+          result.failedEntries.push({
             threadId: n.threadId,
-            error: `unsubscribe: ${err instanceof Error ? err.message : String(err)}`,
+            repo: `${m[1]}/${m[2]}`,
+            prNumber: Number(m[3]),
+            error: errorMsg,
           });
         }
       }
@@ -105,9 +112,13 @@ export async function runDismissStaleNotifs(
         unsubscribed: didUnsubscribe,
       });
     } catch (err) {
-      result.failed.push({
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      result.failed.push({ threadId: n.threadId, error: errorMsg });
+      result.failedEntries.push({
         threadId: n.threadId,
-        error: err instanceof Error ? err.message : String(err),
+        repo: `${m[1]}/${m[2]}`,
+        prNumber: Number(m[3]),
+        error: errorMsg,
       });
     }
   }

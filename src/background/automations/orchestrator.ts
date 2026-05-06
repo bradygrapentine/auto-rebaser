@@ -56,8 +56,12 @@ export interface OrchestratorResult {
   autoMergeMethodByPRId: Record<number, MergeMethod>;
   /** Story 2.8 — per-thread detail for activity-log entries. */
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
+  /** Story 2.8 — per-thread failure detail for activity-log entries. */
+  failedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
   /** Story 2.9 — per-notification detail for activity-log entries. */
   dismissedNotifEntries: Array<{ threadId: string; repo: string; prNumber: number; unsubscribed: boolean }>;
+  /** Story 2.9 — per-notification failure detail for activity-log entries. */
+  failedNotifEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
 }
 
 export async function runAllAutomations(opts: OrchestratorOpts): Promise<OrchestratorResult> {
@@ -66,7 +70,9 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
   const resolvedThreadEntries: OrchestratorResult['resolvedThreadEntries'] = [];
+  const failedThreadEntries: OrchestratorResult['failedThreadEntries'] = [];
   const dismissedNotifEntries: OrchestratorResult['dismissedNotifEntries'] = [];
+  const failedNotifEntries: OrchestratorResult['failedNotifEntries'] = [];
   let resolvedThreads: ResolvedThreadsStore = { ...opts.resolvedThreads };
   let errors = 0;
 
@@ -197,6 +203,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
       errors += result.failed.length;
       resolvedThreads = result.resolvedStore;
       resolvedThreadEntries.push(...result.resolvedEntries);
+      failedThreadEntries.push(...result.failedEntries);
     } catch (err) {
       errors++;
       console.error('[orchestrator] resolveObsoleteThreads threw:', err);
@@ -227,6 +234,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
       notificationsDismissed += result.dismissed;
       errors += result.failed.length;
       dismissedNotifEntries.push(...result.dismissedEntries);
+      failedNotifEntries.push(...result.failedEntries);
     } catch (err) {
       errors++;
       console.error('[orchestrator] dismissStaleNotifs threw:', err);
@@ -249,6 +257,8 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     resolvedThreads,
     autoMergeMethodByPRId,
     resolvedThreadEntries,
+    failedThreadEntries,
     dismissedNotifEntries,
+    failedNotifEntries,
   };
 }

@@ -168,7 +168,8 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
               <span className="activity-entry__time">{formatTime(e.at)}</span>
               <span className="activity-entry__repo">{e.repo}</span>
               <span className="activity-entry__action">
-                {e.action} · {e.result}
+                {e.action}
+                {e.result === 'failed' ? <> · failed</> : null}
                 {entryDetails(e) ? <> · {entryDetails(e)}</> : <> · #{e.prNumber}</>}
               </span>
               {e.errorMessage && (
