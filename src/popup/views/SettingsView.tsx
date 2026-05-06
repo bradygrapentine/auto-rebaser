@@ -138,12 +138,12 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
         <section className="settings-group" data-testid="enterprise-section">
           <h2 className="settings__heading">enterprise</h2>
-          <div className="settings-row">
+          <div className="settings-row settings-row--end">
             <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
             <input
               id="ghes-host"
               type="text"
-              className="input input--small"
+              className="input input--small enterprise-input"
               placeholder="github.acme.corp"
               value={hostDraft}
               onChange={(e) => setHostDraft(e.target.value)}
@@ -151,14 +151,14 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
             />
           </div>
           {hostDraft.trim() && (
-            <div className="settings-row">
+            <div className="settings-row settings-row--end">
               <label htmlFor="ghes-client-id" className="settings-row__label">
                 github_app_client_id
               </label>
               <input
                 id="ghes-client-id"
                 type="text"
-                className="input input--small"
+                className="input input--small enterprise-input"
                 placeholder="Iv23li…"
                 value={clientIdDraft}
                 onChange={(e) => setClientIdDraft(e.target.value)}
