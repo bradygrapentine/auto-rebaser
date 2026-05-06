@@ -788,7 +788,10 @@ code, .mono {
   background: var(--term-bg-alt);
 }
 .popup-footer__line { color: var(--term-fg-dim); }
-.popup-footer__line::before { content: "» "; color: var(--term-fg-muted); }
+/* Two trailing spaces so the prefix column is 3ch wide, matching
+   ".popup-footer__view-activity::before { content: '»» '; }" — keeps
+   "Last poll: …" and "View activity (N)" starting at the same x. */
+.popup-footer__line::before { content: "»  "; color: var(--term-fg-muted); white-space: pre; }
 .popup-footer__delta { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .popup-footer__delta button { line-height: 1.55; }
 .popup-footer {
