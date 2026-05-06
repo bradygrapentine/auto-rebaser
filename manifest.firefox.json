@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Auto Rebaser",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Automatically rebases your open GitHub PRs when they fall behind their base branch.",
   "browser_specific_settings": {
     "gecko": {
