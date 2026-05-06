@@ -515,7 +515,13 @@ code, .mono {
   color: var(--term-fg-muted);
 }
 .settings-row__value-text { white-space: nowrap; }
-.settings-row .input--small { flex: 1; max-width: 240px; }
+.settings-row .input--small {
+  flex: 0 0 auto;
+  width: 240px;
+  max-width: 60%;
+  margin-left: auto;
+  text-align: left;
+}
 .settings-row--action {
   justify-content: flex-start;
   gap: 10px;
@@ -730,6 +736,24 @@ code, .mono {
 .popup-footer__line::before { content: "» "; color: var(--term-fg-muted); }
 .popup-footer__delta { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .popup-footer__delta button { line-height: 1.55; }
+.popup-footer__shortcuts {
+  display: inline-block;
+  margin-top: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--term-fg-dim);
+  cursor: pointer;
+  text-align: left;
+}
+.popup-footer__shortcuts::before {
+  content: "» ";
+  color: var(--term-fg-muted);
+}
+.popup-footer__shortcuts:hover { color: var(--term-cyan); }
 .popup-footer__delta strong { color: var(--term-green); font-weight: 700; }
 .popup-footer__counter,
 .popup-footer__view-activity {
@@ -792,6 +816,7 @@ code, .mono {
   color: var(--term-fg-dim);
   gap: 8px;
   margin: 0;
+  padding-left: 8px;
   justify-self: start;
 }
 .activity-confirm {
