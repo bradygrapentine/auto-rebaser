@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Chrome extension that auto-rebases your open GitHub PRs when they fall behind",
+  "author": "Brady Grapentine <grapentineb@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/bradygrapentine/auto-rebaser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bradygrapentine/auto-rebaser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bradygrapentine/auto-rebaser/issues"
+  },
   "scripts": {
     "build": "vite build",
     "build:chrome": "vite build",
