@@ -9,7 +9,7 @@ vi.mock('../../src/core/auth-device-flow', () => ({
   },
 }));
 vi.mock('../../src/core/auth-store', () => ({
-  setToken: vi.fn(),
+  setAuthGitHubApp: vi.fn(),
 }));
 
 import {
@@ -17,7 +17,7 @@ import {
   pollDeviceFlow,
   DeviceFlowAbort,
 } from '../../src/core/auth-device-flow';
-import { setToken } from '../../src/core/auth-store';
+import { setAuthGitHubApp } from '../../src/core/auth-store';
 import {
   beginDeviceFlow,
   cancelDeviceFlow,
@@ -27,7 +27,7 @@ import {
 
 const mStart = vi.mocked(startDeviceFlow);
 const mPoll = vi.mocked(pollDeviceFlow);
-const mSetToken = vi.mocked(setToken);
+const mSetAuth = vi.mocked(setAuthGitHubApp);
 
 const exampleStart = {
   userCode: 'AAA-111', verificationUri: 'https://github.com/login/device',
@@ -61,7 +61,7 @@ describe('beginDeviceFlow', () => {
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(mSetToken).toHaveBeenCalledWith('gho_test');
+    expect(mSetAuth).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'gho_test' }));
     expect(getStatus()).toEqual({ state: 'success' });
   });
 
@@ -82,7 +82,7 @@ describe('beginDeviceFlow', () => {
     await beginDeviceFlow();
     await new Promise((r) => setTimeout(r, 0));
     expect(getStatus()).toEqual({ state: 'cancelled' });
-    expect(mSetToken).not.toHaveBeenCalled();
+    expect(mSetAuth).not.toHaveBeenCalled();
   });
 
   it('expired_token via DeviceFlowAbort transitions to expired', async () => {
