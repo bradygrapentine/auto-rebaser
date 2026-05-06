@@ -86,9 +86,7 @@ function MergeMethodPreferenceEditor({
       role="list"
       aria-label="Merge method preference"
     >
-      <div className="toggle-sub merge-method-preference__hint">
-        <span>preference order</span>
-      </div>
+      <div className="merge-method-preference__hint">preference order</div>
       {ordered.map((method, idx) => {
         const isActive = idx < preference.length;
         const canMoveUp = isActive && idx > 0;
@@ -101,7 +99,11 @@ function MergeMethodPreferenceEditor({
             data-active={isActive}
             role="listitem"
           >
-            <label className="toggle">
+            <span className="merge-method-row__rank">
+              {isActive ? idx + 1 : '·'}
+            </span>
+            <label className="toggle merge-method-row__toggle">
+              <span className="toggle__name">{MERGE_METHOD_LABELS[method]}</span>
               <input
                 type="checkbox"
                 checked={isActive}
@@ -109,11 +111,10 @@ function MergeMethodPreferenceEditor({
                 onChange={() => toggle(method)}
                 aria-label={`Enable ${MERGE_METHOD_LABELS[method]}`}
               />
-              <span className="toggle__name">{MERGE_METHOD_LABELS[method]}</span>
             </label>
             <button
               type="button"
-              className="btn btn--icon"
+              className="ar-icon-button merge-method-row__move"
               disabled={disabled || !canMoveUp}
               onClick={() => move(idx, idx - 1)}
               aria-label={`Move ${MERGE_METHOD_LABELS[method]} up`}
@@ -122,7 +123,7 @@ function MergeMethodPreferenceEditor({
             </button>
             <button
               type="button"
-              className="btn btn--icon"
+              className="ar-icon-button merge-method-row__move"
               disabled={disabled || !canMoveDown}
               onClick={() => move(idx, idx + 1)}
               aria-label={`Move ${MERGE_METHOD_LABELS[method]} down`}
@@ -349,8 +350,8 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
         </div>
         {expanded.stale && (
           <>
-            <div className="toggle-sub">
-              <span>idle threshold</span>
+            <div className="toggle-sub toggle-sub--row">
+              <span className="toggle-sub__label">idle threshold</span>
               <select
                 value={settings.staleThresholdDays}
                 disabled={!settings.enableStaleBadge}
@@ -358,7 +359,7 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
                   save({ staleThresholdDays: Number(e.target.value) as StaleThresholdDays })
                 }
                 aria-label="Idle threshold (days)"
-                className="select select--small"
+                className="select select--small toggle-sub__select"
               >
                 {STALE_THRESHOLDS.map((d) => (
                   <option key={d} value={d}>{d}d</option>

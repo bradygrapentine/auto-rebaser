@@ -79,53 +79,57 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
           ← back
         </button>
         <span className="popup-header__title" style={{ marginLeft: 4 }}>
-          ~/activity
+          activity
         </span>
       </header>
 
-      <div className="view-body">
+      <div className="view-body activity-view">
         <div className="activity-toolbar">
-          <select
-            aria-label="Filter by action"
-            value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value as 'all' | ActivityAction)}
-            className="select select--small"
-          >
-            {Object.entries(ACTION_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filter by repo"
-            value={repoFilter}
-            onChange={(e) => setRepoFilter(e.target.value)}
-            className="select select--small"
-          >
-            <option value="all">All repos</option>
-            {repoOptions.map((repo) => (
-              <option key={repo} value={repo}>
-                {repo}
-              </option>
-            ))}
-          </select>
-          <label className="activity-toolbar__today">
-            <input
-              type="checkbox"
-              checked={todayOnly}
-              onChange={(e) => setTodayOnly(e.target.checked)}
-            />
-            today only
-          </label>
-          <button
-            type="button"
-            onClick={() => setConfirmingClear(true)}
-            disabled={entries.length === 0}
-            className="btn"
-          >
-            clear log
-          </button>
+          <div className="activity-toolbar__filters">
+            <select
+              aria-label="Filter by action"
+              value={actionFilter}
+              onChange={(e) => setActionFilter(e.target.value as 'all' | ActivityAction)}
+              className="select select--small"
+            >
+              {Object.entries(ACTION_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by repo"
+              value={repoFilter}
+              onChange={(e) => setRepoFilter(e.target.value)}
+              className="select select--small"
+            >
+              <option value="all">All repos</option>
+              {repoOptions.map((repo) => (
+                <option key={repo} value={repo}>
+                  {repo}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="activity-toolbar__row">
+            <label className="toggle activity-toolbar__today">
+              <span>today only</span>
+              <input
+                type="checkbox"
+                checked={todayOnly}
+                onChange={(e) => setTodayOnly(e.target.checked)}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setConfirmingClear(true)}
+              disabled={entries.length === 0}
+              className="btn"
+            >
+              clear log
+            </button>
+          </div>
         </div>
 
         {confirmingClear && (
