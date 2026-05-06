@@ -189,7 +189,20 @@ export function PRListView({
         )}
       </div>
       <footer className="popup-footer">
-        <span className="popup-footer__line">{lastPollText}</span>
+        <div className="popup-footer__top">
+          <span className="popup-footer__line">{lastPollText}</span>
+          {onHelp && (
+            <button
+              type="button"
+              className="btn popup-footer__shortcuts-btn"
+              onClick={onHelp}
+              data-testid="help-link"
+              aria-label="Show keyboard shortcuts"
+            >
+              shortcuts
+            </button>
+          )}
+        </div>
         {authMethod && (
           <span className="popup-footer__via" data-testid="auth-method-line">
             via {authMethod === 'github_app' ? 'GitHub App' : 'PAT'}
@@ -199,19 +212,6 @@ export function PRListView({
           </span>
         )}
         <PollSummaryFooter onOpenActivity={onOpenActivity} />
-        {onHelp && (
-          <div className="popup-footer__shortcuts-row">
-            <button
-              type="button"
-              className="btn"
-              onClick={onHelp}
-              data-testid="help-link"
-              aria-label="Show keyboard shortcuts"
-            >
-              shortcuts
-            </button>
-          </div>
-        )}
       </footer>
     </div>
   );
