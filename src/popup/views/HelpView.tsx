@@ -22,21 +22,23 @@ export function HelpView({ onBack }: Props) {
 
   return (
     <div className="popup-root" data-testid="help-view">
-      <header className="view-header">
-        <button type="button" className="btn" onClick={onBack}>back</button>
-        <h2 className="view-header__title">keyboard shortcuts</h2>
+      <header className="popup-header">
+        <button type="button" aria-label="Back" onClick={onBack} className="btn">
+          ← back
+        </button>
+        <span className="popup-header__title" style={{ marginLeft: 4 }}>
+          shortcuts
+        </span>
       </header>
-      <div className="view-body">
-        <table className="help-shortcuts">
-          <tbody>
-            {SHORTCUTS.map(({ keys, action }) => (
-              <tr key={keys}>
-                <td className="help-shortcuts__keys"><code>{keys}</code></td>
-                <td>{action}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="view-body help-view">
+        <dl className="help-shortcuts">
+          {SHORTCUTS.map(({ keys, action }) => (
+            <div key={keys} className="help-shortcuts__row">
+              <dt className="help-shortcuts__keys"><code>{keys}</code></dt>
+              <dd className="help-shortcuts__action">{action}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </div>
   );

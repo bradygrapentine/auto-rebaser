@@ -51,8 +51,8 @@ describe('ActivityLogView', () => {
       e({ action: 'rebase', prNumber: 3 }),
     ]);
     await act(async () => {});
-    const dropdown = screen.getByLabelText(/filter by action/i);
-    fireEvent.change(dropdown, { target: { value: 'branch_deleted' } });
+    fireEvent.click(screen.getByRole('button', { name: /filter by action/i }));
+    fireEvent.click(screen.getByRole('option', { name: 'branch_deleted' }));
     const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
     expect(items).toHaveLength(1);
     expect(items[0]).toHaveTextContent('#2');
@@ -64,9 +64,8 @@ describe('ActivityLogView', () => {
       e({ repo: 'org/b', prNumber: 2 }),
     ]);
     await act(async () => {});
-    fireEvent.change(screen.getByLabelText(/filter by repo/i), {
-      target: { value: 'org/b' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: /filter by repo/i }));
+    fireEvent.click(screen.getByRole('option', { name: 'org/b' }));
     const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
     expect(items).toHaveLength(1);
     expect(items[0]).toHaveTextContent('org/b');
