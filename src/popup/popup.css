@@ -246,6 +246,15 @@ code, .mono {
 }
 .pr-row__title:hover { color: var(--term-cyan); }
 
+.pr-row__skip-badge {
+  font-size: 10px;
+  color: var(--term-fg-muted);
+  border: 1px solid var(--term-border);
+  padding: 1px 4px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
 /* ─── Status badge ─────────────────────────────────────────────────────── */
 .state-badge {
   display: inline-flex;
@@ -410,6 +419,28 @@ code, .mono {
   gap: 4px;
 }
 .automation-row > .toggle { flex: 1; }
+
+.merge-method-preference {
+  margin-top: 6px;
+  margin-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.merge-method-preference__hint {
+  margin: 0 0 4px 0;
+  color: var(--term-fg-muted);
+  font-size: 11px;
+}
+.merge-method-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 4px;
+}
+.merge-method-row[data-active="false"] .toggle__name {
+  color: var(--term-fg-muted);
+}
 
 .toggle-sub {
   display: flex;

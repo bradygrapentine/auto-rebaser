@@ -39,4 +39,15 @@ describe('PRRow', () => {
     const row = document.querySelector('.pr-row');
     expect(row).not.toHaveAttribute('title');
   });
+
+  it('renders auto-merge skip badge when autoMergeSkipReason is set', () => {
+    const prWithSkip = { ...basePR, autoMergeSkipReason: 'no-allowed-method' as const };
+    render(<PRRow pr={prWithSkip as PRRecord} />);
+    expect(screen.getByTestId('auto-merge-skip-badge')).toBeInTheDocument();
+  });
+
+  it('does not render skip badge when autoMergeSkipReason is absent', () => {
+    render(<PRRow pr={basePR} />);
+    expect(screen.queryByTestId('auto-merge-skip-badge')).not.toBeInTheDocument();
+  });
 });

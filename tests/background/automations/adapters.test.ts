@@ -86,7 +86,7 @@ describe('toEligiblePR', () => {
   it('happy path: maps PRRecord + detail to EligiblePR', () => {
     const pr = makePR();
     const detail = makeDetail();
-    const result = toEligiblePR(pr, detail);
+    const result = toEligiblePR(pr, detail, { squash: true, merge: true, rebase: true });
     expect(result.id).toBe(1);
     expect(result.nodeId).toBe('MDEwOlB1bGxSZXF1ZXN0MQ==');
     expect(result.repo).toBe('owner/repo');
@@ -94,39 +94,40 @@ describe('toEligiblePR', () => {
     expect(result.mergeableState).toBe('clean');
     expect(result.autoMergeEnabled).toBe(false);
     expect(result.unsupported).toBe(false);
+    expect(result.allowedMethods).toEqual({ squash: true, merge: true, rebase: true });
   });
 
   it('auto_merge present → autoMergeEnabled=true', () => {
     const pr = makePR();
     const detail = makeDetail({ auto_merge: { enabled: true } });
-    const result = toEligiblePR(pr, detail);
+    const result = toEligiblePR(pr, detail, { squash: true, merge: true, rebase: true });
     expect(result.autoMergeEnabled).toBe(true);
   });
 
   it('missing node_id → nodeId=""', () => {
     const pr = makePR();
     const detail = makeDetail({ node_id: undefined });
-    const result = toEligiblePR(pr, detail);
+    const result = toEligiblePR(pr, detail, { squash: true, merge: true, rebase: true });
     expect(result.nodeId).toBe('');
   });
 
   it('draft=true → isDraft=true', () => {
     const pr = makePR();
     const detail = makeDetail({ draft: true });
-    const result = toEligiblePR(pr, detail);
+    const result = toEligiblePR(pr, detail, { squash: true, merge: true, rebase: true });
     expect(result.isDraft).toBe(true);
   });
 
   it('draft undefined → isDraft=false (?? fallback)', () => {
     const pr = makePR();
     const detail = makeDetail({ draft: undefined });
-    expect(toEligiblePR(pr, detail).isDraft).toBe(false);
+    expect(toEligiblePR(pr, detail, { squash: true, merge: true, rebase: true }).isDraft).toBe(false);
   });
 
   it('node_id undefined → nodeId="" (?? fallback)', () => {
     const pr = makePR();
     const detail = makeDetail({ node_id: undefined });
-    expect(toEligiblePR(pr, detail).nodeId).toBe('');
+    expect(toEligiblePR(pr, detail, { squash: true, merge: true, rebase: true }).nodeId).toBe('');
   });
 });
 
