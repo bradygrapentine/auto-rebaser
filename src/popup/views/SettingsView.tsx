@@ -113,15 +113,9 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
         {authMethod && (
           <section className="settings-group" data-testid="account-section">
-            <h2 className="settings__heading">account</h2>
-            <div className="settings-row">
-              <span className="settings-row__label">auth_method</span>
-              <span className="muted">
-                {authMethod === 'github_app' ? 'GitHub App' : 'Personal Access Token (legacy)'}
-              </span>
-            </div>
-            {onSignOut && (
-              <div className="settings-row">
+            <div className="settings__heading-row">
+              <h2 className="settings__heading">account</h2>
+              {onSignOut && (
                 <button
                   type="button"
                   className="btn"
@@ -130,8 +124,14 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
                 >
                   switch to {otherMethodLabel}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
+            <div className="settings-row">
+              <span className="settings-row__label">auth_method</span>
+              <span className="muted">
+                {authMethod === 'github_app' ? 'GitHub App' : 'Personal Access Token (legacy)'}
+              </span>
+            </div>
           </section>
         )}
 

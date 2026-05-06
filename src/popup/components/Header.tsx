@@ -6,9 +6,11 @@ interface Props {
   onPollNow?: () => void;
   /** When true, the refresh icon spins (poll in progress). */
   polling?: boolean;
+  /** Optional — opens the keyboard-shortcuts help view. */
+  onHelp?: () => void;
 }
 
-export function Header({ user, onSignOut, onSettings, onPollNow, polling = false }: Props) {
+export function Header({ user, onSignOut, onSettings, onPollNow, polling = false, onHelp }: Props) {
   return (
     <header className="popup-header">
       <span className="popup-header__title">auto-rebaser</span>
@@ -33,6 +35,18 @@ export function Header({ user, onSignOut, onSettings, onPollNow, polling = false
       >
         <span aria-hidden>⚙</span>
       </button>
+      {onHelp && (
+        <button
+          type="button"
+          aria-label="Show keyboard shortcuts"
+          onClick={onHelp}
+          className="ar-icon-button ar-icon-button--lg"
+          title="Keyboard shortcuts"
+          data-testid="help-link"
+        >
+          <span aria-hidden>?</span>
+        </button>
+      )}
       {user && (
         <button type="button" aria-label="Sign out" onClick={onSignOut} className="btn">
           log-out

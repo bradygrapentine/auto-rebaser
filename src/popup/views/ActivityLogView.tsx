@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { Select } from '../components/Select';
 import type { ActivityAction, ActivityEntry } from '../../core/activity-log-types';
 
 interface Props {
@@ -81,55 +82,45 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
         <span className="popup-header__title" style={{ marginLeft: 4 }}>
           activity
         </span>
+        <button
+          type="button"
+          onClick={() => setConfirmingClear(true)}
+          disabled={entries.length === 0}
+          className="btn"
+        >
+          clear log
+        </button>
       </header>
 
       <div className="view-body activity-view">
         <div className="activity-toolbar">
           <div className="activity-toolbar__filters">
-            <select
-              aria-label="Filter by action"
+            <Select
+              ariaLabel="Filter by action"
               value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value as 'all' | ActivityAction)}
-              className="select select--small"
-            >
-              {Object.entries(ACTION_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter by repo"
+              onChange={(v) => setActionFilter(v as 'all' | ActivityAction)}
+              options={Object.entries(ACTION_LABELS).map(([value, label]) => ({
+                value, label,
+              }))}
+            />
+            <Select
+              ariaLabel="Filter by repo"
               value={repoFilter}
-              onChange={(e) => setRepoFilter(e.target.value)}
-              className="select select--small"
-            >
-              <option value="all">All repos</option>
-              {repoOptions.map((repo) => (
-                <option key={repo} value={repo}>
-                  {repo}
-                </option>
-              ))}
-            </select>
+              onChange={setRepoFilter}
+              options={[
+                { value: 'all', label: 'All repos' },
+                ...repoOptions.map((r) => ({ value: r, label: r })),
+              ]}
+            />
           </div>
-          <div className="activity-toolbar__row">
-            <label className="toggle activity-toolbar__today">
-              <span>today only</span>
-              <input
-                type="checkbox"
-                checked={todayOnly}
-                onChange={(e) => setTodayOnly(e.target.checked)}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setConfirmingClear(true)}
-              disabled={entries.length === 0}
-              className="btn"
-            >
-              clear log
-            </button>
-          </div>
+          <label className="toggle activity-toolbar__today">
+            <span>today only</span>
+            <input
+              type="checkbox"
+              checked={todayOnly}
+              onChange={(e) => setTodayOnly(e.target.checked)}
+            />
+          </label>
         </div>
 
         {confirmingClear && (

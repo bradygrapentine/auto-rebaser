@@ -141,6 +141,7 @@ export function PRListView({
         onSettings={onSettings}
         onPollNow={handlePollNow}
         polling={pollInProgress === true}
+        onHelp={onHelp}
       />
       <div className="view-body">
         {authMethod === 'pat' && (
@@ -199,17 +200,6 @@ export function PRListView({
           </span>
         )}
         <PollSummaryFooter onOpenActivity={onOpenActivity} />
-        {onHelp && (
-          <button
-            type="button"
-            className="popup-footer__help"
-            onClick={onHelp}
-            aria-label="Show keyboard shortcuts"
-            data-testid="help-link"
-          >
-            ?
-          </button>
-        )}
       </footer>
     </div>
   );

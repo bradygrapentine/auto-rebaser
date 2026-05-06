@@ -38,6 +38,8 @@ html, body, #root {
   color: var(--term-fg);
   background: var(--term-bg);
   font-feature-settings: "calt" 1, "liga" 1;
+  position: relative;
+  overflow: hidden;
 }
 
 a {
@@ -371,30 +373,39 @@ code, .mono {
   font-family: inherit;
 }
 
-.popup-footer__help {
-  background: transparent;
-  border: 1px solid var(--term-border);
-  color: var(--term-fg-muted);
-  padding: 0 5px;
-  font-family: inherit;
-  font-size: 10px;
-  cursor: pointer;
-  margin-left: 6px;
-}
-.popup-footer__help:hover { color: var(--term-cyan); border-color: var(--term-cyan); }
-
+.help-view { padding: 14px; }
 .help-shortcuts {
-  width: 100%;
-  border-collapse: collapse;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   font-size: 12px;
 }
-.help-shortcuts td { padding: 3px 8px; }
-.help-shortcuts__keys { width: 1%; white-space: nowrap; }
+.help-shortcuts__row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--term-border);
+}
+.help-shortcuts__row:last-child { border-bottom: none; }
+.help-shortcuts__keys {
+  margin: 0;
+  text-align: left;
+}
 .help-shortcuts__keys code {
   background: rgba(86, 212, 221, 0.10);
-  border: 1px solid var(--term-border);
-  padding: 1px 4px;
+  border: 1px solid var(--term-border-bright);
+  border-radius: 3px;
+  padding: 2px 6px;
   font-size: 11px;
+  color: var(--term-cyan);
+  font-family: inherit;
+}
+.help-shortcuts__action {
+  margin: 0;
+  color: var(--term-fg-dim);
 }
 
 /* ─── Status badge ─────────────────────────────────────────────────────── */
@@ -476,6 +487,14 @@ code, .mono {
   margin: 0 0 14px;
 }
 .settings__heading::before { content: "# "; color: var(--term-fg-dim); font-weight: 400; }
+.settings__heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.settings__heading-row .settings__heading { margin: 0; }
 
 .settings-row {
   display: flex;
@@ -846,6 +865,81 @@ code, .mono {
 ::-webkit-scrollbar-track { background: var(--term-bg); }
 ::-webkit-scrollbar-thumb { background: var(--term-border-bright); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--term-fg-muted); }
+
+/* ─── Custom Select (in-popup dropdown) ────────────────────────────────── */
+.select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  min-width: 0;
+}
+.select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 3px 8px;
+  background: var(--term-bg);
+  color: var(--term-fg);
+  border: 1px solid var(--term-border-bright);
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--term-cyan);
+  color: var(--term-cyan);
+}
+.select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--term-blue);
+  box-shadow: 0 0 0 2px var(--term-glow-blue);
+}
+.select-trigger:disabled {
+  color: var(--term-fg-muted);
+  cursor: not-allowed;
+}
+.select-trigger__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-trigger__chev { color: var(--term-fg-muted); font-size: 10px; }
+.select-wrap--open .select-trigger { border-color: var(--term-cyan); color: var(--term-cyan); }
+.select-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 2px 0;
+  list-style: none;
+  background: var(--term-bg-alt);
+  border: 1px solid var(--term-border-bright);
+  border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+.select-option {
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--term-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-option:hover { background: var(--term-bg-hover); color: var(--term-cyan); }
+.select-option--active {
+  color: var(--term-green);
+}
+.select-option--active::before { content: "› "; color: var(--term-green); }
 
 /* ─── Selection ────────────────────────────────────────────────────────── */
 ::selection { background: var(--term-glow-blue); }

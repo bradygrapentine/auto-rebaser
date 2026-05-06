@@ -14,7 +14,7 @@ describe('HelpView', () => {
   it('back button calls onBack', () => {
     const onBack = vi.fn();
     render(<HelpView onBack={onBack} />);
-    fireEvent.click(screen.getByText('back'));
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
