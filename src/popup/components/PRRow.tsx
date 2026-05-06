@@ -17,13 +17,19 @@ interface Props {
   pingState?: { canPing: boolean; pingedHoursAgo: number | null };
   /** Story 5.1 — invoked when the user clicks the ping link. */
   onPing?: (pr: PRRecord) => void;
+  /** Install URL surfaced when the row's error suggests a missing App install. */
+  installRequestUrl?: string;
 }
 
-export function PRRow({ pr, focused, showStaleBadge, pingState, onPing }: Props) {
+const APP_NOT_INSTALLED_HINT = 'Auto Rebaser App not installed for this repo';
+
+export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installRequestUrl }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
   const staleness = extended.staleness;
   const idleLabel = staleness && showStaleBadge ? formatIdleDays(staleness.idleDays) : null;
+  const showError = pr.state === 'error' && pr.errorMessage;
+  const isAppNotInstalled = pr.errorMessage === APP_NOT_INSTALLED_HINT;
 
   return (
     <div className="pr-row-wrap">
@@ -37,7 +43,28 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing }: Props)
       >
         <StatusBadge state={pr.state} />
         <span className="pr-row__num" aria-hidden>#{pr.number}</span>
-        <span className="pr-row__title">{pr.title}</span>
+        <div className="pr-row__title-wrap">
+          <span className="pr-row__title">{pr.title}</span>
+          {showError && (
+            <span className="pr-row__error-hint" data-testid="pr-error-hint">
+              {pr.errorMessage}
+              {isAppNotInstalled && installRequestUrl && (
+                <>
+                  {' — '}
+                  <a
+                    href={installRequestUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="pr-row__error-fix"
+                  >
+                    install
+                  </a>
+                </>
+              )}
+            </span>
+          )}
+        </div>
         {idleLabel && (
           <span className="pr-row__stale-badge" data-testid="stale-badge">
             {idleLabel}

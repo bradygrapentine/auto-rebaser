@@ -157,6 +157,11 @@ async function runPollCycleInner(): Promise<void> {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
+      // Same translation as mapUpdateBranchError: 403/404 on getPR is
+      // overwhelmingly "App not installed on this repo".
+      const friendly = msg.startsWith('HTTP_403') || msg.startsWith('HTTP_404')
+        ? 'Auto Rebaser App not installed for this repo'
+        : msg;
       processedPRs.push({
         id: item.id,
         number: item.number,
@@ -165,7 +170,7 @@ async function runPollCycleInner(): Promise<void> {
         url: item.html_url,
         state: 'error',
         lastUpdated: Date.now(),
-        errorMessage: msg,
+        errorMessage: friendly,
       });
       continue;
     }

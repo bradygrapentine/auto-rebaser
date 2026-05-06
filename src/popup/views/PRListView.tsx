@@ -192,31 +192,32 @@ export function PRListView({
                     ? coverageFor(g.repo, installations)
                     : undefined
                 }
+                installRequestUrl={installRequestUrl}
               />
             );
           })
         )}
       </div>
       <footer className="popup-footer">
-        <div className="popup-footer__top">
+        <div className="popup-footer__main">
           <span className="popup-footer__line">
             {lastPollAt
               ? `Last poll: ${new Date(lastPollAt).toLocaleTimeString()}`
               : 'Last poll: never'}
           </span>
-          {onHelp && (
-            <button
-              type="button"
-              className="btn popup-footer__shortcuts-btn"
-              onClick={onHelp}
-              data-testid="help-link"
-              aria-label="Show keyboard shortcuts"
-            >
-              shortcuts
-            </button>
-          )}
+          <PollSummaryFooter onOpenActivity={onOpenActivity} />
         </div>
-        <PollSummaryFooter onOpenActivity={onOpenActivity} />
+        {onHelp && (
+          <button
+            type="button"
+            className="btn popup-footer__shortcuts-btn"
+            onClick={onHelp}
+            data-testid="help-link"
+            aria-label="Show keyboard shortcuts"
+          >
+            shortcuts
+          </button>
+        )}
       </footer>
     </div>
   );

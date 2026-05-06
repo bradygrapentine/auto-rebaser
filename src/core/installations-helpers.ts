@@ -5,7 +5,10 @@
 import type { Installation } from '../github/endpoints/installations';
 import { getOriginBase } from './host-config';
 
-const APP_SLUG = 'auto-rebaser';
+// Must match the slug under github.com/apps/<slug>. Mismatch = install
+// link 404s or routes to a stranger's app, and the popup's
+// "install or request" CTA stops working.
+const APP_SLUG = 'auto-rebaser-ext';
 
 export type Coverage = 'active' | 'suspended' | 'not-installed';
 
@@ -42,7 +45,7 @@ export function installationsDisplay(installations: Installation[] | undefined):
 
 /**
  * Audit B3 — derive the install-request URL from the configured host. On
- * github.com this is `https://github.com/apps/auto-rebaser/installations/new`;
+ * github.com this is `https://github.com/apps/auto-rebaser-ext/installations/new`;
  * on a GHES instance it must point at the GHES host since the App lives in
  * a separate registry.
  */

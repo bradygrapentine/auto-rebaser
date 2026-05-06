@@ -23,11 +23,13 @@ interface Props {
   onPing?: (pr: PRRecord) => void;
   /** Story 4.5 — installation coverage for this repo (App auth only). */
   coverage?: 'active' | 'suspended' | 'not-installed';
+  /** Forwarded to PRRow so error rows can offer an "install" link. */
+  installRequestUrl?: string;
 }
 
 export function RepoGroup({
   group, expanded, onToggle, userLogin, focusedPRId,
-  showStaleBadges, pingStateFor, onPing, coverage,
+  showStaleBadges, pingStateFor, onPing, coverage, installRequestUrl,
 }: Props) {
   const [owner, ...rest] = group.repo.split('/');
   const displayName =
@@ -79,6 +81,7 @@ export function RepoGroup({
               showStaleBadge={showStaleBadges}
               pingState={pingStateFor?.(pr) ?? undefined}
               onPing={onPing}
+              installRequestUrl={installRequestUrl}
             />
           ))}
         </div>
