@@ -94,6 +94,13 @@ describe('SignInView', () => {
       fireEvent.click(screen.getByTestId('signin-github-app'));
     });
     expect(await screen.findByTestId('device-code')).toHaveTextContent('ABCD-1234');
+    // The verification tab is no longer auto-opened — the user clicks
+    // "copy code & open verification page" when ready, so the popup has
+    // a chance to display the code before Chrome destroys it.
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('open-verification-tab'));
+    });
     expect(chrome.tabs.create).toHaveBeenCalledWith({
       url: 'https://github.com/login/device',
     });
