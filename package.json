@@ -1,6 +1,6 @@
 {
   "name": "auto-rebaser",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Chrome extension that auto-rebases your open GitHub PRs when they fall behind",
