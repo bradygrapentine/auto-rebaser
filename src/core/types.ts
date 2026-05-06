@@ -141,7 +141,8 @@ export type RuntimeMessage =
   // Story 4.2 — Device Flow
   | { type: 'AUTH_BEGIN_DEVICE_FLOW' }
   | { type: 'AUTH_DEVICE_FLOW_STATUS' }
-  | { type: 'AUTH_CANCEL_DEVICE_FLOW' };
+  | { type: 'AUTH_CANCEL_DEVICE_FLOW' }
+  | { type: 'AUTH_RESET_DEVICE_FLOW' };
 
 export interface RuntimeResponse {
   ok: boolean;
