@@ -22,8 +22,16 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
 
   // Chrome MV3 popups close as soon as a new tab is created via
   // chrome.tabs.create(), wiping local state. On reopen, ask the service
-  // worker if a device flow is already in flight and restore the user
-  // code so the popup picks up where it left off.
+  // worker if a device flow is in flight and restore the user code so
+  // the popup picks up where it left off.
+  //
+  // Only `pending` is auto-resumed. Stale `success` (the runner never
+  // resets after a successful flow) used to trigger
+  // onDeviceFlowSuccess() here, which on a signed-out account bounced
+  // SignInView back into PRListView and then back to SignInView, which
+  // re-read the same stale `success` — an infinite remount loop the
+  // user saw as "popup glitching on the login screen". Anything other
+  // than `pending` is treated as no-op now.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -35,12 +43,9 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
       if (status.state === 'pending') {
         setDeviceStart(status.start);
         setView('device');
-      } else if (status.state === 'success') {
-        onDeviceFlowSuccess?.();
       }
     })();
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submitPAT = async (e: React.FormEvent) => {
@@ -93,6 +98,10 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
       const status = res.data as DeviceFlowStatus;
       if (status.state === 'success') {
         cancelled = true;
+        // Reset the runner so the next sign-in attempt starts fresh.
+        // Without this, a stale `success` state lingers and any future
+        // SignInView mount used to spuriously re-fire the success path.
+        void chrome.runtime.sendMessage({ type: 'AUTH_RESET_DEVICE_FLOW' });
         onDeviceFlowSuccess?.();
         return;
       }

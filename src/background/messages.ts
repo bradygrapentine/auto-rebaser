@@ -6,6 +6,7 @@ import {
   beginDeviceFlow,
   cancelDeviceFlow,
   getStatus as getDeviceFlowStatus,
+  resetStatus as resetDeviceFlowStatus,
 } from './auth-device-flow-runner';
 
 const VALID_INTERVALS = new Set([1, 2, 5, 10, 15, 30, 60, 120, 240]);
@@ -48,6 +49,12 @@ export function handleMessage(
 
   if (msg.type === 'AUTH_CANCEL_DEVICE_FLOW') {
     cancelDeviceFlow();
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  if (msg.type === 'AUTH_RESET_DEVICE_FLOW') {
+    resetDeviceFlowStatus();
     sendResponse({ ok: true });
     return false;
   }
