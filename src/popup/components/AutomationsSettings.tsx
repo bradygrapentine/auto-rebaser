@@ -136,7 +136,12 @@ function MergeMethodPreferenceEditor({
   );
 }
 
-export function AutomationsSettings() {
+interface AutomationsSettingsProps {
+  /** Story 4.4 — drives the 2.9 notifications-scope CTA messaging. */
+  authMethod?: 'github_app' | 'pat';
+}
+
+export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {}) {
   const { settings, save } = useAutomationSettings();
   const [expanded, setExpanded] = useState<Record<SubKey, boolean>>({
     ignored: true,
@@ -293,7 +298,18 @@ export function AutomationsSettings() {
                 />
               </label>
             )}
-            {settings.autoDismissStaleNotifications && !settings.notificationsScopeGranted && (
+            {settings.autoDismissStaleNotifications && authMethod === 'github_app' && (
+              <p
+                className="muted"
+                data-testid="notifications-app-blocked"
+                style={{ marginLeft: 18, marginTop: 6, fontSize: 11 }}
+              >
+                Notification cleanup is unavailable when signed in via GitHub App.
+                Switch to PAT (settings → account) to enable.
+              </p>
+            )}
+            {settings.autoDismissStaleNotifications && authMethod !== 'github_app'
+              && !settings.notificationsScopeGranted && (
               <div style={{ marginLeft: 18, marginTop: 6 }}>
                 <button
                   type="button"
