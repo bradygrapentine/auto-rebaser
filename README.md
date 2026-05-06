@@ -4,7 +4,14 @@
 
 Chrome / Firefox extension that auto-rebases your open GitHub PRs and runs a small set of cleanup automations on top. Polls your authored PRs on a configurable interval, then for each one decides what to do — rebase if behind, delete the branch if merged, flip on auto-merge if eligible, resolve obsolete review threads, dismiss stale notifications.
 
-Local-first, single-user. No backend. Everything runs in the extension service worker against the GitHub API with your Personal Access Token.
+Local-first, single-user. No backend. Everything runs in the extension service worker against the GitHub API with your GitHub App token (OAuth Device Flow) or Personal Access Token. GitHub Enterprise Server is supported via a per-host setting.
+
+## Install
+
+> _Store links go live when v0.3.0 finishes review. Until then, load unpacked from `dist/` (Chrome) or `dist-firefox/` (Firefox) — see Development below._
+
+- Chrome Web Store: _pending review_
+- Firefox Add-ons: _pending review_
 
 ## Features
 
@@ -54,7 +61,7 @@ The popup uses a terminal-inspired theme — JetBrains Mono, Tokyo Night palette
 ```sh
 npm install
 npm run dev            # vite build --watch
-npm test               # vitest run (~430 tests, ~99% line coverage)
+npm test               # vitest run (~634 tests)
 npm run typecheck
 npm run build          # chrome
 npm run build:firefox  # firefox (writes to dist-firefox/)
