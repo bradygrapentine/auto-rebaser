@@ -14,7 +14,8 @@ import {
   type DeviceFlowStart,
   type TokenSet,
 } from '../core/auth-device-flow';
-import { setAuthGitHubApp } from '../core/auth-store';
+import { setAuthGitHubApp, setInstallations } from '../core/auth-store';
+import { getUserInstallations } from '../github/endpoints/installations';
 
 export type DeviceFlowStatus =
   | { state: 'idle' }
@@ -50,6 +51,14 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
     .then(async (tokenSet) => {
       state.lastTokenSet = tokenSet;
       await setAuthGitHubApp(tokenSet);
+      // Best-effort: fetch installations so the popup can show coverage.
+      // Failure here doesn't block sign-in; user just sees an empty list.
+      try {
+        const installations = await getUserInstallations();
+        await setInstallations(installations);
+      } catch (err) {
+        console.warn('[device-flow] could not fetch installations:', err);
+      }
       state.status = { state: 'success' };
     })
     .catch((err) => {

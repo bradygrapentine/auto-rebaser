@@ -5,6 +5,12 @@ import { Header } from '../components/Header';
 import { RepoGroup } from '../components/RepoGroup';
 import { PollSummaryFooter } from '../components/PollSummaryFooter';
 import { MigrationBanner } from '../components/MigrationBanner';
+import type { Installation } from '../../github/endpoints/installations';
+import {
+  coverageFor,
+  installationsDisplay,
+  INSTALL_REQUEST_URL,
+} from '../../core/installations-helpers';
 import { usePRStore } from '../hooks/usePRStore';
 import { useGroupedPRs } from '../hooks/useGroupedPRs';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
@@ -15,6 +21,8 @@ interface Props {
   user?: { login: string; avatarUrl: string };
   /** Story 4.4 — auth method drives the migration banner + footer "via X" line. */
   authMethod?: 'github_app' | 'pat';
+  /** Story 4.5 — list of installations the App is installed on. */
+  installations?: Installation[];
   onSettings: () => void;
   onSignOut: () => void;
   onHelp?: () => void;
@@ -23,7 +31,7 @@ interface Props {
 }
 
 export function PRListView({
-  user, authMethod, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
+  user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
 }: Props) {
   const store = usePRStore();
   const { prs, lastPollAt, pollInProgress } = store;
@@ -129,6 +137,22 @@ export function PRListView({
         {authMethod === 'pat' && (
           <MigrationBanner onSwitchToApp={onSignOut} />
         )}
+        {authMethod === 'github_app'
+          && (!installations || installations.length === 0) && (
+          <div className="empty-installations" data-testid="empty-installations">
+            <p>The Auto Rebaser App isn't installed on any account you can access.</p>
+            <div className="empty-installations__actions">
+              <a
+                href={INSTALL_REQUEST_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn--primary"
+              >
+                install or request
+              </a>
+            </div>
+          </div>
+        )}
         {groups.length === 0 ? (
           <p className="empty-state">no open prs found.</p>
         ) : (
@@ -145,6 +169,11 @@ export function PRListView({
                 showStaleBadges={settings.enableStaleBadge}
                 pingStateFor={pingStateFor}
                 onPing={onPing}
+                coverage={
+                  authMethod === 'github_app'
+                    ? coverageFor(g.repo, installations)
+                    : undefined
+                }
               />
             );
           })
@@ -155,6 +184,9 @@ export function PRListView({
         {authMethod && (
           <span className="popup-footer__via" data-testid="auth-method-line">
             via {authMethod === 'github_app' ? 'GitHub App' : 'PAT'}
+            {authMethod === 'github_app' && installations && installations.length > 0 && (
+              <> on {installationsDisplay(installations)}</>
+            )}
           </span>
         )}
         <PollSummaryFooter onOpenActivity={onOpenActivity} />
