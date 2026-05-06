@@ -351,7 +351,7 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
         {expanded.stale && (
           <>
             <div className="toggle-sub toggle-sub--row">
-              <span className="toggle-sub__label">idle threshold</span>
+              <span className="toggle-sub__label">Idle threshold</span>
               <select
                 value={settings.staleThresholdDays}
                 disabled={!settings.enableStaleBadge}
@@ -403,14 +403,10 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
         )}
       </div>
 
-      {/* 5.5 keyboard shortcuts */}
+      {/* 5.5 keyboard shortcuts — leaf toggle, no expander since there are no
+          sub-options. */}
       <div className="automation-block">
-        <div className="automation-row">
-          <Chevron
-            expanded={expanded.shortcuts}
-            onClick={() => toggle('shortcuts')}
-            label="keyboard-shortcuts section"
-          />
+        <div className="automation-row automation-row--leaf">
           <label className="toggle">
             <span className="toggle__name">Enable keyboard shortcuts</span>
             <input
