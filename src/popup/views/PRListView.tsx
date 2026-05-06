@@ -34,6 +34,20 @@ export function PRListView({
 }: Props) {
   const store = usePRStore();
   const { prs, lastPollAt, pollInProgress } = store;
+
+  // Auto-poll when the popup opens if we don't have fresh data. Fires
+  // when there's never been a poll OR the last poll is older than 60s,
+  // so the user sees current state without manually clicking the
+  // refresh icon every time the popup wakes up.
+  useEffect(() => {
+    const stale = lastPollAt == null || Date.now() - lastPollAt > 60_000;
+    if (stale && !pollInProgress) {
+      chrome.runtime.sendMessage({ type: 'POLL_NOW' });
+    }
+    // Intentionally only fires on mount — periodic polling is handled
+    // by the service-worker alarm.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { settings } = useAutomationSettings();
   const ignored = new Set(settings.ignoredRepos);
   const visiblePRs = prs.filter((pr) => !ignored.has(pr.repo));
