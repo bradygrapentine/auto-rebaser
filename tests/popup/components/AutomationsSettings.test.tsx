@@ -30,15 +30,17 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 4 main toggles. Sub-toggle for unsubscribe is hidden when 2.9 is off.
-    // Three additional checkboxes inside the expanded auto-merge section come
-    // from the merge-method preference list (one per method).
+    // 4 main automation toggles + 1 keyboard-shortcuts toggle. Sub-toggle for
+    // unsubscribe is hidden when 2.9 is off. Three additional checkboxes
+    // inside the expanded auto-merge section come from the merge-method
+    // preference list (one per method).
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(7);
+    expect(checkboxes).toHaveLength(8);
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
     expect(screen.getByLabelText(/Auto-resolve outdated review threads/)).not.toBeChecked();
     expect(screen.getByLabelText(/Dismiss stale PR notifications/)).not.toBeChecked();
+    expect(screen.getByLabelText(/Enable keyboard shortcuts/)).toBeChecked();
   });
 
   it('toggling 2.6 calls save with the new value', async () => {

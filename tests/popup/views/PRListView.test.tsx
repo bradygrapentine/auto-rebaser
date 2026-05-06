@@ -122,6 +122,57 @@ describe('PRListView', () => {
     expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
 
+  // Story 5.5 — keyboard shortcuts
+  it('pressing j focuses the first visible PR row', async () => {
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [pr2], lastPollAt: null });
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    // Wait for useAutomationSettings to resolve.
+    await new Promise((r) => setTimeout(r, 0));
+    fireEvent.keyDown(window, { key: 'j' });
+    const focused = document.querySelector('[data-focused="true"]');
+    expect(focused).toBeInTheDocument();
+    expect(focused).toHaveTextContent(/Second PR/);
+  });
+
+  it('pressing s calls onSettings', async () => {
+    const onSettings = vi.fn();
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+    render(<PRListView onSettings={onSettings} onSignOut={vi.fn()} />);
+    await new Promise((r) => setTimeout(r, 0));
+    fireEvent.keyDown(window, { key: 's' });
+    expect(onSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('pressing ? calls onHelp', async () => {
+    const onHelp = vi.fn();
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} onHelp={onHelp} />);
+    await new Promise((r) => setTimeout(r, 0));
+    fireEvent.keyDown(window, { key: '?' });
+    expect(onHelp).toHaveBeenCalledTimes(1);
+  });
+
+  it('pressing r sends POLL_NOW', async () => {
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    await new Promise((r) => setTimeout(r, 0));
+    fireEvent.keyDown(window, { key: 'r' });
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
+  });
+
+  it('j skips PRs in collapsed groups', async () => {
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [pr1, pr2], lastPollAt: null });
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    await new Promise((r) => setTimeout(r, 0));
+    // Only pr2 group is auto-expanded (state='behind'). pr1 group is collapsed.
+    fireEvent.keyDown(window, { key: 'j' });
+    const focused = document.querySelector('[data-focused="true"]');
+    expect(focused).toHaveTextContent(/Second PR/);
+    // Pressing j again wraps to the same row (only 1 visible).
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(document.querySelector('[data-focused="true"]')).toHaveTextContent(/Second PR/);
+  });
+
   it('refresh button is disabled and labeled "Polling" when pollInProgress', () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
       ...emptyStore,

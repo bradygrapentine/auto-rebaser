@@ -255,6 +255,38 @@ code, .mono {
   white-space: nowrap;
 }
 
+.pr-row[data-focused="true"] {
+  outline: 1px solid var(--term-cyan);
+  outline-offset: -1px;
+  background: rgba(86, 212, 221, 0.08);
+}
+
+.popup-footer__help {
+  background: transparent;
+  border: 1px solid var(--term-border);
+  color: var(--term-fg-muted);
+  padding: 0 5px;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.popup-footer__help:hover { color: var(--term-cyan); border-color: var(--term-cyan); }
+
+.help-shortcuts {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.help-shortcuts td { padding: 3px 8px; }
+.help-shortcuts__keys { width: 1%; white-space: nowrap; }
+.help-shortcuts__keys code {
+  background: rgba(86, 212, 221, 0.10);
+  border: 1px solid var(--term-border);
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
 /* ─── Status badge ─────────────────────────────────────────────────────── */
 .state-badge {
   display: inline-flex;

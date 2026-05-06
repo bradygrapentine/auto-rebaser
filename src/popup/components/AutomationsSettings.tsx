@@ -19,7 +19,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'dismiss';
+type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'dismiss' | 'shortcuts';
 
 function Chevron({
   expanded,
@@ -142,6 +142,7 @@ export function AutomationsSettings() {
     autoMerge: true,
     autoResolve: true,
     dismiss: true,
+    shortcuts: true,
   });
 
   const toggle = (k: SubKey) =>
@@ -308,6 +309,25 @@ export function AutomationsSettings() {
             />
           </>
         )}
+      </div>
+
+      {/* 5.5 keyboard shortcuts */}
+      <div className="automation-block">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.shortcuts}
+            onClick={() => toggle('shortcuts')}
+            label="keyboard-shortcuts section"
+          />
+          <label className="toggle">
+            <span className="toggle__name">Enable keyboard shortcuts</span>
+            <input
+              type="checkbox"
+              checked={settings.enableKeyboardShortcuts}
+              onChange={(e) => save({ enableKeyboardShortcuts: e.target.checked })}
+            />
+          </label>
+        </div>
       </div>
     </section>
   );
