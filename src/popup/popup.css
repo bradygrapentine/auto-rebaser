@@ -321,6 +321,25 @@ code, .mono {
 }
 .muted { color: var(--term-fg-muted); }
 
+.empty-installations {
+  border: 1px dashed var(--term-border);
+  padding: 10px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.empty-installations p { margin: 0 0 8px 0; }
+.empty-installations__actions { display: flex; gap: 6px; }
+
+.repo-group__coverage-badge {
+  font-size: 10px;
+  color: #c79a3a;
+  border: 1px solid rgba(199, 154, 58, 0.45);
+  padding: 1px 4px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.repo-group__coverage-badge--suspended { color: #d24f4f; border-color: rgba(210, 79, 79, 0.45); }
+
 .migration-banner {
   border: 1px solid rgba(86, 212, 221, 0.45);
   background: rgba(86, 212, 221, 0.06);

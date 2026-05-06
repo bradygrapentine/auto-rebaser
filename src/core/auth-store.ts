@@ -9,11 +9,18 @@
 
 import { STORAGE_KEYS } from './constants';
 import type { TokenSet } from './auth-device-flow';
+import type { Installation } from '../github/endpoints/installations';
 
 export const AUTH_KEY = 'auth';
 
 export interface AuthGitHubApp extends TokenSet {
   method: 'github_app';
+  /**
+   * Story 4.5 — installations the user can access. Populated after sign-in,
+   * refreshed on demand. Optional so older stored auth values keep loading
+   * without migration.
+   */
+  installations?: Installation[];
 }
 
 export interface AuthPAT {
@@ -42,8 +49,27 @@ export async function getAuth(): Promise<Auth | null> {
 }
 
 export async function setAuthGitHubApp(tokenSet: TokenSet): Promise<void> {
-  const auth: AuthGitHubApp = { method: 'github_app', ...tokenSet };
+  // Preserve any previously-fetched installations across token rotations.
+  const prev = await getAuth();
+  const installations =
+    prev && prev.method === 'github_app' ? prev.installations : undefined;
+  const auth: AuthGitHubApp = {
+    method: 'github_app',
+    ...tokenSet,
+    ...(installations ? { installations } : {}),
+  };
   await chrome.storage.local.set({ [AUTH_KEY]: auth });
+}
+
+/**
+ * Story 4.5 — update only the installations list on the current github_app
+ * auth. No-op when the user is signed in via PAT or signed out.
+ */
+export async function setInstallations(installations: Installation[]): Promise<void> {
+  const prev = await getAuth();
+  if (!prev || prev.method !== 'github_app') return;
+  const next: AuthGitHubApp = { ...prev, installations };
+  await chrome.storage.local.set({ [AUTH_KEY]: next });
 }
 
 export async function setAuthPAT(token: string): Promise<void> {

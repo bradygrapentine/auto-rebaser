@@ -1,6 +1,8 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
 import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
 import { computeIdleDays, resolveThreshold } from '../core/staleness';
+import { getAuth } from '../core/auth-store';
+import { suspendedOwners } from '../core/installations-helpers';
 import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../core/pr-store';
 import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../core/automations-store';
 import { searchAuthoredPRs, getPR, updateBranch } from '../github/endpoints';
@@ -82,6 +84,19 @@ async function runPollCycleInner(): Promise<void> {
     console.warn('[poll-cycle] could not read automation settings; ignoring repo-ignore list', err);
   }
 
+  // Story 4.5 — owners whose GitHub App installation is suspended. PRs in
+  // these repos still display in the popup but DON'T get rebased / merged /
+  // branch-deleted until the org admin re-approves the install.
+  let suspendedOwnerSet = new Set<string>();
+  try {
+    const auth = await getAuth();
+    if (auth?.method === 'github_app') {
+      suspendedOwnerSet = suspendedOwners(auth.installations);
+    }
+  } catch (err) {
+    console.warn('[poll-cycle] could not read installations; treating all as active', err);
+  }
+
   // Step 2: search
   let searchResult;
   try {
@@ -141,7 +156,13 @@ async function runPollCycleInner(): Promise<void> {
       continue;
     }
 
-    const { action, nextState } = deriveStateFromMergeable(pr.mergeable_state, previousState);
+    // Story 4.5 — installation suspended → never write. We still fetch PR
+    // detail (so the popup can display state) but force the state machine
+    // into a no-op.
+    const ownerIsSuspended = suspendedOwnerSet.has(owner.toLowerCase());
+    const { action, nextState } = ownerIsSuspended
+      ? { action: 'noop' as const, nextState: previousState }
+      : deriveStateFromMergeable(pr.mergeable_state, previousState);
 
     let finalState: PRState = nextState;
     let errorMessage: string | undefined;
@@ -285,7 +306,13 @@ async function runPollCycleInner(): Promise<void> {
   await stampPollTime();
 
   // Step 4.5: phase-2 automations (best-effort; never blocks the next poll)
-  await runAutomationsPass(processedPRs, prDetails, updatedCount, rebaseActivityEntries);
+  // Story 4.5 — suspended-installation PRs display but never write. Filter
+  // them out before the orchestrator runs.
+  const automationCandidates = processedPRs.filter((pr) => {
+    const [owner] = pr.repo.split('/');
+    return !suspendedOwnerSet.has(owner.toLowerCase());
+  });
+  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries);
 
   // Step 5: badge
   setBadgeCount(updatedCount);

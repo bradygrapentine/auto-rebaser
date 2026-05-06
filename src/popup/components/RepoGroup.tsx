@@ -21,11 +21,13 @@ interface Props {
   pingStateFor?: (pr: PRRecord) => { canPing: boolean; pingedHoursAgo: number | null } | null;
   /** Story 5.1 — invoked when the user clicks the ping link. */
   onPing?: (pr: PRRecord) => void;
+  /** Story 4.5 — installation coverage for this repo (App auth only). */
+  coverage?: 'active' | 'suspended' | 'not-installed';
 }
 
 export function RepoGroup({
   group, expanded, onToggle, userLogin, focusedPRId,
-  showStaleBadges, pingStateFor, onPing,
+  showStaleBadges, pingStateFor, onPing, coverage,
 }: Props) {
   const [owner, ...rest] = group.repo.split('/');
   const displayName =
@@ -47,6 +49,24 @@ export function RepoGroup({
         <span className="repo-group__count">{group.prs.length}</span>
         {group.hasAttention && !expanded && (
           <span aria-label="needs attention" className="repo-group__attention-dot">●</span>
+        )}
+        {coverage === 'not-installed' && (
+          <span
+            className="repo-group__coverage-badge"
+            data-testid="coverage-not-installed"
+            title={`Auto Rebaser App not installed in ${group.repo.split('/')[0]}`}
+          >
+            App not installed
+          </span>
+        )}
+        {coverage === 'suspended' && (
+          <span
+            className="repo-group__coverage-badge repo-group__coverage-badge--suspended"
+            data-testid="coverage-suspended"
+            title="Installation suspended — re-approval required"
+          >
+            suspended
+          </span>
         )}
       </button>
       {expanded && (

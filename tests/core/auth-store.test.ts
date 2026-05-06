@@ -81,6 +81,8 @@ describe('auth-store', () => {
 
   describe('setAuthGitHubApp', () => {
     it('persists the github_app union shape to local', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({});
+      chrome.storage.sync.get = vi.fn().mockResolvedValue({});
       chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
       await setAuthGitHubApp({
         accessToken: 'gho',
@@ -96,6 +98,38 @@ describe('auth-store', () => {
           accessTokenExpiresAt: 100,
           refreshTokenExpiresAt: 200,
         },
+      });
+    });
+
+    it('preserves previously-fetched installations across token rotations', async () => {
+      const prevInstalls = [{
+        id: 1,
+        account: { login: 'octocat', type: 'User' as const },
+        repository_selection: 'all',
+        target_type: 'User',
+      }];
+      chrome.storage.local.get = vi.fn().mockResolvedValue({
+        [AUTH_KEY]: {
+          method: 'github_app',
+          accessToken: 'old',
+          refreshToken: 'old',
+          accessTokenExpiresAt: 0,
+          refreshTokenExpiresAt: 0,
+          installations: prevInstalls,
+        },
+      });
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      await setAuthGitHubApp({
+        accessToken: 'new',
+        refreshToken: 'new',
+        accessTokenExpiresAt: 100,
+        refreshTokenExpiresAt: 200,
+      });
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        [AUTH_KEY]: expect.objectContaining({
+          accessToken: 'new',
+          installations: prevInstalls,
+        }),
       });
     });
   });

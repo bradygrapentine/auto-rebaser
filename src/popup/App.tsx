@@ -84,6 +84,7 @@ export function App() {
         <PRListView
           user={auth.user}
           authMethod={auth.method}
+          installations={auth.installations}
           onSettings={() => setView('settings')}
           onSignOut={auth.signOut}
           onHelp={() => setView('help')}
