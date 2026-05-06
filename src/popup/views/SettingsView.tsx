@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { AutomationsSettings } from '../components/AutomationsSettings';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { validateHost } from '../../core/host-config';
 import type { IntervalMinutes } from '../../core/types';
 
 interface Props {
@@ -24,8 +26,32 @@ const INTERVALS: Array<{ value: IntervalMinutes; label: string }> = [
   { value: 240, label: '4h'  },
 ];
 
+async function requestHostPermission(host: string): Promise<boolean> {
+  // chrome.permissions may be missing in tests / Firefox edge cases.
+  if (typeof chrome === 'undefined' || !chrome.permissions?.request) return true;
+  return new Promise<boolean>((resolve) => {
+    chrome.permissions.request(
+      { origins: [`https://${host}/*`] },
+      (granted) => resolve(Boolean(granted)),
+    );
+  });
+}
+
+async function removeHostPermission(host: string): Promise<void> {
+  if (typeof chrome === 'undefined' || !chrome.permissions?.remove) return;
+  await new Promise<void>((resolve) => {
+    chrome.permissions.remove(
+      { origins: [`https://${host}/*`] },
+      () => resolve(),
+    );
+  });
+}
+
 export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
   const { settings, saveSettings } = useSettings();
+  const [hostDraft, setHostDraft] = useState<string>(settings.enterpriseHost ?? '');
+  const [clientIdDraft, setClientIdDraft] = useState<string>(settings.enterpriseClientId ?? '');
+  const [hostError, setHostError] = useState<string | null>(null);
   const { settings: automation } = useAutomationSettings();
   useKeyboardShortcuts({
     enabled: automation.enableKeyboardShortcuts,
@@ -38,6 +64,29 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
   };
 
   const otherMethodLabel = authMethod === 'github_app' ? 'PAT' : 'GitHub App';
+
+  const applyEnterpriseHost = async () => {
+    const trimmed = hostDraft.trim();
+    const err = validateHost(trimmed);
+    if (err) { setHostError(err); return; }
+    setHostError(null);
+    if (trimmed) {
+      const ok = await requestHostPermission(trimmed);
+      if (!ok) {
+        setHostError('host permission denied — setting reverted');
+        setHostDraft(settings.enterpriseHost ?? '');
+        return;
+      }
+    } else if (settings.enterpriseHost) {
+      // Returning to cloud — drop the optional permission we requested earlier.
+      await removeHostPermission(settings.enterpriseHost);
+    }
+    await saveSettings({
+      ...settings,
+      enterpriseHost: trimmed || undefined,
+      enterpriseClientId: trimmed ? (clientIdDraft.trim() || undefined) : undefined,
+    });
+  };
 
   return (
     <div className="popup-root">
@@ -85,6 +134,54 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
             )}
           </section>
         )}
+
+        <section className="settings-group" data-testid="enterprise-section">
+          <h2 className="settings__heading">enterprise</h2>
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
+            <input
+              id="ghes-host"
+              type="text"
+              className="input"
+              placeholder="github.acme.corp (blank = github.com)"
+              value={hostDraft}
+              onChange={(e) => setHostDraft(e.target.value)}
+              data-testid="enterprise-host-input"
+            />
+            {hostDraft.trim() && (
+              <>
+                <label htmlFor="ghes-client-id" className="settings-row__label" style={{ marginTop: 6 }}>
+                  github_app_client_id
+                </label>
+                <input
+                  id="ghes-client-id"
+                  type="text"
+                  className="input"
+                  placeholder="Iv23li…"
+                  value={clientIdDraft}
+                  onChange={(e) => setClientIdDraft(e.target.value)}
+                  data-testid="enterprise-client-id-input"
+                />
+              </>
+            )}
+            {hostError && (
+              <p role="alert" className="ping-confirm__error" data-testid="enterprise-host-error">{hostError}</p>
+            )}
+            <div style={{ marginTop: 6 }}>
+              <button
+                type="button"
+                className="btn"
+                onClick={applyEnterpriseHost}
+                data-testid="enterprise-apply"
+              >
+                apply
+              </button>
+              <span className="muted" style={{ fontSize: 10, marginLeft: 8 }}>
+                Switching hosts requires sign-out + sign-in.
+              </span>
+            </div>
+          </div>
+        </section>
 
         <AutomationsSettings authMethod={authMethod} />
       </div>

@@ -9,10 +9,7 @@
 // `userCode` and `verificationUri`. Both Chrome and Firefox use the same
 // code path.
 
-import { GITHUB_APP_CLIENT_ID, GITHUB_DEVICE_FLOW_BASE } from './auth-constants';
-
-const DEVICE_CODE_URL = `${GITHUB_DEVICE_FLOW_BASE}/login/device/code`;
-const ACCESS_TOKEN_URL = `${GITHUB_DEVICE_FLOW_BASE}/login/oauth/access_token`;
+import { getOAuthClientId, getOriginBase } from './host-config';
 
 const DEVICE_FLOW_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
 
@@ -55,13 +52,18 @@ export class DeviceFlowAbort extends Error {
 }
 
 export async function startDeviceFlow(now: number = Date.now()): Promise<DeviceFlowStart> {
-  const res = await fetch(DEVICE_CODE_URL, {
+  const origin = await getOriginBase();
+  const clientId = await getOAuthClientId();
+  if (!clientId) {
+    throw new Error('MISSING_CLIENT_ID');
+  }
+  const res = await fetch(`${origin}/login/device/code`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
     },
-    body: new URLSearchParams({ client_id: GITHUB_APP_CLIENT_ID }).toString(),
+    body: new URLSearchParams({ client_id: clientId }).toString(),
   });
   if (!res.ok) {
     throw new Error(`HTTP_${res.status}`);
@@ -109,14 +111,14 @@ export async function pollDeviceFlow(
 
     await sleep(intervalMs);
 
-    const res = await fetch(ACCESS_TOKEN_URL, {
+    const res = await fetch(`${await getOriginBase()}/login/oauth/access_token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
       },
       body: new URLSearchParams({
-        client_id: GITHUB_APP_CLIENT_ID,
+        client_id: await getOAuthClientId(),
         device_code: start.deviceCode,
         grant_type: DEVICE_FLOW_GRANT_TYPE,
       }).toString(),

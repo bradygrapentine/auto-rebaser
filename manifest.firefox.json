@@ -14,6 +14,9 @@
     "https://api.github.com/*",
     "https://github.com/*"
   ],
+  "optional_permissions": [
+    "https://*/*"
+  ],
   "background": {
     "scripts": ["service-worker.js"],
     "type": "module"

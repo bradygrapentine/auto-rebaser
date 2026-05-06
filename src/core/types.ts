@@ -57,6 +57,16 @@ export type IntervalMinutes = 1 | 2 | 5 | 10 | 15 | 30 | 60 | 120 | 240;
 
 export interface Settings {
   intervalMinutes: IntervalMinutes;
+  /**
+   * Story 4.6 — GitHub Enterprise Server hostname (e.g. "github.acme.corp").
+   * Empty / undefined targets github.com. No protocol, no path.
+   */
+  enterpriseHost?: string;
+  /**
+   * Story 4.6 — GHES has its own GitHub App registry, so the cloud client_id
+   * doesn't apply. Required when `enterpriseHost` is set.
+   */
+  enterpriseClientId?: string;
 }
 
 // GitHub API response types — keep here so non-github modules don't need to import from src/github/.

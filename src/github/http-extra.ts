@@ -1,5 +1,6 @@
-import { getToken, clearToken } from '../core/auth-store';
-import { GITHUB_API_BASE } from '../core/constants';
+import { clearToken } from '../core/auth-store';
+import { ensureFreshToken } from '../core/auth-refresh';
+import { getApiBase } from '../core/host-config';
 
 // Companion to http.ts for endpoints with empty bodies (204 No Content, 205 Reset
 // Content) where calling response.json() would throw. At v1 merge time this can
@@ -9,10 +10,10 @@ export async function requestNoBody(
   path: string,
   options: RequestInit = {}
 ): Promise<number> {
-  const token = await getToken();
+  const token = await ensureFreshToken();
   if (!token) throw new Error('NOT_AUTHENTICATED');
 
-  const url = GITHUB_API_BASE + path;
+  const url = (await getApiBase()) + path;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github+json',

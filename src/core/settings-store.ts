@@ -9,3 +9,8 @@ export async function loadSettings(): Promise<Settings> {
 export async function saveSettings(settings: Settings): Promise<void> {
   await chrome.storage.sync.set({ [STORAGE_KEYS.settings]: settings });
 }
+
+/** Story 4.6 alias — read-only accessor used by host-config.ts. */
+export async function getSettings(): Promise<Settings> {
+  return loadSettings();
+}
