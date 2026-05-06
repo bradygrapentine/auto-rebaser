@@ -1,4 +1,5 @@
-import { getToken, clearToken } from '../core/auth-store';
+import { clearToken } from '../core/auth-store';
+import { ensureFreshToken, forceRefresh } from '../core/auth-refresh';
 import { getEntry, setEntry } from '../core/etag-cache';
 import { GITHUB_API_BASE } from '../core/constants';
 
@@ -9,7 +10,7 @@ export interface RequestOptions extends RequestInit {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   if (!path.startsWith('/')) throw new Error('INVALID_PATH');
 
-  const token = await getToken();
+  const token = await ensureFreshToken();
   if (!token) throw new Error('NOT_AUTHENTICATED');
 
   const { useETag, ...fetchOptions } = options;
@@ -21,7 +22,6 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     'X-GitHub-Api-Version': '2022-11-28',
   };
 
-  // Merge user-provided headers
   const userHeaders = fetchOptions.headers
     ? (fetchOptions.headers as Record<string, string>)
     : {};
@@ -35,8 +35,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
   }
 
-  const headers = { ...baseHeaders, ...userHeaders };
-  const response = await fetch(url, { ...fetchOptions, headers });
+  let response = await fetch(url, { ...fetchOptions, headers: { ...baseHeaders, ...userHeaders } });
+
+  // Story 4.3 — reactive refresh path: a 401 on a github_app token means the
+  // server invalidated it earlier than expected. Force a refresh and retry
+  // once. PAT 401 falls through to the existing clear-and-throw path.
+  if (response.status === 401) {
+    const refreshed = await forceRefresh().catch(() => null);
+    if (refreshed) {
+      const retryHeaders = { ...baseHeaders, Authorization: `Bearer ${refreshed}`, ...userHeaders };
+      response = await fetch(url, { ...fetchOptions, headers: retryHeaders });
+    }
+  }
 
   const { status } = response;
 

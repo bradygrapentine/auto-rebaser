@@ -14,7 +14,7 @@ import {
   type DeviceFlowStart,
   type TokenSet,
 } from '../core/auth-device-flow';
-import { setToken } from '../core/auth-store';
+import { setAuthGitHubApp } from '../core/auth-store';
 
 export type DeviceFlowStatus =
   | { state: 'idle' }
@@ -49,7 +49,7 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
   void pollDeviceFlow(start, { signal: abort.signal })
     .then(async (tokenSet) => {
       state.lastTokenSet = tokenSet;
-      await setToken(tokenSet.accessToken);
+      await setAuthGitHubApp(tokenSet);
       state.status = { state: 'success' };
     })
     .catch((err) => {

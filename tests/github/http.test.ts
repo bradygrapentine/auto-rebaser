@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { request } from '../../src/github/http';
 import * as authStore from '../../src/core/auth-store';
+import * as authRefresh from '../../src/core/auth-refresh';
 import * as etagCache from '../../src/core/etag-cache';
 import { GITHUB_API_BASE } from '../../src/core/constants';
 
@@ -15,7 +16,8 @@ function mockFetch(status: number, body: unknown, headers: Record<string, string
 }
 
 beforeEach(() => {
-  vi.spyOn(authStore, 'getToken');
+  vi.spyOn(authRefresh, 'ensureFreshToken');
+  vi.spyOn(authRefresh, 'forceRefresh').mockResolvedValue(null);
   vi.spyOn(authStore, 'clearToken').mockResolvedValue(undefined);
   vi.spyOn(etagCache, 'getEntry');
   vi.spyOn(etagCache, 'setEntry').mockResolvedValue(undefined);
@@ -28,12 +30,12 @@ describe('http.request', () => {
   });
 
   it('throws NOT_AUTHENTICATED when no token', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue(null);
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue(null);
     await expect(request('/user')).rejects.toThrow('NOT_AUTHENTICATED');
   });
 
   it('sends Authorization header', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok123');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok123');
     global.fetch = mockFetch(200, { login: 'me' });
 
     await request('/user');
@@ -44,7 +46,7 @@ describe('http.request', () => {
   });
 
   it('304 with useETag returns cached data', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     vi.mocked(etagCache.getEntry).mockResolvedValue({ etag: '"abc"', data: { cached: true } });
     global.fetch = mockFetch(304, null);
 
@@ -53,7 +55,7 @@ describe('http.request', () => {
   });
 
   it('304 with useETag sends If-None-Match header', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     vi.mocked(etagCache.getEntry).mockResolvedValue({ etag: '"etag-val"', data: {} });
     global.fetch = mockFetch(304, null);
 
@@ -64,7 +66,7 @@ describe('http.request', () => {
   });
 
   it('200 with etag stores new entry', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     vi.mocked(etagCache.getEntry).mockResolvedValue(null);
     global.fetch = mockFetch(200, { items: [] }, { etag: '"new-etag"' });
 
@@ -76,7 +78,7 @@ describe('http.request', () => {
   });
 
   it('401 → throws AUTH_ERROR and calls clearToken', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(401, { message: 'Bad credentials' });
 
     await expect(request('/user')).rejects.toThrow('AUTH_ERROR');
@@ -84,28 +86,28 @@ describe('http.request', () => {
   });
 
   it('403 → throws AUTH_ERROR', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(403, { message: 'Forbidden' });
 
     await expect(request('/user')).rejects.toThrow('AUTH_ERROR');
   });
 
   it('429 → throws RATE_LIMITED', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(429, {});
 
     await expect(request('/user')).rejects.toThrow('RATE_LIMITED');
   });
 
   it('500 → throws HTTP_500', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(500, { message: 'Server Error' });
 
     await expect(request('/user')).rejects.toThrow('HTTP_500');
   });
 
   it('merges user-provided headers', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(200, {});
 
     await request('/repos/a/b/pulls/1/update-branch', {
@@ -119,7 +121,7 @@ describe('http.request', () => {
   });
 
   it('does not call etag-cache when useETag is false/absent', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(200, {});
 
     await request('/user');
@@ -128,7 +130,7 @@ describe('http.request', () => {
   });
 
   it('sends standard Accept and X-GitHub-Api-Version headers', async () => {
-    vi.mocked(authStore.getToken).mockResolvedValue('tok');
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(200, {});
 
     await request('/user');

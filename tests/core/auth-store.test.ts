@@ -1,29 +1,137 @@
-import { describe, it, expect, vi } from 'vitest';
-import { getToken, setToken, clearToken } from '../../src/core/auth-store';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  getAuth,
+  getToken,
+  setToken,
+  setAuthGitHubApp,
+  setAuthPAT,
+  clearAuth,
+  clearToken,
+  AUTH_KEY,
+  type AuthGitHubApp,
+} from '../../src/core/auth-store';
 import { STORAGE_KEYS } from '../../src/core/constants';
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('auth-store', () => {
-  it('getToken returns null when key missing', async () => {
-    chrome.storage.sync.get = vi.fn().mockResolvedValue({});
-    const result = await getToken();
-    expect(result).toBeNull();
+  describe('getAuth', () => {
+    it('returns null when nothing stored anywhere', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({});
+      chrome.storage.sync.get = vi.fn().mockResolvedValue({});
+      expect(await getAuth()).toBeNull();
+    });
+
+    it('returns the new tagged-union shape from local', async () => {
+      const auth: AuthGitHubApp = {
+        method: 'github_app',
+        accessToken: 'gho_x',
+        refreshToken: 'ghr_x',
+        accessTokenExpiresAt: 100,
+        refreshTokenExpiresAt: 200,
+      };
+      chrome.storage.local.get = vi.fn().mockResolvedValue({ [AUTH_KEY]: auth });
+      expect(await getAuth()).toEqual(auth);
+    });
+
+    it('migrates legacy sync.github_token to local PAT auth on first read', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({});
+      chrome.storage.sync.get = vi.fn().mockResolvedValue({ [STORAGE_KEYS.token]: 'ghp_legacy' });
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
+
+      const result = await getAuth();
+      expect(result).toEqual({ method: 'pat', token: 'ghp_legacy' });
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        [AUTH_KEY]: { method: 'pat', token: 'ghp_legacy' },
+      });
+      expect(chrome.storage.sync.remove).toHaveBeenCalledWith(STORAGE_KEYS.token);
+    });
   });
 
-  it('getToken returns stored token', async () => {
-    chrome.storage.sync.get = vi.fn().mockResolvedValue({ [STORAGE_KEYS.token]: 'my-token' });
-    const result = await getToken();
-    expect(result).toBe('my-token');
+  describe('getToken (back-compat)', () => {
+    it('returns null when signed out', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({});
+      chrome.storage.sync.get = vi.fn().mockResolvedValue({});
+      expect(await getToken()).toBeNull();
+    });
+
+    it('returns access token for github_app auth', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({
+        [AUTH_KEY]: {
+          method: 'github_app',
+          accessToken: 'gho_app',
+          refreshToken: 'ghr_x',
+          accessTokenExpiresAt: 0,
+          refreshTokenExpiresAt: 0,
+        },
+      });
+      expect(await getToken()).toBe('gho_app');
+    });
+
+    it('returns token for pat auth', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({
+        [AUTH_KEY]: { method: 'pat', token: 'ghp_pat' },
+      });
+      expect(await getToken()).toBe('ghp_pat');
+    });
   });
 
-  it('setToken writes correct key', async () => {
-    chrome.storage.sync.set = vi.fn().mockResolvedValue(undefined);
-    await setToken('abc123');
-    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ [STORAGE_KEYS.token]: 'abc123' });
+  describe('setAuthGitHubApp', () => {
+    it('persists the github_app union shape to local', async () => {
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      await setAuthGitHubApp({
+        accessToken: 'gho',
+        refreshToken: 'ghr',
+        accessTokenExpiresAt: 100,
+        refreshTokenExpiresAt: 200,
+      });
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        [AUTH_KEY]: {
+          method: 'github_app',
+          accessToken: 'gho',
+          refreshToken: 'ghr',
+          accessTokenExpiresAt: 100,
+          refreshTokenExpiresAt: 200,
+        },
+      });
+    });
   });
 
-  it('clearToken calls remove with correct key', async () => {
-    chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
-    await clearToken();
-    expect(chrome.storage.sync.remove).toHaveBeenCalledWith(STORAGE_KEYS.token);
+  describe('setAuthPAT / setToken', () => {
+    it('setAuthPAT writes the pat shape to local', async () => {
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      await setAuthPAT('ghp_pat');
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        [AUTH_KEY]: { method: 'pat', token: 'ghp_pat' },
+      });
+    });
+
+    it('setToken is an alias for setAuthPAT', async () => {
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      await setToken('ghp_pat');
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        [AUTH_KEY]: { method: 'pat', token: 'ghp_pat' },
+      });
+    });
+  });
+
+  describe('clearAuth / clearToken', () => {
+    it('removes the local auth key AND the legacy sync key', async () => {
+      chrome.storage.local.remove = vi.fn().mockResolvedValue(undefined);
+      chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
+      await clearAuth();
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(AUTH_KEY);
+      expect(chrome.storage.sync.remove).toHaveBeenCalledWith(STORAGE_KEYS.token);
+    });
+
+    it('clearToken is an alias for clearAuth', async () => {
+      chrome.storage.local.remove = vi.fn().mockResolvedValue(undefined);
+      chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
+      await clearToken();
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(AUTH_KEY);
+    });
   });
 });
