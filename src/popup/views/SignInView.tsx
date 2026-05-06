@@ -68,16 +68,8 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
     }
   };
 
-  /**
-   * Copy the user code, then open the verification page in a new tab.
-   * The popup may close on the tab navigation; the on-mount resume logic
-   * picks up where the user left off when they reopen the popup.
-   */
   const openVerificationTab = () => {
     if (!deviceStart) return;
-    if (navigator.clipboard?.writeText) {
-      void navigator.clipboard.writeText(deviceStart.userCode);
-    }
     chrome.tabs.create({ url: deviceStart.verificationUri });
   };
 
@@ -124,9 +116,32 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
     };
   }, [view, deviceStart, onDeviceFlowSuccess]);
 
+  const [copied, setCopied] = useState(false);
+
   const copyCode = () => {
-    if (deviceStart?.userCode) {
+    if (!deviceStart?.userCode) return;
+    // navigator.clipboard.writeText is unreliable in extension popups when the
+    // popup is about to lose focus (e.g. opening a new tab). Fall through to
+    // the synchronous execCommand path so the code lands on the clipboard
+    // before any focus shift.
+    let ok = false;
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = deviceStart.userCode;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch { /* fall through */ }
+    if (!ok && navigator.clipboard?.writeText) {
       void navigator.clipboard.writeText(deviceStart.userCode);
+      ok = true;
+    }
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     }
   };
 
@@ -141,20 +156,22 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
             <p>Enter this code at github.com/login/device:</p>
             <div className="device-code" data-testid="device-code">
               <code>{deviceStart.userCode}</code>
-              <button type="button" className="btn" onClick={copyCode}>copy</button>
+              <button type="button" className="btn" onClick={copyCode}>
+                {copied ? 'copied' : 'copy'}
+              </button>
             </div>
             <button
               type="button"
-              className="btn btn--primary btn--block"
+              className="btn btn--block"
               onClick={openVerificationTab}
               data-testid="open-verification-tab"
             >
-              copy code & open verification page
+              open verification page
             </button>
             <p className="help">
-              The popup will close when the tab opens — click the extension
-              icon again to come back here. Polling continues in the
-              background; once you authorize, we sign you in automatically.
+              The popup closes when the tab opens — click the extension icon
+              again to come back here. Polling continues in the background;
+              once you authorize, we sign you in automatically.
             </p>
           </>
         )}
