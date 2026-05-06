@@ -21,6 +21,7 @@ export type ActivityEntry = {
   mergeMethod?: 'SQUASH' | 'MERGE' | 'REBASE'; // for auto_merge_enabled
   threadId?: string;                          // for thread_resolved
   reviewers?: string[];                       // for reviewer_pinged (Track 2C)
+  prUrl?: string;                             // absolute URL to the PR; entry row links to this
 };
 
 export type ActivityStore = { entries: ActivityEntry[] };

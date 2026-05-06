@@ -48,6 +48,7 @@ export function PingConfirmView({ pr, template, onCancel, onSuccess }: Props) {
         repo: pr.repo,
         prNumber: pr.number,
         prTitle: pr.title,
+        prUrl: pr.url,
         result: 'success',
         ...(reviewers.length > 0 ? { reviewers } : {}),
       }]);
@@ -61,6 +62,7 @@ export function PingConfirmView({ pr, template, onCancel, onSuccess }: Props) {
         repo: pr.repo,
         prNumber: pr.number,
         prTitle: pr.title,
+        prUrl: pr.url,
         result: 'failed',
         errorMessage: message,
         ...(reviewers.length > 0 ? { reviewers } : {}),

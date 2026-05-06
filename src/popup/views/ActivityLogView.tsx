@@ -158,25 +158,35 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
         )}
 
         <ul className="activity-list" data-testid="activity-list">
-          {filtered.map((e, i) => (
-            <li
-              key={`${e.at}-${i}`}
-              className={`activity-entry activity-entry--${e.result}`}
-              data-action={e.action}
-              data-repo={e.repo}
-            >
-              <span className="activity-entry__time">{formatTime(e.at)}</span>
-              <span className="activity-entry__repo">{e.repo}</span>
-              <span className="activity-entry__action">
-                {e.action}
-                {e.result === 'failed' ? <> · failed</> : null}
-                {entryDetails(e) ? <> · {entryDetails(e)}</> : <> · #{e.prNumber}</>}
-              </span>
-              {e.errorMessage && (
-                <span className="activity-entry__error">"{e.errorMessage}"</span>
-              )}
-            </li>
-          ))}
+          {filtered.map((e, i) => {
+            const href = e.prUrl ?? `https://github.com/${e.repo}/pull/${e.prNumber}`;
+            return (
+              <li
+                key={`${e.at}-${i}`}
+                className={`activity-entry activity-entry--${e.result}`}
+                data-action={e.action}
+                data-repo={e.repo}
+              >
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="activity-entry__link"
+                >
+                  <span className="activity-entry__time">{formatTime(e.at)}</span>
+                  <span className="activity-entry__repo">{e.repo}</span>
+                  <span className="activity-entry__action">
+                    {e.action}
+                    {e.result === 'failed' ? <> · failed</> : null}
+                    {entryDetails(e) ? <> · {entryDetails(e)}</> : <> · #{e.prNumber}</>}
+                  </span>
+                  {e.errorMessage && (
+                    <span className="activity-entry__error">"{e.errorMessage}"</span>
+                  )}
+                </a>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

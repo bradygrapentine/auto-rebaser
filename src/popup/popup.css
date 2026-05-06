@@ -899,16 +899,22 @@ code, .mono {
   gap: 4px;
 }
 .activity-entry {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 8px;
-  row-gap: 2px;
-  padding: 6px 8px;
   border-left: 2px solid var(--term-border);
   background: var(--term-bg-alt);
   font-size: 12px;
   line-height: 1.35;
 }
+.activity-entry__link {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 6px 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.activity-entry__link:hover { background: var(--term-bg); }
+.activity-entry__link:hover .activity-entry__action { text-decoration: underline; }
 .activity-entry--success { border-left-color: var(--term-green); }
 .activity-entry--failed  { border-left-color: var(--term-red); }
 .activity-entry--skipped { border-left-color: var(--term-fg-muted); }

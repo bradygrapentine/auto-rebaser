@@ -197,6 +197,7 @@ async function runPollCycleInner(): Promise<void> {
           repo: fullName,
           prNumber: item.number,
           prTitle: item.title,
+          prUrl: item.html_url,
           result: 'success',
         });
       } catch (err) {
@@ -215,6 +216,7 @@ async function runPollCycleInner(): Promise<void> {
           repo: fullName,
           prNumber: item.number,
           prTitle: item.title,
+          prUrl: item.html_url,
           result: 'failed',
           errorMessage: mapped.errorMessage,
         });
@@ -441,6 +443,7 @@ async function runAutomationsPass(
           repo: pr.repo,
           prNumber: pr.number,
           prTitle: pr.title,
+          prUrl: pr.url,
           result: 'success',
           ...(extended.headRef ? { branchRef: extended.headRef } : {}),
         });
@@ -454,6 +457,7 @@ async function runAutomationsPass(
           repo: pr.repo,
           prNumber: pr.number,
           prTitle: pr.title,
+          prUrl: pr.url,
           result: 'success',
           ...(chosen ? { mergeMethod: chosen } : {}),
         });
@@ -472,6 +476,7 @@ async function runAutomationsPass(
         repo: t.repo,
         prNumber: t.prNumber,
         prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
         result: 'success',
         threadId: t.threadId,
       });
@@ -484,6 +489,7 @@ async function runAutomationsPass(
         repo: t.repo,
         prNumber: t.prNumber,
         prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
         result: 'failed',
         threadId: t.threadId,
         errorMessage: t.error,
@@ -499,6 +505,7 @@ async function runAutomationsPass(
         repo: d.repo,
         prNumber: d.prNumber,
         prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
         result: 'success',
         threadId: d.threadId,
       });
@@ -511,6 +518,7 @@ async function runAutomationsPass(
         repo: d.repo,
         prNumber: d.prNumber,
         prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
         result: 'failed',
         threadId: d.threadId,
         errorMessage: d.error,
