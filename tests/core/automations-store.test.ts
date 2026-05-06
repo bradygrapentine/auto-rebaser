@@ -23,16 +23,18 @@ describe('automations-store', () => {
 
   it('merges stored partial with defaults (forward-compat: new fields filled by defaults)', async () => {
     // Simulate an old stored object missing newer fields
-    const partial = { autoDeleteMergedBranch: false, autoMergeMethod: 'MERGE' };
+    const partial = { autoDeleteMergedBranch: false };
     chrome.storage.sync.get = vi
       .fn()
       .mockResolvedValue({ [AUTOMATION_STORAGE_KEYS.settings]: partial });
     const result = await getAutomationSettings();
     // Stored values win for present fields
     expect(result.autoDeleteMergedBranch).toBe(false);
-    expect(result.autoMergeMethod).toBe('MERGE');
     // Default fills missing fields
     expect(result.autoEnableAutoMerge).toBe(DEFAULT_AUTOMATION_SETTINGS.autoEnableAutoMerge);
+    expect(result.mergeMethodPreference).toEqual(
+      DEFAULT_AUTOMATION_SETTINGS.mergeMethodPreference,
+    );
     expect(result.autoResolveOutdatedThreads).toBe(
       DEFAULT_AUTOMATION_SETTINGS.autoResolveOutdatedThreads,
     );
@@ -41,13 +43,58 @@ describe('automations-store', () => {
     );
   });
 
+  // Story 5.4 migration tests
+  it('migrates legacy autoMergeMethod=REBASE → mergeMethodPreference [REBASE, SQUASH, MERGE]', async () => {
+    const legacy = {
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoMergeMethod: 'REBASE' as const,
+    };
+    // Strip the new field to simulate pre-5.4 storage
+    delete (legacy as Partial<AutomationSettings>).mergeMethodPreference;
+    chrome.storage.sync.get = vi
+      .fn()
+      .mockResolvedValue({ [AUTOMATION_STORAGE_KEYS.settings]: legacy });
+    const result = await getAutomationSettings();
+    expect(result.mergeMethodPreference).toEqual(['REBASE', 'SQUASH', 'MERGE']);
+    // Legacy field is dropped from the returned shape.
+    expect((result as Partial<AutomationSettings> & { autoMergeMethod?: string }).autoMergeMethod).toBeUndefined();
+  });
+
+  it('migrates legacy autoMergeMethod=MERGE preserves user choice as first slot', async () => {
+    const legacy = {
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoMergeMethod: 'MERGE' as const,
+    };
+    delete (legacy as Partial<AutomationSettings>).mergeMethodPreference;
+    chrome.storage.sync.get = vi
+      .fn()
+      .mockResolvedValue({ [AUTOMATION_STORAGE_KEYS.settings]: legacy });
+    const result = await getAutomationSettings();
+    expect(result.mergeMethodPreference[0]).toBe('MERGE');
+    expect(result.mergeMethodPreference).toHaveLength(3);
+  });
+
+  it('does NOT migrate when mergeMethodPreference already present', async () => {
+    const stored = {
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      mergeMethodPreference: ['MERGE'] as Array<'SQUASH' | 'MERGE' | 'REBASE'>,
+      // Stale legacy field shouldn't override the new one.
+      autoMergeMethod: 'REBASE' as const,
+    };
+    chrome.storage.sync.get = vi
+      .fn()
+      .mockResolvedValue({ [AUTOMATION_STORAGE_KEYS.settings]: stored });
+    const result = await getAutomationSettings();
+    expect(result.mergeMethodPreference).toEqual(['MERGE']);
+  });
+
   it('returns stored values for fields that are present', async () => {
     const stored: AutomationSettings = {
       ignoredRepos: ['org/repo-ignored'],
       autoDeleteMergedBranch: false,
       autoDeleteOptOutRepos: ['org/repo-a'],
       autoEnableAutoMerge: true,
-      autoMergeMethod: 'REBASE',
+      mergeMethodPreference: ['REBASE', 'SQUASH', 'MERGE'],
       autoMergeOptOutRepos: ['org/repo-b'],
       autoResolveOutdatedThreads: true,
       autoResolveOptOutRepos: [],

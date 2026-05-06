@@ -32,13 +32,13 @@ describe('useAutomationSettings', () => {
     const stored = {
       ...DEFAULT_AUTOMATION_SETTINGS,
       autoEnableAutoMerge: true,
-      autoMergeMethod: 'REBASE' as const,
+      mergeMethodPreference: ['REBASE', 'SQUASH', 'MERGE'] as Array<'REBASE' | 'SQUASH' | 'MERGE'>,
     };
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(stored);
     const { result } = renderHook(() => useAutomationSettings());
     await act(async () => {});
     expect(result.current.settings.autoEnableAutoMerge).toBe(true);
-    expect(result.current.settings.autoMergeMethod).toBe('REBASE');
+    expect(result.current.settings.mergeMethodPreference).toEqual(['REBASE', 'SQUASH', 'MERGE']);
     expect(result.current.loading).toBe(false);
   });
 

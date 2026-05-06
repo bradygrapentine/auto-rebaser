@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   runEnableAutoMerge,
+  resolveMergeMethod,
   type EligiblePR,
   type EnableAutoMergeSettings,
   type EnableAutoMergeDeps,
@@ -8,9 +9,11 @@ import {
 
 const onSettings: EnableAutoMergeSettings = {
   enabled: true,
-  mergeMethod: 'SQUASH',
+  mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
   optOutRepos: [],
 };
+
+const allAllowed = { squash: true, merge: true, rebase: true };
 
 function makeDeps(
   overrides: Partial<EnableAutoMergeDeps> = {}
@@ -29,6 +32,7 @@ const pr = (over: Partial<EligiblePR> = {}): EligiblePR => ({
   mergeableState: 'clean',
   autoMergeEnabled: false,
   unsupported: false,
+  allowedMethods: allAllowed,
   ...over,
 });
 
@@ -37,7 +41,7 @@ describe('runEnableAutoMerge', () => {
     const deps = makeDeps();
     const r = await runEnableAutoMerge([pr()], onSettings, deps);
     expect(r.enabled).toBe(1);
-    expect(r.enabledPRs).toEqual([1]);
+    expect(r.enabledPRs).toEqual([{ prId: 1, method: 'SQUASH' }]);
     expect(deps.enable).toHaveBeenCalledWith('PR_1', 'SQUASH');
   });
 
@@ -90,12 +94,72 @@ describe('runEnableAutoMerge', () => {
     });
     const r = await runEnableAutoMerge([pr({ id: 1 }), pr({ id: 2 })], onSettings, deps);
     expect(r.failed).toEqual([{ prId: 1, error: 'RATE_LIMITED' }]);
-    expect(r.enabledPRs).toEqual([2]);
+    expect(r.enabledPRs).toEqual([{ prId: 2, method: 'SQUASH' }]);
   });
 
-  it('passes configured merge method', async () => {
+  it('uses first preference that the repo allows', async () => {
     const deps = makeDeps();
-    await runEnableAutoMerge([pr()], { ...onSettings, mergeMethod: 'REBASE' }, deps);
+    const onlyRebase = { squash: false, merge: false, rebase: true };
+    await runEnableAutoMerge(
+      [pr({ allowedMethods: onlyRebase })],
+      { ...onSettings, mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'] },
+      deps,
+    );
     expect(deps.enable).toHaveBeenCalledWith('PR_1', 'REBASE');
+  });
+
+  it('respects user preference order over default', async () => {
+    const deps = makeDeps();
+    await runEnableAutoMerge(
+      [pr()],
+      { ...onSettings, mergeMethodPreference: ['MERGE', 'SQUASH', 'REBASE'] },
+      deps,
+    );
+    expect(deps.enable).toHaveBeenCalledWith('PR_1', 'MERGE');
+  });
+
+  it('records noAllowedMethodPRs when no preferred method is allowed', async () => {
+    const deps = makeDeps();
+    const onlySquash = { squash: true, merge: false, rebase: false };
+    const r = await runEnableAutoMerge(
+      [pr({ id: 7, allowedMethods: onlySquash })],
+      { ...onSettings, mergeMethodPreference: ['REBASE', 'MERGE'] },
+      deps,
+    );
+    expect(r.noAllowedMethodPRs).toEqual([7]);
+    expect(r.enabled).toBe(0);
+    expect(deps.enable).not.toHaveBeenCalled();
+  });
+
+  it('empty preference list = no auto-merge for any PR', async () => {
+    const deps = makeDeps();
+    const r = await runEnableAutoMerge(
+      [pr({ id: 1 }), pr({ id: 2 })],
+      { ...onSettings, mergeMethodPreference: [] },
+      deps,
+    );
+    expect(r.noAllowedMethodPRs).toEqual([1, 2]);
+    expect(deps.enable).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveMergeMethod', () => {
+  it('returns first preference that the repo allows', () => {
+    expect(
+      resolveMergeMethod(['SQUASH', 'REBASE', 'MERGE'], { squash: true, merge: true, rebase: true }),
+    ).toBe('SQUASH');
+  });
+  it('skips disallowed methods until it finds an allowed one', () => {
+    expect(
+      resolveMergeMethod(['SQUASH', 'REBASE', 'MERGE'], { squash: false, merge: true, rebase: false }),
+    ).toBe('MERGE');
+  });
+  it('returns null when no preference matches', () => {
+    expect(
+      resolveMergeMethod(['SQUASH'], { squash: false, merge: true, rebase: true }),
+    ).toBeNull();
+  });
+  it('returns null on empty preference', () => {
+    expect(resolveMergeMethod([], { squash: true, merge: true, rebase: true })).toBeNull();
   });
 });

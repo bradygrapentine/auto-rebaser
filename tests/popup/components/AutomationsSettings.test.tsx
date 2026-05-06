@@ -30,13 +30,15 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    const checkboxes = screen.getAllByRole('checkbox');
     // 4 main toggles. Sub-toggle for unsubscribe is hidden when 2.9 is off.
-    expect(checkboxes).toHaveLength(4);
-    expect(checkboxes[0]).toBeChecked();    // 2.6 default on
-    expect(checkboxes[1]).not.toBeChecked(); // 2.7 default off
-    expect(checkboxes[2]).not.toBeChecked(); // 2.8
-    expect(checkboxes[3]).not.toBeChecked(); // 2.9
+    // Three additional checkboxes inside the expanded auto-merge section come
+    // from the merge-method preference list (one per method).
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(7);
+    expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
+    expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
+    expect(screen.getByLabelText(/Auto-resolve outdated review threads/)).not.toBeChecked();
+    expect(screen.getByLabelText(/Dismiss stale PR notifications/)).not.toBeChecked();
   });
 
   it('toggling 2.6 calls save with the new value', async () => {
@@ -54,39 +56,54 @@ describe('AutomationsSettings', () => {
     );
   });
 
-  it('merge-method dropdown disabled when 2.7 is off', async () => {
+  it('merge-method preference controls disabled when 2.7 is off', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
       DEFAULT_AUTOMATION_SETTINGS
     );
     render(<AutomationsSettings />);
     await flush();
-    expect(screen.getByLabelText('Merge method')).toBeDisabled();
+    expect(screen.getByLabelText('Enable squash')).toBeDisabled();
   });
 
-  it('merge-method dropdown enabled when 2.7 is on', async () => {
+  it('merge-method preference controls enabled when 2.7 is on', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...DEFAULT_AUTOMATION_SETTINGS,
       autoEnableAutoMerge: true,
     });
     render(<AutomationsSettings />);
     await flush();
-    expect(screen.getByLabelText('Merge method')).not.toBeDisabled();
+    expect(screen.getByLabelText('Enable squash')).not.toBeDisabled();
   });
 
-  it('changing merge method persists', async () => {
+  it('moving REBASE up persists with REBASE first', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...DEFAULT_AUTOMATION_SETTINGS,
       autoEnableAutoMerge: true,
+      mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
     });
     render(<AutomationsSettings />);
     await flush();
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Merge method'), {
-        target: { value: 'REBASE' },
-      });
+      fireEvent.click(screen.getByLabelText('Move rebase up'));
     });
     expect(saveAutomationSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ autoMergeMethod: 'REBASE' })
+      expect.objectContaining({ mergeMethodPreference: ['REBASE', 'SQUASH', 'MERGE'] })
+    );
+  });
+
+  it('unchecking SQUASH removes it from preference', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoEnableAutoMerge: true,
+      mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
+    });
+    render(<AutomationsSettings />);
+    await flush();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Enable squash'));
+    });
+    expect(saveAutomationSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ mergeMethodPreference: ['REBASE', 'MERGE'] })
     );
   });
 
@@ -267,14 +284,14 @@ describe('AutomationsSettings', () => {
       fireEvent.click(chevron);
     });
     expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
-    expect(screen.queryByLabelText('Merge method')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('merge-method-preference')).not.toBeInTheDocument();
 
     // Clicking again re-expands.
     await act(async () => {
       fireEvent.click(screen.getByLabelText(/Expand auto-merge section/));
     });
     expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
-    expect(screen.getByLabelText('Merge method')).toBeInTheDocument();
+    expect(screen.getByTestId('merge-method-preference')).toBeInTheDocument();
   });
 
   it('global ignored-repos input persists to ignoredRepos', async () => {

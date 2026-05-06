@@ -18,8 +18,15 @@ import {
 } from './adapters';
 import type { NotificationInput } from './dismiss-stale-notifs';
 
+export interface OrchestratorRepoInfo {
+  delete_branch_on_merge: boolean;
+  allow_squash_merge: boolean;
+  allow_merge_commit: boolean;
+  allow_rebase_merge: boolean;
+}
+
 export interface OrchestratorDeps {
-  getRepo: (owner: string, repo: string) => Promise<{ delete_branch_on_merge: boolean } | null>;
+  getRepo: (owner: string, repo: string) => Promise<OrchestratorRepoInfo | null>;
   deleteRef: (owner: string, repo: string, ref: string) => Promise<'deleted' | 'already-gone'>;
   enableAutoMerge: (prNodeId: string, method: MergeMethod) => Promise<{ enabled: boolean; unsupported: boolean }>;
   listThreads: (owner: string, repo: string, number: number) => Promise<Array<{ id: string; isResolved: boolean; isOutdated: boolean; line: number | null }>>;
@@ -41,12 +48,19 @@ export interface OrchestratorResult {
   summary: PollSummary;
   prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }>;
   resolvedThreads: ResolvedThreadsStore;
+  /**
+   * Story 5.4 — for every PR auto-merge was enabled on this cycle, the
+   * resolved method (from the repo's allowed methods + user preference list).
+   * Poll-cycle reads this to mint the activity log entry.
+   */
+  autoMergeMethodByPRId: Record<number, MergeMethod>;
 }
 
 export async function runAllAutomations(opts: OrchestratorOpts): Promise<OrchestratorResult> {
   const { prs, prDetails, settings, github } = opts;
 
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
+  const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
   let resolvedThreads: ResolvedThreadsStore = { ...opts.resolvedThreads };
   let errors = 0;
 
@@ -59,16 +73,30 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   // ── Step 1: enableAutoMerge ─────────────────────────────────────────────────
   if (settings.autoEnableAutoMerge) {
     try {
-      const eligiblePRs = prs.map(pr => {
-        const detail = prDetails.get(pr.id);
-        return detail ? toEligiblePR(pr, detail) : null;
-      }).filter((x): x is NonNullable<typeof x> => x !== null);
+      // Fetch each PR's repo (cached) so we know which merge methods are allowed.
+      const eligiblePRs = (
+        await Promise.all(
+          prs.map(async (pr) => {
+            const detail = prDetails.get(pr.id);
+            if (!detail) return null;
+            const [owner, name] = pr.repo.split('/');
+            if (!owner || !name) return null;
+            const repoInfo = await github.getRepo(owner, name);
+            if (!repoInfo) return null;
+            return toEligiblePR(pr, detail, {
+              squash: repoInfo.allow_squash_merge,
+              merge: repoInfo.allow_merge_commit,
+              rebase: repoInfo.allow_rebase_merge,
+            });
+          }),
+        )
+      ).filter((x): x is NonNullable<typeof x> => x !== null);
 
       const result = await runEnableAutoMerge(
         eligiblePRs,
         {
           enabled: true,
-          mergeMethod: settings.autoMergeMethod,
+          mergeMethodPreference: settings.mergeMethodPreference,
           optOutRepos: settings.autoMergeOptOutRepos,
         },
         { enable: github.enableAutoMerge },
@@ -76,11 +104,15 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
 
       autoMergeEnabled += result.enabled;
       errors += result.failed.length;
-      for (const prId of result.enabledPRs) {
+      for (const { prId, method } of result.enabledPRs) {
         prUpdates.push({ prId, patch: { autoMergeEnabled: true } });
+        autoMergeMethodByPRId[prId] = method;
       }
       for (const prId of result.unsupportedPRs) {
         prUpdates.push({ prId, patch: { autoMergeUnsupported: true } });
+      }
+      for (const prId of result.noAllowedMethodPRs) {
+        prUpdates.push({ prId, patch: { autoMergeSkipReason: 'no-allowed-method' } });
       }
     } catch (err) {
       errors++;
@@ -188,5 +220,5 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     errors,
   };
 
-  return { summary, prUpdates, resolvedThreads };
+  return { summary, prUpdates, resolvedThreads, autoMergeMethodByPRId };
 }

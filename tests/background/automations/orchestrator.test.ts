@@ -63,7 +63,7 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   autoDeleteMergedBranch: true,
   autoDeleteOptOutRepos: [],
   autoEnableAutoMerge: true,
-  autoMergeMethod: 'SQUASH',
+  mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
   autoMergeOptOutRepos: [],
   autoResolveOutdatedThreads: true,
   autoResolveOptOutRepos: [],
@@ -75,7 +75,12 @@ const ALL_ON_SETTINGS: AutomationSettings = {
 
 function makeGithubDeps(): OrchestratorDeps {
   return {
-    getRepo: vi.fn().mockResolvedValue({ delete_branch_on_merge: false }),
+    getRepo: vi.fn().mockResolvedValue({
+      delete_branch_on_merge: false,
+      allow_squash_merge: true,
+      allow_merge_commit: true,
+      allow_rebase_merge: true,
+    }),
     deleteRef: vi.fn().mockResolvedValue('deleted'),
     enableAutoMerge: vi.fn().mockResolvedValue({ enabled: true, unsupported: false }),
     listThreads: vi.fn().mockResolvedValue([]),
@@ -94,7 +99,8 @@ beforeEach(() => {
     enabled: 2,
     skipped: 0,
     unsupportedPRs: [],
-    enabledPRs: [1],
+    noAllowedMethodPRs: [],
+    enabledPRs: [{ prId: 1, method: 'SQUASH' }],
     failed: [],
   });
   mockDeleteMergedBranch.mockResolvedValue({
@@ -328,7 +334,7 @@ describe('runAllAutomations', () => {
     const callOrder: string[] = [];
     mockEnableAutoMerge.mockImplementation(async () => {
       callOrder.push('enableAutoMerge');
-      return { enabled: 0, skipped: 0, unsupportedPRs: [], enabledPRs: [], failed: [] };
+      return { enabled: 0, skipped: 0, unsupportedPRs: [], noAllowedMethodPRs: [], enabledPRs: [], failed: [] };
     });
     mockDeleteMergedBranch.mockImplementation(async () => {
       callOrder.push('deleteMergedBranch');

@@ -17,7 +17,7 @@
 import type { PRRecord } from '../../core/types';
 import type { PullRequest } from '../../core/types';
 import type { MergedPRInput } from './delete-merged-branch';
-import type { EligiblePR } from './enable-auto-merge';
+import type { EligiblePR, RepoAllowedMethods } from './enable-auto-merge';
 import type { PRRef } from './resolve-obsolete-threads';
 import type { PRStateMap } from './dismiss-stale-notifs';
 
@@ -66,7 +66,11 @@ export function toMergedPRInput(pr: PRRecord, detail: PullRequestDetail): Merged
  * autoMergeEnabled: from detail.auto_merge presence.
  * unsupported: derived from PRRecord's phase-two state (cast).
  */
-export function toEligiblePR(pr: PRRecord, detail: PullRequestDetail): EligiblePR {
+export function toEligiblePR(
+  pr: PRRecord,
+  detail: PullRequestDetail,
+  allowedMethods: RepoAllowedMethods,
+): EligiblePR {
   const extended = pr as PRRecord & { autoMergeUnsupported?: boolean; autoMergeEnabled?: boolean };
   return {
     id: pr.id,
@@ -76,6 +80,7 @@ export function toEligiblePR(pr: PRRecord, detail: PullRequestDetail): EligibleP
     mergeableState: detail.mergeable_state,
     autoMergeEnabled: detail.auto_merge != null ? true : (extended.autoMergeEnabled ?? false),
     unsupported: extended.autoMergeUnsupported ?? false,
+    allowedMethods,
   };
 }
 

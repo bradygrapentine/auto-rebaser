@@ -3,11 +3,21 @@ import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { RepoOptOutList } from './RepoOptOutList';
 import type { MergeMethod } from '../../core/automations-types';
 
-const MERGE_METHODS: Array<{ value: MergeMethod; label: string }> = [
-  { value: 'SQUASH', label: 'squash' },
-  { value: 'MERGE',  label: 'merge'  },
-  { value: 'REBASE', label: 'rebase' },
-];
+const MERGE_METHOD_LABELS: Record<MergeMethod, string> = {
+  SQUASH: 'squash',
+  MERGE: 'merge',
+  REBASE: 'rebase',
+};
+
+const ALL_MERGE_METHODS: MergeMethod[] = ['SQUASH', 'REBASE', 'MERGE'];
+
+function reorder<T>(arr: T[], from: number, to: number): T[] {
+  if (to < 0 || to >= arr.length) return arr;
+  const next = arr.slice();
+  const [m] = next.splice(from, 1);
+  next.splice(to, 0, m);
+  return next;
+}
 
 type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'dismiss';
 
@@ -34,6 +44,93 @@ function Chevron({
     >
       {expanded ? '▾' : '▸'}
     </button>
+  );
+}
+
+function MergeMethodPreferenceEditor({
+  preference,
+  disabled,
+  onChange,
+}: {
+  preference: MergeMethod[];
+  disabled: boolean;
+  onChange: (next: MergeMethod[]) => void;
+}) {
+  const enabled = new Set(preference);
+  const ordered: MergeMethod[] = [
+    ...preference,
+    ...ALL_MERGE_METHODS.filter((m) => !enabled.has(m)),
+  ];
+
+  const move = (from: number, to: number) => {
+    // Reorder within the active prefix only.
+    if (from >= preference.length) return;
+    const next = reorder(preference, from, to);
+    onChange(next);
+  };
+
+  const toggle = (method: MergeMethod) => {
+    if (enabled.has(method)) {
+      onChange(preference.filter((m) => m !== method));
+    } else {
+      onChange([...preference, method]);
+    }
+  };
+
+  return (
+    <div
+      className="merge-method-preference"
+      data-testid="merge-method-preference"
+      role="list"
+      aria-label="Merge method preference"
+    >
+      <div className="toggle-sub merge-method-preference__hint">
+        <span>preference order</span>
+      </div>
+      {ordered.map((method, idx) => {
+        const isActive = idx < preference.length;
+        const canMoveUp = isActive && idx > 0;
+        const canMoveDown = isActive && idx < preference.length - 1;
+        return (
+          <div
+            key={method}
+            className="merge-method-row"
+            data-testid={`merge-method-row-${method}`}
+            data-active={isActive}
+            role="listitem"
+          >
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={isActive}
+                disabled={disabled}
+                onChange={() => toggle(method)}
+                aria-label={`Enable ${MERGE_METHOD_LABELS[method]}`}
+              />
+              <span className="toggle__name">{MERGE_METHOD_LABELS[method]}</span>
+            </label>
+            <button
+              type="button"
+              className="btn btn--icon"
+              disabled={disabled || !canMoveUp}
+              onClick={() => move(idx, idx - 1)}
+              aria-label={`Move ${MERGE_METHOD_LABELS[method]} up`}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="btn btn--icon"
+              disabled={disabled || !canMoveDown}
+              onClick={() => move(idx, idx + 1)}
+              aria-label={`Move ${MERGE_METHOD_LABELS[method]} down`}
+            >
+              ↓
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -123,20 +220,11 @@ export function AutomationsSettings() {
         </div>
         {expanded.autoMerge && (
           <>
-            <div className="toggle-sub">
-              <span>merge_method</span>
-              <select
-                value={settings.autoMergeMethod}
-                disabled={!settings.autoEnableAutoMerge}
-                onChange={(e) => save({ autoMergeMethod: e.target.value as MergeMethod })}
-                aria-label="Merge method"
-                className="select select--small"
-              >
-                {MERGE_METHODS.map((m) => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-            </div>
+            <MergeMethodPreferenceEditor
+              preference={settings.mergeMethodPreference}
+              disabled={!settings.autoEnableAutoMerge}
+              onChange={(mergeMethodPreference) => save({ mergeMethodPreference })}
+            />
             <RepoOptOutList
               label="Skip repos"
               repos={settings.autoMergeOptOutRepos}

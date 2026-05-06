@@ -15,7 +15,12 @@ export interface AutomationSettings {
   autoDeleteOptOutRepos: string[];
 
   autoEnableAutoMerge: boolean;
-  autoMergeMethod: MergeMethod;
+  /**
+   * Ordered preference list. Auto-merge picks the first method the repo's
+   * GitHub settings allow. Empty list disables auto-merge for every repo.
+   * Story 5.4 — replaces the previous single `autoMergeMethod` field.
+   */
+  mergeMethodPreference: MergeMethod[];
   /** Per-automation skip list. Repos here do NOT get auto-merge enabled. */
   autoMergeOptOutRepos: string[];
 
@@ -36,7 +41,7 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   autoDeleteMergedBranch: true,           // safe default per backlog 2.6
   autoDeleteOptOutRepos: [],
   autoEnableAutoMerge: false,             // opt-in per backlog 2.7
-  autoMergeMethod: 'SQUASH',
+  mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
   autoMergeOptOutRepos: [],
   autoResolveOutdatedThreads: false,      // opt-in per backlog 2.8
   autoResolveOptOutRepos: [],
@@ -60,6 +65,12 @@ export interface PRRecordPhaseTwo {
   autoMergeEnabled?: boolean;
   /** True after Story 2.7 records that the repo rejected the merge method. */
   autoMergeUnsupported?: boolean;
+  /**
+   * Story 5.4 — set when no method in the user's `mergeMethodPreference` is
+   * allowed by the repo. Surfaces an inline badge; not retried until settings
+   * or repo permissions change.
+   */
+  autoMergeSkipReason?: 'no-allowed-method';
   /** PR head branch name — needed for Story 2.6. */
   headRef?: string;
   /** True when head and base repos are identical (not a fork). */
