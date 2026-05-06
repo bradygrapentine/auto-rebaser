@@ -113,23 +113,23 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
         {authMethod && (
           <section className="settings-group" data-testid="account-section">
-            <div className="settings__heading-row">
-              <h2 className="settings__heading">account</h2>
-              {onSignOut && (
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={onSignOut}
-                  data-testid="switch-method"
-                >
-                  switch to {otherMethodLabel}
-                </button>
-              )}
-            </div>
+            <h2 className="settings__heading">account</h2>
             <div className="settings-row">
               <span className="settings-row__label">auth_method</span>
-              <span className="muted">
-                {authMethod === 'github_app' ? 'GitHub App' : 'Personal Access Token (legacy)'}
+              <span className="settings-row__value">
+                <span className="muted">
+                  {authMethod === 'github_app' ? 'GitHub App' : 'PAT (legacy)'}
+                </span>
+                {onSignOut && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={onSignOut}
+                    data-testid="switch-method"
+                  >
+                    switch to {otherMethodLabel}
+                  </button>
+                )}
               </span>
             </div>
           </section>
@@ -137,49 +137,49 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
         <section className="settings-group" data-testid="enterprise-section">
           <h2 className="settings__heading">enterprise</h2>
-          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div className="settings-row">
             <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
             <input
               id="ghes-host"
               type="text"
-              className="input"
-              placeholder="github.acme.corp (blank = github.com)"
+              className="input input--small"
+              placeholder="github.acme.corp"
               value={hostDraft}
               onChange={(e) => setHostDraft(e.target.value)}
               data-testid="enterprise-host-input"
             />
-            {hostDraft.trim() && (
-              <>
-                <label htmlFor="ghes-client-id" className="settings-row__label" style={{ marginTop: 6 }}>
-                  github_app_client_id
-                </label>
-                <input
-                  id="ghes-client-id"
-                  type="text"
-                  className="input"
-                  placeholder="Iv23li…"
-                  value={clientIdDraft}
-                  onChange={(e) => setClientIdDraft(e.target.value)}
-                  data-testid="enterprise-client-id-input"
-                />
-              </>
-            )}
-            {hostError && (
-              <p role="alert" className="ping-confirm__error" data-testid="enterprise-host-error">{hostError}</p>
-            )}
-            <div style={{ marginTop: 6 }}>
-              <button
-                type="button"
-                className="btn"
-                onClick={applyEnterpriseHost}
-                data-testid="enterprise-apply"
-              >
-                apply
-              </button>
-              <span className="muted" style={{ fontSize: 10, marginLeft: 8 }}>
-                Switching hosts requires sign-out + sign-in.
-              </span>
+          </div>
+          {hostDraft.trim() && (
+            <div className="settings-row">
+              <label htmlFor="ghes-client-id" className="settings-row__label">
+                github_app_client_id
+              </label>
+              <input
+                id="ghes-client-id"
+                type="text"
+                className="input input--small"
+                placeholder="Iv23li…"
+                value={clientIdDraft}
+                onChange={(e) => setClientIdDraft(e.target.value)}
+                data-testid="enterprise-client-id-input"
+              />
             </div>
+          )}
+          {hostError && (
+            <p role="alert" className="ping-confirm__error" data-testid="enterprise-host-error">{hostError}</p>
+          )}
+          <div className="settings-row enterprise-apply-row">
+            <span className="muted" style={{ fontSize: 10 }}>
+              Switching hosts requires sign-out + sign-in.
+            </span>
+            <button
+              type="button"
+              className="btn"
+              onClick={applyEnterpriseHost}
+              data-testid="enterprise-apply"
+            >
+              apply
+            </button>
           </div>
         </section>
 

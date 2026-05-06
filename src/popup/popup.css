@@ -220,13 +220,14 @@ code, .mono {
 /* ─── PR row ───────────────────────────────────────────────────────────── */
 .pr-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 6px 14px 6px 28px;
   border-left: 2px solid transparent;
   text-decoration: none;
   color: inherit;
 }
+.pr-row > .state-badge { flex-shrink: 0; margin-top: 1px; }
 .pr-row:hover {
   background: var(--term-bg-hover);
   border-left-color: var(--term-cyan);
@@ -241,9 +242,9 @@ code, .mono {
   flex: 1;
   min-width: 0;
   color: var(--term-fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   font-size: 13px;
 }
 .pr-row__title:hover { color: var(--term-cyan); }
@@ -505,6 +506,16 @@ code, .mono {
   font-size: 13px;
 }
 .settings-row__label { color: var(--term-fg-dim); }
+.settings-row__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-row .input--small { flex: 1; max-width: 240px; }
+.enterprise-apply-row {
+  margin-top: 4px;
+  align-items: center;
+}
 
 .settings-group { margin-top: 18px; }
 .settings-group__title {
@@ -580,6 +591,9 @@ code, .mono {
   gap: 4px;
 }
 .automation-row > .toggle { flex: 1; }
+/* Leaf toggle (no expander chevron) — pad-left to align with rows that do
+   have a chevron, so the column of toggles stays visually consistent. */
+.automation-row--leaf { padding-left: 16px; }
 
 .merge-method-preference {
   margin-top: 6px;
@@ -589,7 +603,7 @@ code, .mono {
 }
 .merge-method-preference__hint {
   margin: 0 0 4px 0;
-  color: var(--term-fg-muted);
+  color: var(--term-fg-dim);
   font-size: 11px;
 }
 .merge-method-preference__hint::before {
@@ -754,12 +768,16 @@ code, .mono {
   gap: 8px;
 }
 .activity-toolbar__today {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   font-size: 12px;
   color: var(--term-fg-dim);
-  grid-template-columns: auto auto;
   gap: 6px;
   margin: 0;
 }
+.activity-toolbar__today > span { order: 1; }
+.activity-toolbar__today > input { order: 2; }
 .activity-confirm {
   margin: 8px 0;
   padding: 8px;

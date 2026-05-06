@@ -35,6 +35,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing }: Props)
         data-focused={focused ? 'true' : undefined}
         title={pr.errorMessage}
       >
+        <StatusBadge state={pr.state} />
         <span className="pr-row__num" aria-hidden>#{pr.number}</span>
         <span className="pr-row__title">{pr.title}</span>
         {idleLabel && (
@@ -51,7 +52,6 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing }: Props)
             auto-merge skipped: no allowed method
           </span>
         )}
-        <StatusBadge state={pr.state} />
       </a>
       {pingState && onPing && (pingState.canPing || pingState.pingedHoursAgo != null) && (
         <button
