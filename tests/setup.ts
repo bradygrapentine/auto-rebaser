@@ -41,6 +41,9 @@ function buildChromeMock() {
       setBadgeText: vi.fn(),
       setBadgeBackgroundColor: vi.fn(),
     },
+    tabs: {
+      create: vi.fn(),
+    },
     runtime: {
       onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
       onInstalled: { addListener: vi.fn() },

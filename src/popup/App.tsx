@@ -29,7 +29,11 @@ export function App() {
   if (auth.status === 'signed-out' || auth.status === 'error') {
     return (
       <div className="popup-root">
-        <SignInView onSubmit={auth.signInWithPAT} error={auth.error} />
+        <SignInView
+          onSubmit={auth.signInWithPAT}
+          onDeviceFlowSuccess={auth.refresh}
+          error={auth.error}
+        />
       </div>
     );
   }

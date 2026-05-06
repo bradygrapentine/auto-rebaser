@@ -84,7 +84,7 @@ describe('App', () => {
       refresh: vi.fn(),
     });
     render(<App />);
-    expect(screen.getByRole('button', { name: /save token/i })).toBeInTheDocument();
+    expect(screen.getByTestId('signin-github-app')).toBeInTheDocument();
   });
 
   it('shows SignInView with error when status=error', () => {
@@ -96,7 +96,9 @@ describe('App', () => {
       refresh: vi.fn(),
     });
     render(<App />);
-    expect(screen.getByRole('button', { name: /save token/i })).toBeInTheDocument();
+    // Choice screen renders; PAT-specific error appears after navigating to PAT view.
+    expect(screen.getByTestId('signin-github-app')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('signin-pat'));
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
