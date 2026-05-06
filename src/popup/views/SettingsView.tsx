@@ -114,30 +114,31 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
         {authMethod && (
           <section className="settings-group" data-testid="account-section">
             <h2 className="settings__heading">account</h2>
-            <div className="settings-row">
+            <div className="settings-row settings-row--inline">
               <span className="settings-row__label">auth_method</span>
-              <span className="settings-row__value">
-                <span className="muted">
-                  {authMethod === 'github_app' ? 'GitHub App' : 'PAT (legacy)'}
-                </span>
-                {onSignOut && (
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={onSignOut}
-                    data-testid="switch-method"
-                  >
-                    switch to {otherMethodLabel}
-                  </button>
-                )}
+              <span className="settings-row__sep" aria-hidden>—</span>
+              <span className="muted settings-row__value-text">
+                {authMethod === 'github_app' ? 'GitHub App' : 'PAT (legacy)'}
               </span>
             </div>
+            {onSignOut && (
+              <div className="settings-row settings-row--action">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={onSignOut}
+                  data-testid="switch-method"
+                >
+                  switch to {otherMethodLabel}
+                </button>
+              </div>
+            )}
           </section>
         )}
 
         <section className="settings-group" data-testid="enterprise-section">
           <h2 className="settings__heading">enterprise</h2>
-          <div className="settings-row enterprise-host-row">
+          <div className="settings-row">
             <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
             <input
               id="ghes-host"
@@ -148,14 +149,6 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
               onChange={(e) => setHostDraft(e.target.value)}
               data-testid="enterprise-host-input"
             />
-            <button
-              type="button"
-              className="btn"
-              onClick={applyEnterpriseHost}
-              data-testid="enterprise-apply"
-            >
-              apply
-            </button>
           </div>
           {hostDraft.trim() && (
             <div className="settings-row">
@@ -176,9 +169,19 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
           {hostError && (
             <p role="alert" className="ping-confirm__error" data-testid="enterprise-host-error">{hostError}</p>
           )}
-          <p className="muted enterprise-hint">
-            Switching hosts requires sign-out + sign-in
-          </p>
+          <div className="settings-row settings-row--action enterprise-apply-row">
+            <button
+              type="button"
+              className="btn"
+              onClick={applyEnterpriseHost}
+              data-testid="enterprise-apply"
+            >
+              apply
+            </button>
+            <span className="muted enterprise-hint">
+              Switching hosts requires sign-out + sign-in
+            </span>
+          </div>
         </section>
 
         <AutomationsSettings authMethod={authMethod} />

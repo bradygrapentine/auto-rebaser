@@ -113,14 +113,16 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
               ]}
             />
           </div>
-          <label className="toggle activity-toolbar__today">
-            <span>today only</span>
-            <input
-              type="checkbox"
-              checked={todayOnly}
-              onChange={(e) => setTodayOnly(e.target.checked)}
-            />
-          </label>
+          <div className="activity-toolbar__today-row">
+            <label className="toggle activity-toolbar__today">
+              <span>today only</span>
+              <input
+                type="checkbox"
+                checked={todayOnly}
+                onChange={(e) => setTodayOnly(e.target.checked)}
+              />
+            </label>
+          </div>
         </div>
 
         {confirmingClear && (
