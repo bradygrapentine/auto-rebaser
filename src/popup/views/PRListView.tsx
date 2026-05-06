@@ -33,7 +33,7 @@ export function PRListView({
   user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
 }: Props) {
   const store = usePRStore();
-  const { prs, pollInProgress } = store;
+  const { prs, lastPollAt, pollInProgress } = store;
   const { settings } = useAutomationSettings();
   const ignored = new Set(settings.ignoredRepos);
   const visiblePRs = prs.filter((pr) => !ignored.has(pr.repo));
@@ -185,7 +185,11 @@ export function PRListView({
       </div>
       <footer className="popup-footer">
         <div className="popup-footer__top">
-          <PollSummaryFooter onOpenActivity={onOpenActivity} />
+          <span className="popup-footer__line">
+            {lastPollAt
+              ? `Last poll: ${new Date(lastPollAt).toLocaleTimeString()}`
+              : 'Last poll: never'}
+          </span>
           {onHelp && (
             <button
               type="button"
@@ -198,6 +202,7 @@ export function PRListView({
             </button>
           )}
         </div>
+        <PollSummaryFooter onOpenActivity={onOpenActivity} />
       </footer>
     </div>
   );
