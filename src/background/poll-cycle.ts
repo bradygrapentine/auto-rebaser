@@ -197,6 +197,7 @@ async function runPollCycleInner(): Promise<void> {
           repo: fullName,
           prNumber: item.number,
           prTitle: item.title,
+          prUrl: item.html_url,
           result: 'success',
         });
       } catch (err) {
@@ -215,6 +216,7 @@ async function runPollCycleInner(): Promise<void> {
           repo: fullName,
           prNumber: item.number,
           prTitle: item.title,
+          prUrl: item.html_url,
           result: 'failed',
           errorMessage: mapped.errorMessage,
         });
@@ -441,6 +443,7 @@ async function runAutomationsPass(
           repo: pr.repo,
           prNumber: pr.number,
           prTitle: pr.title,
+          prUrl: pr.url,
           result: 'success',
           ...(extended.headRef ? { branchRef: extended.headRef } : {}),
         });
@@ -454,10 +457,27 @@ async function runAutomationsPass(
           repo: pr.repo,
           prNumber: pr.number,
           prTitle: pr.title,
+          prUrl: pr.url,
           result: 'success',
           ...(chosen ? { mergeMethod: chosen } : {}),
         });
       }
+    }
+
+    // Story 2.7 — auto_merge_enabled failure entries.
+    for (const f of result.failedAutoMergeEntries ?? []) {
+      const pr = prMap.get(f.prId);
+      if (!pr) continue;
+      cycleEntries.push({
+        at: now,
+        action: 'auto_merge_enabled',
+        repo: pr.repo,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        prUrl: pr.url,
+        result: 'failed',
+        errorMessage: f.error,
+      });
     }
 
     // Story 2.8 — thread_resolved entries.
@@ -472,8 +492,23 @@ async function runAutomationsPass(
         repo: t.repo,
         prNumber: t.prNumber,
         prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
         result: 'success',
         threadId: t.threadId,
+      });
+    }
+    for (const t of result.failedThreadEntries ?? []) {
+      const pr = prByRepoNumber.get(`${t.repo}#${t.prNumber}`);
+      cycleEntries.push({
+        at: now,
+        action: 'thread_resolved',
+        repo: t.repo,
+        prNumber: t.prNumber,
+        prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
+        result: 'failed',
+        threadId: t.threadId,
+        errorMessage: t.error,
       });
     }
 
@@ -486,8 +521,23 @@ async function runAutomationsPass(
         repo: d.repo,
         prNumber: d.prNumber,
         prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
         result: 'success',
         threadId: d.threadId,
+      });
+    }
+    for (const d of result.failedNotifEntries ?? []) {
+      const pr = prByRepoNumber.get(`${d.repo}#${d.prNumber}`);
+      cycleEntries.push({
+        at: now,
+        action: 'notification_dismissed',
+        repo: d.repo,
+        prNumber: d.prNumber,
+        prTitle: pr?.title ?? '',
+        ...(pr?.url ? { prUrl: pr.url } : {}),
+        result: 'failed',
+        threadId: d.threadId,
+        errorMessage: d.error,
       });
     }
 
