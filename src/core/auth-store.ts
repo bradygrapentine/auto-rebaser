@@ -82,6 +82,12 @@ export async function clearAuth(): Promise<void> {
   // Belt-and-suspenders: also drop the legacy sync key in case migration
   // hasn't run yet on this device.
   await chrome.storage.sync.remove(STORAGE_KEYS.token);
+  // Audit cleanup — drop per-account state that would otherwise leak across
+  // sign-ins on a shared device.
+  await chrome.storage.local.remove([
+    'pingedPRs',          // Story 5.1 ping-throttle
+    'resolved_threads',   // Story 2.8 already-resolved-threads
+  ]);
 }
 
 // ── Back-compat shims so callers don't all need to know about the new shape ──

@@ -10,6 +10,7 @@ function mockFetch(status: number) {
 
 beforeEach(() => {
   vi.spyOn(authRefresh, 'ensureFreshToken');
+  vi.spyOn(authRefresh, 'forceRefresh').mockResolvedValue(null);
   vi.spyOn(authStore, 'clearToken').mockResolvedValue(undefined);
 });
 
@@ -73,5 +74,30 @@ describe('requestNoBody', () => {
     const h = opts.headers as Record<string, string>;
     expect(h['X-Test']).toBe('1');
     expect(h['Authorization']).toBe('Bearer tok');
+  });
+
+  // Audit B1 — 401 should refresh + retry once, then succeed without clearing.
+  it('refreshes on 401 and retries once', async () => {
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('old-tok');
+    vi.mocked(authRefresh.forceRefresh).mockResolvedValue('new-tok');
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ status: 401, ok: false })
+      .mockResolvedValueOnce({ status: 204, ok: true });
+
+    const status = await requestNoBody('/x', { method: 'DELETE' });
+    expect(status).toBe(204);
+    expect(authRefresh.forceRefresh).toHaveBeenCalled();
+    expect(authStore.clearToken).not.toHaveBeenCalled();
+    // Second fetch used the new token
+    const [, retryOpts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    expect((retryOpts.headers as Record<string, string>)['Authorization']).toBe('Bearer new-tok');
+  });
+
+  it('still throws AUTH_ERROR after 401 + failed refresh', async () => {
+    vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('old-tok');
+    vi.mocked(authRefresh.forceRefresh).mockResolvedValue(null);
+    global.fetch = mockFetch(401);
+    await expect(requestNoBody('/x', { method: 'DELETE' })).rejects.toThrow('AUTH_ERROR');
+    expect(authStore.clearToken).toHaveBeenCalled();
   });
 });

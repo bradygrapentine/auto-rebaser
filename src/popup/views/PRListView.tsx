@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { PRRecord } from '../../core/types';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { Header } from '../components/Header';
@@ -9,7 +9,7 @@ import type { Installation } from '../../github/endpoints/installations';
 import {
   coverageFor,
   installationsDisplay,
-  INSTALL_REQUEST_URL,
+  getInstallRequestUrl,
 } from '../../core/installations-helpers';
 import { usePRStore } from '../hooks/usePRStore';
 import { useGroupedPRs } from '../hooks/useGroupedPRs';
@@ -43,6 +43,15 @@ export function PRListView({
   });
 
   const pinged = usePingedStore();
+
+  // Audit B3 — derive install-request URL from the host config so GHES users
+  // get a working link.
+  const [installRequestUrl, setInstallRequestUrl] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    getInstallRequestUrl().then((url) => { if (!cancelled) setInstallRequestUrl(url); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const pingStateFor = (pr: PRRecord) => {
     if (!settings.enablePingReviewers || !onPing) return null;
     const extended = pr as PRRecord & PRRecordPhaseTwo;
@@ -143,7 +152,7 @@ export function PRListView({
             <p>The Auto Rebaser App isn't installed on any account you can access.</p>
             <div className="empty-installations__actions">
               <a
-                href={INSTALL_REQUEST_URL}
+                href={installRequestUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn--primary"
