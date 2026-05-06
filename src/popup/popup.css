@@ -1013,7 +1013,7 @@ code, .mono {
   border: 1px solid var(--term-border-bright);
   border-radius: 3px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  max-height: 220px;
+  max-height: 260px;
   overflow-y: auto;
   font-size: 12px;
 }
