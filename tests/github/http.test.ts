@@ -85,11 +85,12 @@ describe('http.request', () => {
     expect(authStore.clearToken).toHaveBeenCalled();
   });
 
-  it('403 → throws AUTH_ERROR', async () => {
+  it('403 → throws HTTP_403 without clearing auth (App scope error, not invalid token)', async () => {
     vi.mocked(authRefresh.ensureFreshToken).mockResolvedValue('tok');
     global.fetch = mockFetch(403, { message: 'Forbidden' });
 
-    await expect(request('/user')).rejects.toThrow('AUTH_ERROR');
+    await expect(request('/user')).rejects.toThrow('HTTP_403');
+    expect(authStore.clearToken).not.toHaveBeenCalled();
   });
 
   it('429 → throws RATE_LIMITED', async () => {
