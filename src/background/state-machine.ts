@@ -32,6 +32,15 @@ export function mapUpdateBranchError(err: unknown): UpdateBranchAttempt {
   if (msg.startsWith('HTTP_409')) {
     return { state: 'conflict', errorMessage: 'Merge conflict' };
   }
+  // 403/404 from the rebase endpoint almost always mean the GitHub App
+  // isn't installed for this repo (or was suspended). Surface a
+  // user-actionable message instead of a raw "HTTP_403".
+  if (msg.startsWith('HTTP_403') || msg.startsWith('HTTP_404')) {
+    return {
+      state: 'error',
+      errorMessage: 'Auto Rebaser App not installed for this repo',
+    };
+  }
   if (msg === 'AUTH_ERROR') {
     throw err instanceof Error ? err : new Error(msg);
   }
