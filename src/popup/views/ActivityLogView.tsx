@@ -70,7 +70,12 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
       .filter((e) => repoFilter === 'all' || e.repo === repoFilter)
       .filter((e) => !todayOnly || isToday(e.at))
       .slice()
-      .reverse(); // newest first for display
+      // Sort by timestamp descending (newest first). Previously reversed
+      // the array which assumed append order = chronological — fine in
+      // most cases but ambiguous when multiple entries share the same
+      // millisecond (e.g. several automations completing simultaneously
+      // in one poll cycle).
+      .sort((a, b) => b.at - a.at);
   }, [entries, actionFilter, repoFilter, todayOnly]);
 
   return (
