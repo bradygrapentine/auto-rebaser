@@ -20,6 +20,29 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
   const [deviceStart, setDeviceStart] = useState<DeviceFlowStart | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
+  // Chrome MV3 popups close as soon as a new tab is created via
+  // chrome.tabs.create(), wiping local state. On reopen, ask the service
+  // worker if a device flow is already in flight and restore the user
+  // code so the popup picks up where it left off.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'AUTH_DEVICE_FLOW_STATUS',
+      })) as RuntimeResponse;
+      if (cancelled || !res.ok) return;
+      const status = res.data as DeviceFlowStatus;
+      if (status.state === 'pending') {
+        setDeviceStart(status.start);
+        setView('device');
+      } else if (status.state === 'success') {
+        onDeviceFlowSuccess?.();
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const submitPAT = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pat.trim() || busy) return;
@@ -36,11 +59,26 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
       if (!res.ok) throw new Error(res.error ?? 'failed to start device flow');
       const start = res.data as DeviceFlowStart;
       setDeviceStart(start);
-      // Open the verification page in a new tab so the user can paste/type the code there.
-      chrome.tabs.create({ url: start.verificationUri });
+      // NOTE: do not auto-open the verification tab. chrome.tabs.create()
+      // steals focus from the popup, which Chrome then destroys — the user
+      // never sees the code. Show the code first; the user clicks a link
+      // (which we copy the code on click) to navigate when ready.
     } catch (err) {
       setDeviceError(err instanceof Error ? err.message : 'failed to start');
     }
+  };
+
+  /**
+   * Copy the user code, then open the verification page in a new tab.
+   * The popup may close on the tab navigation; the on-mount resume logic
+   * picks up where the user left off when they reopen the popup.
+   */
+  const openVerificationTab = () => {
+    if (!deviceStart) return;
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(deviceStart.userCode);
+    }
+    chrome.tabs.create({ url: deviceStart.verificationUri });
   };
 
   const cancelDeviceFlow = async () => {
@@ -100,16 +138,23 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
           <p className="muted">requesting code…</p>
         ) : (
           <>
-            <p>Enter this code on github.com:</p>
+            <p>Enter this code at github.com/login/device:</p>
             <div className="device-code" data-testid="device-code">
               <code>{deviceStart.userCode}</code>
               <button type="button" className="btn" onClick={copyCode}>copy</button>
             </div>
+            <button
+              type="button"
+              className="btn btn--primary btn--block"
+              onClick={openVerificationTab}
+              data-testid="open-verification-tab"
+            >
+              copy code & open verification page
+            </button>
             <p className="help">
-              Verification page opened in a new tab — if not,{' '}
-              <a href={deviceStart.verificationUri} target="_blank" rel="noreferrer">
-                open it manually
-              </a>.
+              The popup will close when the tab opens — click the extension
+              icon again to come back here. Polling continues in the
+              background; once you authorize, we sign you in automatically.
             </p>
           </>
         )}
