@@ -321,6 +321,21 @@ code, .mono {
 }
 .muted { color: var(--term-fg-muted); }
 
+.device-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.device-code code {
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  background: rgba(86, 212, 221, 0.10);
+  border: 1px solid var(--term-border);
+  padding: 4px 10px;
+  font-family: inherit;
+}
+
 .popup-footer__help {
   background: transparent;
   border: 1px solid var(--term-border);

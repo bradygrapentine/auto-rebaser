@@ -127,11 +127,17 @@ export interface GitHubUser {
 export type RuntimeMessage =
   | { type: 'POLL_NOW' }
   | { type: 'SET_INTERVAL'; intervalMinutes: IntervalMinutes }
-  | { type: 'REAUTH'; scopes?: string[] };
+  | { type: 'REAUTH'; scopes?: string[] }
+  // Story 4.2 — Device Flow
+  | { type: 'AUTH_BEGIN_DEVICE_FLOW' }
+  | { type: 'AUTH_DEVICE_FLOW_STATUS' }
+  | { type: 'AUTH_CANCEL_DEVICE_FLOW' };
 
 export interface RuntimeResponse {
   ok: boolean;
   error?: string;
+  /** Story 4.2 — Device Flow status payload. */
+  data?: unknown;
 }
 
 // HTTP error sentinel codes thrown by github/http.ts and consumed by background/state-machine.ts.
