@@ -1,5 +1,6 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
-import type { PRRecordPhaseTwo } from '../core/automations-types';
+import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
+import { computeIdleDays, resolveThreshold } from '../core/staleness';
 import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../core/pr-store';
 import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../core/automations-store';
 import { searchAuthoredPRs, getPR, updateBranch } from '../github/endpoints';
@@ -28,6 +29,29 @@ function isAbortError(err: unknown): boolean {
   return false;
 }
 
+/**
+ * Story 5.1 — compute the `staleness` patch for a PR. Returns the metadata
+ * when the PR is past its repo's threshold; `staleness: undefined` (clearing
+ * any stored value) otherwise. Returns {} when staleness can't be computed
+ * (no settings loaded, or no `updated_at` on the detail) so the PR's prior
+ * staleness (if any) is preserved.
+ */
+function computeStalenessPatch(
+  detail: PullRequest,
+  fullName: string,
+  settings: AutomationSettings | null,
+): Partial<PRRecordPhaseTwo> {
+  if (!settings || !detail.updated_at) return {};
+  const lastActivityAt = Date.parse(detail.updated_at);
+  if (Number.isNaN(lastActivityAt)) return {};
+  const idleDays = computeIdleDays(lastActivityAt);
+  const threshold = resolveThreshold(fullName, settings);
+  if (idleDays < threshold) {
+    return { staleness: undefined };
+  }
+  return { staleness: { idleDays, lastActivityAt } };
+}
+
 /** Flips PRStore.pollInProgress without going through upsert (avoids racing the store). */
 async function setPollInProgress(value: boolean): Promise<void> {
   const store = await loadStore();
@@ -50,9 +74,10 @@ async function runPollCycleInner(): Promise<void> {
   // loop and the orchestrator pass, so it has to be available before either.
   // Failure to load defaults to "no repos ignored", matching current behavior.
   let ignoredRepos = new Set<string>();
+  let staleSettings: AutomationSettings | null = null;
   try {
-    const settings = await getAutomationSettings();
-    ignoredRepos = new Set(settings.ignoredRepos ?? []);
+    staleSettings = await getAutomationSettings();
+    ignoredRepos = new Set(staleSettings.ignoredRepos ?? []);
   } catch (err) {
     console.warn('[poll-cycle] could not read automation settings; ignoring repo-ignore list', err);
   }
@@ -179,6 +204,10 @@ async function runPollCycleInner(): Promise<void> {
         ? { sameRepo: pr.head.repo.full_name === fullName }
         : {}),
       ...(pr.draft !== undefined ? { isDraft: pr.draft } : {}),
+      ...computeStalenessPatch(pr, fullName, staleSettings),
+      ...(pr.requested_reviewers !== undefined
+        ? { requestedReviewers: pr.requested_reviewers.map((r) => r.login) }
+        : {}),
       ...(errorMessage !== undefined ? { errorMessage } : {}),
     } as PRRecord);
   }

@@ -1,4 +1,5 @@
 import type { PRGroup } from '../hooks/useGroupedPRs';
+import type { PRRecord } from '../../core/types';
 import { PRRow } from './PRRow';
 
 interface Props {
@@ -11,9 +12,21 @@ interface Props {
   userLogin?: string;
   /** Story 5.5 — id of the keyboard-focused PR (if any). */
   focusedPRId?: number | null;
+  /** Story 5.1 — render the `idle Nd` pill on stale rows. */
+  showStaleBadges?: boolean;
+  /**
+   * Story 5.1 — when provided, the row renders a ping link gated by the
+   * returned `canPing` / `pingedHoursAgo`.
+   */
+  pingStateFor?: (pr: PRRecord) => { canPing: boolean; pingedHoursAgo: number | null } | null;
+  /** Story 5.1 — invoked when the user clicks the ping link. */
+  onPing?: (pr: PRRecord) => void;
 }
 
-export function RepoGroup({ group, expanded, onToggle, userLogin, focusedPRId }: Props) {
+export function RepoGroup({
+  group, expanded, onToggle, userLogin, focusedPRId,
+  showStaleBadges, pingStateFor, onPing,
+}: Props) {
   const [owner, ...rest] = group.repo.split('/');
   const displayName =
     userLogin && owner.toLowerCase() === userLogin.toLowerCase()
@@ -39,7 +52,14 @@ export function RepoGroup({ group, expanded, onToggle, userLogin, focusedPRId }:
       {expanded && (
         <div id={`group-${group.repo}`} className="repo-group__list">
           {group.prs.map((pr) => (
-            <PRRow key={pr.id} pr={pr} focused={pr.id === focusedPRId} />
+            <PRRow
+              key={pr.id}
+              pr={pr}
+              focused={pr.id === focusedPRId}
+              showStaleBadge={showStaleBadges}
+              pingState={pingStateFor?.(pr) ?? undefined}
+              onPing={onPing}
+            />
           ))}
         </div>
       )}

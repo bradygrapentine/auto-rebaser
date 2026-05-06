@@ -20,6 +20,8 @@ Auto Rebaser is a browser extension that automatically rebases your open GitHub 
 | List of your open authored PRs (repo, number, title, state, base SHA, etc.) | `chrome.storage.local` | Display in the popup; detect when a PR falls behind. |
 | Per-PR last-known ETags | `chrome.storage.local` | Reduce GitHub API quota consumption via conditional requests. |
 | Settings (poll interval, automation toggles, per-repo opt-outs) | `chrome.storage.sync` | Your preferences. |
+| Activity log (action, repo, PR number, PR title, result, timestamp) | `chrome.storage.local` | Audit trail for automated actions. Capped at 200 entries / 30 days. Cleared on demand via "Clear log". Never synced. |
+| Ping throttle (PR id → last-pinged timestamp) | `chrome.storage.local` | Prevents the popup's "ping reviewers" button from re-posting within 24 hours. |
 
 `chrome.storage.sync` data is synced by your browser vendor (Google or Mozilla) to your other signed-in browser instances, encrypted in transit. Auto Rebaser does not control or have access to that sync channel.
 

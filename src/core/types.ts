@@ -103,6 +103,10 @@ export interface PullRequest {
   merged?: boolean;
   /** ISO timestamp when the PR was merged, or null/undefined. */
   merged_at?: string | null;
+  /** ISO timestamp of the most recent activity (commits, comments, reviews). Story 5.1. */
+  updated_at?: string;
+  /** Reviewers requested but not yet reviewing. Story 5.1 — needed to know whom to @-mention on ping. */
+  requested_reviewers?: Array<{ login: string }>;
   /** GraphQL node_id — needed for Story 2.7 (enable auto-merge). */
   node_id?: string;
   draft?: boolean;

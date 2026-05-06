@@ -1,0 +1,73 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  getPingedStore,
+  recordPing,
+  isThrottled,
+  hoursSinceLastPing,
+  PING_THROTTLE_KEY,
+} from '../../src/core/ping-throttle';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('isThrottled', () => {
+  const now = 1_700_000_000_000;
+
+  it('returns false when PR is not in store', () => {
+    expect(isThrottled({}, 1, now)).toBe(false);
+  });
+
+  it('returns true within 24 hours of a ping', () => {
+    const store = { 1: { at: now - 60 * 60 * 1000 } }; // 1 hour ago
+    expect(isThrottled(store, 1, now)).toBe(true);
+  });
+
+  it('returns false at exactly 24 hours', () => {
+    const store = { 1: { at: now - 24 * 60 * 60 * 1000 } };
+    expect(isThrottled(store, 1, now)).toBe(false);
+  });
+
+  it('returns false past 24 hours', () => {
+    const store = { 1: { at: now - 25 * 60 * 60 * 1000 } };
+    expect(isThrottled(store, 1, now)).toBe(false);
+  });
+
+  it('throttles per PR id, not across PRs', () => {
+    const store = { 1: { at: now } };
+    expect(isThrottled(store, 1, now)).toBe(true);
+    expect(isThrottled(store, 2, now)).toBe(false);
+  });
+});
+
+describe('hoursSinceLastPing', () => {
+  const now = 1_700_000_000_000;
+
+  it('returns null when never pinged', () => {
+    expect(hoursSinceLastPing({}, 1, now)).toBeNull();
+  });
+
+  it('returns floor of hours elapsed', () => {
+    const store = { 1: { at: now - (3 * 60 * 60 * 1000 + 30 * 60 * 1000) } }; // 3h30m ago
+    expect(hoursSinceLastPing(store, 1, now)).toBe(3);
+  });
+});
+
+describe('storage round-trip', () => {
+  it('recordPing writes the entry, getPingedStore reads it back', async () => {
+    const data: Record<string, unknown> = {};
+    chrome.storage.local.get = vi.fn().mockImplementation(async (key: string) => ({
+      [key]: data[key],
+    }));
+    chrome.storage.local.set = vi.fn().mockImplementation(async (obj: Record<string, unknown>) => {
+      Object.assign(data, obj);
+    });
+
+    await recordPing(42, 1_700_000_000_000);
+    const store = await getPingedStore();
+    expect(store[42]).toEqual({ at: 1_700_000_000_000 });
+    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+      expect.objectContaining({ [PING_THROTTLE_KEY]: { 42: { at: 1_700_000_000_000 } } }),
+    );
+  });
+});
