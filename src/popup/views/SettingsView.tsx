@@ -3,6 +3,7 @@ import { useSettings } from '../hooks/useSettings';
 import { AutomationsSettings } from '../components/AutomationsSettings';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { Select } from '../components/Select';
 import { validateHost } from '../../core/host-config';
 import type { IntervalMinutes } from '../../core/types';
 
@@ -58,9 +59,8 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
     bindings: { Escape: onBack },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = Number(e.target.value) as IntervalMinutes;
-    saveSettings({ ...settings, intervalMinutes: val });
+  const handleIntervalChange = (val: string) => {
+    saveSettings({ ...settings, intervalMinutes: Number(val) as IntervalMinutes });
   };
 
   const otherMethodLabel = authMethod === 'github_app' ? 'PAT' : 'GitHub App';
@@ -100,15 +100,16 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
         <div className="enterprise-row">
           <span className="settings-row__label">github_poll_interval</span>
           <span className="settings-row__sep" aria-hidden>—</span>
-          <select
-            value={settings.intervalMinutes}
-            onChange={handleChange}
-            className="select select--small enterprise-input"
-          >
-            {INTERVALS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+          <div className="enterprise-input enterprise-input--select">
+            <Select
+              ariaLabel="github_poll_interval"
+              value={String(settings.intervalMinutes)}
+              onChange={handleIntervalChange}
+              options={INTERVALS.map(({ value, label }) => ({
+                value: String(value), label,
+              }))}
+            />
+          </div>
         </div>
 
         {authMethod && (
@@ -151,23 +152,22 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
               data-testid="enterprise-host-input"
             />
           </div>
-          {hostDraft.trim() && (
-            <div className="enterprise-row">
-              <label htmlFor="ghes-client-id" className="settings-row__label">
-                github_app_client_id
-              </label>
-              <span className="settings-row__sep" aria-hidden>—</span>
-              <input
-                id="ghes-client-id"
-                type="text"
-                className="input input--small enterprise-input"
-                placeholder="Iv23li…"
-                value={clientIdDraft}
-                onChange={(e) => setClientIdDraft(e.target.value)}
-                data-testid="enterprise-client-id-input"
-              />
-            </div>
-          )}
+          <div className="enterprise-row">
+            <label htmlFor="ghes-client-id" className="settings-row__label">
+              github_app_client_id
+            </label>
+            <span className="settings-row__sep" aria-hidden>—</span>
+            <input
+              id="ghes-client-id"
+              type="text"
+              className="input input--small enterprise-input"
+              placeholder="Iv23li…"
+              value={clientIdDraft}
+              onChange={(e) => setClientIdDraft(e.target.value)}
+              data-testid="enterprise-client-id-input"
+              disabled={!hostDraft.trim()}
+            />
+          </div>
           {hostError && (
             <p role="alert" className="ping-confirm__error" data-testid="enterprise-host-error">{hostError}</p>
           )}
