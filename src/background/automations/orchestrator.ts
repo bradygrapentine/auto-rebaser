@@ -54,6 +54,10 @@ export interface OrchestratorResult {
    * Poll-cycle reads this to mint the activity log entry.
    */
   autoMergeMethodByPRId: Record<number, MergeMethod>;
+  /** Story 2.8 — per-thread detail for activity-log entries. */
+  resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
+  /** Story 2.9 — per-notification detail for activity-log entries. */
+  dismissedNotifEntries: Array<{ threadId: string; repo: string; prNumber: number; unsubscribed: boolean }>;
 }
 
 export async function runAllAutomations(opts: OrchestratorOpts): Promise<OrchestratorResult> {
@@ -61,6 +65,8 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
 
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
+  const resolvedThreadEntries: OrchestratorResult['resolvedThreadEntries'] = [];
+  const dismissedNotifEntries: OrchestratorResult['dismissedNotifEntries'] = [];
   let resolvedThreads: ResolvedThreadsStore = { ...opts.resolvedThreads };
   let errors = 0;
 
@@ -190,6 +196,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
       threadsResolved += result.resolved;
       errors += result.failed.length;
       resolvedThreads = result.resolvedStore;
+      resolvedThreadEntries.push(...result.resolvedEntries);
     } catch (err) {
       errors++;
       console.error('[orchestrator] resolveObsoleteThreads threw:', err);
@@ -219,6 +226,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
 
       notificationsDismissed += result.dismissed;
       errors += result.failed.length;
+      dismissedNotifEntries.push(...result.dismissedEntries);
     } catch (err) {
       errors++;
       console.error('[orchestrator] dismissStaleNotifs threw:', err);
@@ -235,5 +243,12 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     errors,
   };
 
-  return { summary, prUpdates, resolvedThreads, autoMergeMethodByPRId };
+  return {
+    summary,
+    prUpdates,
+    resolvedThreads,
+    autoMergeMethodByPRId,
+    resolvedThreadEntries,
+    dismissedNotifEntries,
+  };
 }

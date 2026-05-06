@@ -30,6 +30,8 @@ export interface DismissStaleNotifsResult {
   skipped: number;
   failed: Array<{ threadId: string; error: string }>;
   scopeMissing: boolean;
+  /** Per-notification detail for activity-log entries. */
+  dismissedEntries: Array<{ threadId: string; repo: string; prNumber: number; unsubscribed: boolean }>;
 }
 
 const PR_URL_RE =
@@ -47,6 +49,7 @@ export async function runDismissStaleNotifs(
     skipped: 0,
     failed: [],
     scopeMissing: false,
+    dismissedEntries: [],
   };
 
   if (!settings.enabled) return result;
@@ -82,10 +85,12 @@ export async function runDismissStaleNotifs(
     try {
       await deps.markRead(n.threadId);
       result.dismissed++;
+      let didUnsubscribe = false;
       if (settings.unsubscribe) {
         try {
           await deps.unsubscribe(n.threadId);
           result.unsubscribed++;
+          didUnsubscribe = true;
         } catch (err) {
           result.failed.push({
             threadId: n.threadId,
@@ -93,6 +98,12 @@ export async function runDismissStaleNotifs(
           });
         }
       }
+      result.dismissedEntries.push({
+        threadId: n.threadId,
+        repo: `${m[1]}/${m[2]}`,
+        prNumber: Number(m[3]),
+        unsubscribed: didUnsubscribe,
+      });
     } catch (err) {
       result.failed.push({
         threadId: n.threadId,

@@ -460,6 +460,37 @@ async function runAutomationsPass(
       }
     }
 
+    // Story 2.8 — thread_resolved entries.
+    const prByRepoNumber = new Map<string, PRRecord>(
+      processedPRs.map((p) => [`${p.repo}#${p.number}`, p]),
+    );
+    for (const t of result.resolvedThreadEntries ?? []) {
+      const pr = prByRepoNumber.get(`${t.repo}#${t.prNumber}`);
+      cycleEntries.push({
+        at: now,
+        action: 'thread_resolved',
+        repo: t.repo,
+        prNumber: t.prNumber,
+        prTitle: pr?.title ?? '',
+        result: 'success',
+        threadId: t.threadId,
+      });
+    }
+
+    // Story 2.9 — notification_dismissed entries.
+    for (const d of result.dismissedNotifEntries ?? []) {
+      const pr = prByRepoNumber.get(`${d.repo}#${d.prNumber}`);
+      cycleEntries.push({
+        at: now,
+        action: 'notification_dismissed',
+        repo: d.repo,
+        prNumber: d.prNumber,
+        prTitle: pr?.title ?? '',
+        result: 'success',
+        threadId: d.threadId,
+      });
+    }
+
     // Write all this cycle's entries in one storage call.
     await appendActivity(cycleEntries);
   } catch (err) {
