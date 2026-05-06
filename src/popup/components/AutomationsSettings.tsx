@@ -305,8 +305,8 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
                 data-testid="notifications-app-blocked"
                 style={{ marginLeft: 18, marginTop: 6, fontSize: 11 }}
               >
-                Notification cleanup is unavailable when signed in via GitHub App.
-                Switch to PAT (settings → account) to enable.
+                Notification cleanup is unavailable when signed in via GitHub App —
+                switch to PAT (settings → account) to enable
               </p>
             )}
             {settings.autoDismissStaleNotifications && authMethod !== 'github_app'
@@ -395,7 +395,7 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
                   data-testid="ping-template"
                 />
                 <span className="muted" style={{ fontSize: 10 }}>
-                  Use {'{reviewers}'} to insert the @-mentions inline.
+                  Use {'{reviewers}'} to insert the @-mentions inline
                 </span>
               </div>
             )}

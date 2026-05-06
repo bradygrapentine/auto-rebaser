@@ -517,9 +517,16 @@ code, .mono {
 .settings-row__value > .muted { white-space: nowrap; }
 .settings-row__value > .btn { white-space: nowrap; }
 .settings-row .input--small { flex: 1; max-width: 240px; }
-.enterprise-apply-row {
-  margin-top: 4px;
+.enterprise-host-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
   align-items: center;
+}
+.enterprise-hint {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: var(--term-fg-muted);
 }
 
 .settings-group { margin-top: 18px; }

@@ -150,7 +150,7 @@ export function PRListView({
         {authMethod === 'github_app'
           && (!installations || installations.length === 0) && (
           <div className="empty-installations" data-testid="empty-installations">
-            <p>The Auto Rebaser App isn't installed on any account you can access.</p>
+            <p>The Auto Rebaser App isn't installed on any account you can access</p>
             <div className="empty-installations__actions">
               <a
                 href={installRequestUrl}
@@ -164,7 +164,7 @@ export function PRListView({
           </div>
         )}
         {groups.length === 0 ? (
-          <p className="empty-state">no open prs found.</p>
+          <p className="empty-state">no open prs found</p>
         ) : (
           groups.map((g) => {
             const expanded = isExpanded(g.repo, g.hasAttention);

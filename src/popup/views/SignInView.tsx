@@ -127,7 +127,7 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
     return (
       <div className="signin">
         <h1 className="signin__title">auto-rebaser --auth</h1>
-        <p className="signin__lede">Sign in with a Personal Access Token (legacy).</p>
+        <p className="signin__lede">Sign in with a Personal Access Token (legacy)</p>
         <form onSubmit={submitPAT}>
           <label htmlFor="pat-input" className="label">github_pat</label>
           <input
@@ -168,7 +168,7 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
   return (
     <div className="signin">
       <h1 className="signin__title">auto-rebaser --auth</h1>
-      <p className="signin__lede">Keep your GitHub PRs up to date automatically.</p>
+      <p className="signin__lede">Keep your GitHub PRs up to date automatically</p>
 
       <button
         type="button"
