@@ -525,14 +525,19 @@ code, .mono {
 .settings-row--end {
   justify-content: flex-end;
   gap: 8px;
+  flex-wrap: nowrap;
 }
-.settings-row--end .settings-row__label { color: var(--term-fg-dim); }
+.settings-row--end .settings-row__label {
+  color: var(--term-fg-dim);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 .settings-row--end .enterprise-input {
-  flex: 0 1 200px;
+  flex: 0 1 160px;
   width: auto;
-  min-width: 120px;
-  max-width: 200px;
-  margin-left: 0;
+  min-width: 100px;
+  max-width: 160px;
+  margin-left: 0 !important;
 }
 .settings-row--action {
   justify-content: flex-start;
@@ -751,20 +756,26 @@ code, .mono {
 .popup-footer__shortcuts-row {
   display: flex;
   justify-content: flex-end;
-  margin-top: 6px;
+  margin-top: 2px;
+  line-height: 1.55;
 }
+.popup-footer__shortcuts-row .btn { line-height: 1.4; }
 .popup-footer__delta strong { color: var(--term-green); font-weight: 700; }
 .popup-footer__counter,
 .popup-footer__view-activity {
+  display: inline-block;
+  align-self: flex-start;
   background: transparent;
   border: none;
   padding: 0;
   margin: 0;
   font-family: inherit;
   font-size: 11px;
+  line-height: 1.55;
   color: var(--term-fg-dim);
   text-align: left;
   cursor: pointer;
+  text-indent: 0;
 }
 .popup-footer__counter::before {
   content: "+ ";
