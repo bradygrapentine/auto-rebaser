@@ -464,6 +464,22 @@ async function runAutomationsPass(
       }
     }
 
+    // Story 2.7 — auto_merge_enabled failure entries.
+    for (const f of result.failedAutoMergeEntries ?? []) {
+      const pr = prMap.get(f.prId);
+      if (!pr) continue;
+      cycleEntries.push({
+        at: now,
+        action: 'auto_merge_enabled',
+        repo: pr.repo,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        prUrl: pr.url,
+        result: 'failed',
+        errorMessage: f.error,
+      });
+    }
+
     // Story 2.8 — thread_resolved entries.
     const prByRepoNumber = new Map<string, PRRecord>(
       processedPRs.map((p) => [`${p.repo}#${p.number}`, p]),

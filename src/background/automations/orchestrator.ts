@@ -54,6 +54,8 @@ export interface OrchestratorResult {
    * Poll-cycle reads this to mint the activity log entry.
    */
   autoMergeMethodByPRId: Record<number, MergeMethod>;
+  /** Story 2.7 — per-PR auto-merge failure detail for activity-log entries. */
+  failedAutoMergeEntries: Array<{ prId: number; error: string }>;
   /** Story 2.8 — per-thread detail for activity-log entries. */
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
   /** Story 2.8 — per-thread failure detail for activity-log entries. */
@@ -69,6 +71,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
 
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
+  const failedAutoMergeEntries: OrchestratorResult['failedAutoMergeEntries'] = [];
   const resolvedThreadEntries: OrchestratorResult['resolvedThreadEntries'] = [];
   const failedThreadEntries: OrchestratorResult['failedThreadEntries'] = [];
   const dismissedNotifEntries: OrchestratorResult['dismissedNotifEntries'] = [];
@@ -116,6 +119,9 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
 
       autoMergeEnabled += result.enabled;
       errors += result.failed.length;
+      for (const f of result.failed) {
+        failedAutoMergeEntries.push({ prId: f.prId, error: f.error });
+      }
       for (const { prId, method } of result.enabledPRs) {
         prUpdates.push({ prId, patch: { autoMergeEnabled: true } });
         autoMergeMethodByPRId[prId] = method;
@@ -256,6 +262,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     prUpdates,
     resolvedThreads,
     autoMergeMethodByPRId,
+    failedAutoMergeEntries,
     resolvedThreadEntries,
     failedThreadEntries,
     dismissedNotifEntries,
