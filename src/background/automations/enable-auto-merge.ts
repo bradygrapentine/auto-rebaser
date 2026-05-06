@@ -39,7 +39,7 @@ export interface EnableAutoMergeDeps {
   enable(
     prNodeId: string,
     method: MergeMethod
-  ): Promise<{ enabled: boolean; unsupported: boolean }>;
+  ): Promise<{ enabled: boolean; unsupported: boolean; reason?: string }>;
 }
 
 export interface EnableAutoMergeResult {
@@ -47,6 +47,8 @@ export interface EnableAutoMergeResult {
   skipped: number;
   /** PRs that should be marked `automerge-unsupported` and not retried. */
   unsupportedPRs: number[];
+  /** Per-PR reason text for `unsupportedPRs` (GraphQL error message). */
+  unsupportedReasons: Record<number, string>;
   /**
    * PRs whose preference list had no method allowed by the repo. Surfaced as
    * an inline badge on the PR row; not retried until settings or repo change.
@@ -82,6 +84,7 @@ export async function runEnableAutoMerge(
     enabled: 0,
     skipped: 0,
     unsupportedPRs: [],
+    unsupportedReasons: {},
     noAllowedMethodPRs: [],
     enabledPRs: [],
     failed: [],
@@ -116,6 +119,7 @@ export async function runEnableAutoMerge(
       const out = await deps.enable(pr.nodeId, method);
       if (out.unsupported) {
         result.unsupportedPRs.push(pr.id);
+        if (out.reason) result.unsupportedReasons[pr.id] = out.reason;
       } else if (out.enabled) {
         result.enabled++;
         result.enabledPRs.push({ prId: pr.id, method });
