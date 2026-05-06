@@ -26,24 +26,47 @@ export function useAuth(): UseAuthResult {
 
   const refresh = useCallback(async () => {
     setState((s) => ({ ...s, status: 'loading' }));
+    const auth = await getAuth();
+    if (!auth) {
+      setState({ status: 'signed-out' });
+      return;
+    }
+
+    // /user is informational (login + avatar). If it fails — the App
+    // lacks `read:user`, the network is down, GitHub returned a transient
+    // 5xx — keep the session signed-in with whatever fallback identity we
+    // can derive (App installations carry the account login). Without
+    // this, a single failed /user call after sign-in would knock the
+    // popup back to SignInView even though storage still holds a valid
+    // tokenSet.
+    const fallbackLogin = auth.method === 'github_app' && auth.installations?.[0]
+      ? auth.installations[0].account.login
+      : undefined;
+
+    let ghUser: Awaited<ReturnType<typeof getAuthenticatedUser>> | null = null;
     try {
-      const auth = await getAuth();
-      if (!auth) {
+      ghUser = await getAuthenticatedUser();
+    } catch (err) {
+      // Only AUTH_ERROR (401 after refresh) means the token is dead;
+      // anything else is transient.
+      if (err instanceof Error && err.message === 'AUTH_ERROR') {
         setState({ status: 'signed-out' });
         return;
       }
-      const ghUser = await getAuthenticatedUser();
-      setState({
-        status: 'signed-in',
-        method: auth.method,
-        ...(auth.method === 'github_app' && auth.installations
-          ? { installations: auth.installations }
-          : {}),
-        user: { login: ghUser.login, avatarUrl: ghUser.avatar_url },
-      });
-    } catch {
-      setState({ status: 'signed-out' });
     }
+
+    setState({
+      status: 'signed-in',
+      method: auth.method,
+      ...(auth.method === 'github_app' && auth.installations
+        ? { installations: auth.installations }
+        : {}),
+      user: ghUser
+        ? { login: ghUser.login, avatarUrl: ghUser.avatar_url }
+        : fallbackLogin
+          ? { login: fallbackLogin, avatarUrl: '' }
+          : undefined,
+    });
   }, []);
 
   useEffect(() => {

@@ -62,9 +62,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return cachedData as T;
   }
 
-  if (status === 401 || status === 403) {
+  // 401 only clears auth when refresh has already been tried (above) and
+  // still failed. 403 is "token valid, lacks permission for this resource"
+  // — for GitHub App user-to-server tokens that's common when the App
+  // wasn't granted a particular permission scope, and clearing auth would
+  // dump the user into a sign-in loop the next mount can't escape. Surface
+  // it as a non-fatal HTTP error instead.
+  if (status === 401) {
     await clearToken();
     throw new Error('AUTH_ERROR');
+  }
+  if (status === 403) {
+    throw new Error('HTTP_403');
   }
 
   if (status === 429) {
