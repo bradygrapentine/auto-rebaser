@@ -125,7 +125,7 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
 
         {confirmingClear && (
           <div role="alertdialog" className="activity-confirm">
-            <p>This deletes activity history. Cannot be undone.</p>
+            <p>This deletes activity history — cannot be undone</p>
             <div>
               <button type="button" onClick={() => setConfirmingClear(false)} className="btn">
                 cancel
@@ -146,7 +146,7 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
 
         {!loading && filtered.length === 0 && (
           <p className="empty-state" data-testid="activity-empty">
-            No activity yet. The extension logs every automated action here.
+            No activity yet — the extension logs every automated action here
           </p>
         )}
 

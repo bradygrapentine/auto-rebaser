@@ -137,7 +137,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
 
         <section className="settings-group" data-testid="enterprise-section">
           <h2 className="settings__heading">enterprise</h2>
-          <div className="settings-row">
+          <div className="settings-row enterprise-host-row">
             <label htmlFor="ghes-host" className="settings-row__label">github_host</label>
             <input
               id="ghes-host"
@@ -148,6 +148,14 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
               onChange={(e) => setHostDraft(e.target.value)}
               data-testid="enterprise-host-input"
             />
+            <button
+              type="button"
+              className="btn"
+              onClick={applyEnterpriseHost}
+              data-testid="enterprise-apply"
+            >
+              apply
+            </button>
           </div>
           {hostDraft.trim() && (
             <div className="settings-row">
@@ -168,19 +176,9 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
           {hostError && (
             <p role="alert" className="ping-confirm__error" data-testid="enterprise-host-error">{hostError}</p>
           )}
-          <div className="settings-row enterprise-apply-row">
-            <span className="muted" style={{ fontSize: 10 }}>
-              Switching hosts requires sign-out + sign-in.
-            </span>
-            <button
-              type="button"
-              className="btn"
-              onClick={applyEnterpriseHost}
-              data-testid="enterprise-apply"
-            >
-              apply
-            </button>
-          </div>
+          <p className="muted enterprise-hint">
+            Switching hosts requires sign-out + sign-in
+          </p>
         </section>
 
         <AutomationsSettings authMethod={authMethod} />

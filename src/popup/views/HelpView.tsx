@@ -5,13 +5,13 @@ interface Props {
 }
 
 const SHORTCUTS: Array<{ keys: string; action: string }> = [
-  { keys: 'r', action: 'poll now' },
-  { keys: 's', action: 'open settings' },
-  { keys: 'j', action: 'focus next PR' },
-  { keys: 'k', action: 'focus previous PR' },
-  { keys: 'Enter', action: 'open focused PR in a new tab' },
-  { keys: '?', action: 'show this help' },
-  { keys: 'Esc', action: 'go back' },
+  { keys: 'r', action: 'Poll now' },
+  { keys: 's', action: 'Open settings' },
+  { keys: 'j', action: 'Focus next PR' },
+  { keys: 'k', action: 'Focus previous PR' },
+  { keys: 'Enter', action: 'Open focused PR in a new tab' },
+  { keys: '?', action: 'Show this help' },
+  { keys: 'Esc', action: 'Go back' },
 ];
 
 export function HelpView({ onBack }: Props) {

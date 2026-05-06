@@ -31,7 +31,7 @@ export function MigrationBanner({ onSwitchToApp }: Props) {
     <div className="migration-banner" data-testid="migration-banner" role="region" aria-label="Auth migration suggestion">
       <p>
         Your PAT works fine, but GitHub App auth is more secure and works
-        at companies that block PATs.
+        at companies that block PATs
       </p>
       <div className="migration-banner__actions">
         <button type="button" className="btn btn--primary" onClick={onSwitchToApp}>

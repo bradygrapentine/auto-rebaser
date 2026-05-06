@@ -6,9 +6,9 @@ describe('HelpView', () => {
   it('renders the shortcut table', () => {
     render(<HelpView onBack={() => {}} />);
     expect(screen.getByTestId('help-view')).toBeInTheDocument();
-    expect(screen.getByText('poll now')).toBeInTheDocument();
-    expect(screen.getByText('focus next PR')).toBeInTheDocument();
-    expect(screen.getByText('open focused PR in a new tab')).toBeInTheDocument();
+    expect(screen.getByText('Poll now')).toBeInTheDocument();
+    expect(screen.getByText('Focus next PR')).toBeInTheDocument();
+    expect(screen.getByText('Open focused PR in a new tab')).toBeInTheDocument();
   });
 
   it('back button calls onBack', () => {
