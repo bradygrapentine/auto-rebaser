@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { PRRow } from '../../../src/popup/components/PRRow';
 import type { PRRecord } from '../../../src/core/types';
 
@@ -49,5 +49,57 @@ describe('PRRow', () => {
   it('does not render skip badge when autoMergeSkipReason is absent', () => {
     render(<PRRow pr={basePR} />);
     expect(screen.queryByTestId('auto-merge-skip-badge')).not.toBeInTheDocument();
+  });
+
+  // Story 5.1
+  it('renders idle badge when staleness is set and showStaleBadge=true', () => {
+    const pr = {
+      ...basePR,
+      staleness: { idleDays: 14, lastActivityAt: 0 },
+    } as PRRecord;
+    render(<PRRow pr={pr} showStaleBadge />);
+    expect(screen.getByTestId('stale-badge')).toHaveTextContent('idle 2w');
+  });
+
+  it('does not render idle badge when showStaleBadge=false', () => {
+    const pr = {
+      ...basePR,
+      staleness: { idleDays: 14, lastActivityAt: 0 },
+    } as PRRecord;
+    render(<PRRow pr={pr} showStaleBadge={false} />);
+    expect(screen.queryByTestId('stale-badge')).not.toBeInTheDocument();
+  });
+
+  it('renders ping link when canPing=true and onPing is provided', () => {
+    const onPing = vi.fn();
+    render(
+      <PRRow
+        pr={basePR}
+        pingState={{ canPing: true, pingedHoursAgo: null }}
+        onPing={onPing}
+      />
+    );
+    const link = screen.getByTestId('ping-link');
+    expect(link).toHaveTextContent('ping');
+    fireEvent.click(link);
+    expect(onPing).toHaveBeenCalledWith(basePR);
+  });
+
+  it('renders "pinged Xh ago" disabled when throttled', () => {
+    render(
+      <PRRow
+        pr={basePR}
+        pingState={{ canPing: false, pingedHoursAgo: 3 }}
+        onPing={vi.fn()}
+      />
+    );
+    const link = screen.getByTestId('ping-link');
+    expect(link).toHaveTextContent('pinged 3h ago');
+    expect(link).toBeDisabled();
+  });
+
+  it('does not render ping link when no pingState provided', () => {
+    render(<PRRow pr={basePR} />);
+    expect(screen.queryByTestId('ping-link')).not.toBeInTheDocument();
   });
 });

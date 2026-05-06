@@ -103,6 +103,12 @@ describe('automations-store', () => {
       autoDismissOptOutRepos: [],
       notificationsScopeGranted: true,
       enableKeyboardShortcuts: false,
+      enableStaleBadge: true,
+      staleThresholdDays: 30,
+      staleThresholdOverrides: { 'org/x': 7 },
+      staleCountsAsAttention: false,
+      enablePingReviewers: true,
+      pingTemplate: 'hi {reviewers}',
     };
     chrome.storage.sync.get = vi
       .fn()

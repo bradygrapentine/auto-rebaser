@@ -37,7 +37,23 @@ export interface AutomationSettings {
 
   /** Story 5.5 — popup keyboard shortcuts (r/s/?/j/k/Enter/Esc). Default ON. */
   enableKeyboardShortcuts: boolean;
+
+  // ── Story 5.1 — stale-PR badge + ping reviewers ──
+  /** Show an `idle Nd` pill on rows whose PR has not been updated within the threshold. */
+  enableStaleBadge: boolean;
+  /** Days of inactivity before a PR is considered idle. */
+  staleThresholdDays: StaleThresholdDays;
+  /** Per-repo override of the stale threshold. Format: { "owner/repo": days }. */
+  staleThresholdOverrides: Record<string, StaleThresholdDays>;
+  /** When true, an idle PR triggers the orange "needs attention" repo-group dot. Default off. */
+  staleCountsAsAttention: boolean;
+  /** Show a `ping ↗` link on stale PR rows that have requested reviewers. */
+  enablePingReviewers: boolean;
+  /** Comment body posted when the user confirms a ping. `{reviewers}` is replaced with `@user1 @user2`. */
+  pingTemplate: string;
 }
+
+export type StaleThresholdDays = 7 | 14 | 30 | 60;
 
 export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   ignoredRepos: [],
@@ -53,6 +69,12 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   autoDismissOptOutRepos: [],
   notificationsScopeGranted: false,
   enableKeyboardShortcuts: true,
+  enableStaleBadge: true,
+  staleThresholdDays: 14,
+  staleThresholdOverrides: {},
+  staleCountsAsAttention: false,
+  enablePingReviewers: false,             // opt-in — never write to PRs without explicit toggle
+  pingTemplate: 'Friendly nudge — could you take a look when you have a moment? {reviewers}',
 };
 
 export type PhaseTwoPRState =
@@ -83,6 +105,21 @@ export interface PRRecordPhaseTwo {
   mergedAt?: number;
   /** PR draft status, needed for Story 2.7. */
   isDraft?: boolean;
+
+  /**
+   * Story 5.1 — staleness metadata computed each poll. Additive — does NOT
+   * affect the existing PR state machine. Cleared when the PR comes back
+   * within threshold.
+   */
+  staleness?: {
+    /** Whole-day count since `lastActivityAt`. */
+    idleDays: number;
+    /** Epoch ms of `pull_request.updated_at` at the time it was computed. */
+    lastActivityAt: number;
+  };
+
+  /** Reviewers requested on the PR — needed for the ping confirmation view. */
+  requestedReviewers?: string[];
 }
 
 /** threadId → epoch ms when we auto-resolved it. Skip if already in this map. */

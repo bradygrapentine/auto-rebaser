@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { RepoOptOutList } from './RepoOptOutList';
-import type { MergeMethod } from '../../core/automations-types';
+import type { MergeMethod, StaleThresholdDays } from '../../core/automations-types';
 
 const MERGE_METHOD_LABELS: Record<MergeMethod, string> = {
   SQUASH: 'squash',
@@ -19,7 +19,9 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'dismiss' | 'shortcuts';
+type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'dismiss' | 'shortcuts' | 'stale';
+
+const STALE_THRESHOLDS: StaleThresholdDays[] = [7, 14, 30, 60];
 
 function Chevron({
   expanded,
@@ -143,6 +145,7 @@ export function AutomationsSettings() {
     autoResolve: true,
     dismiss: true,
     shortcuts: true,
+    stale: true,
   });
 
   const toggle = (k: SubKey) =>
@@ -307,6 +310,78 @@ export function AutomationsSettings() {
               repos={settings.autoDismissOptOutRepos}
               onChange={(autoDismissOptOutRepos) => save({ autoDismissOptOutRepos })}
             />
+          </>
+        )}
+      </div>
+
+      {/* 5.1 stale-PR badge + ping reviewers */}
+      <div className="automation-block" data-testid="stale-block">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.stale}
+            onClick={() => toggle('stale')}
+            label="stale-PR section"
+          />
+          <label className="toggle">
+            <span className="toggle__name">Show stale-PR badge</span>
+            <input
+              type="checkbox"
+              checked={settings.enableStaleBadge}
+              onChange={(e) => save({ enableStaleBadge: e.target.checked })}
+            />
+          </label>
+        </div>
+        {expanded.stale && (
+          <>
+            <div className="toggle-sub">
+              <span>idle threshold</span>
+              <select
+                value={settings.staleThresholdDays}
+                disabled={!settings.enableStaleBadge}
+                onChange={(e) =>
+                  save({ staleThresholdDays: Number(e.target.value) as StaleThresholdDays })
+                }
+                aria-label="Idle threshold (days)"
+                className="select select--small"
+              >
+                {STALE_THRESHOLDS.map((d) => (
+                  <option key={d} value={d}>{d}d</option>
+                ))}
+              </select>
+            </div>
+            <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
+              <span>Stale counts as attention</span>
+              <input
+                type="checkbox"
+                checked={settings.staleCountsAsAttention}
+                disabled={!settings.enableStaleBadge}
+                onChange={(e) => save({ staleCountsAsAttention: e.target.checked })}
+              />
+            </label>
+            <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
+              <span>Allow ping reviewers</span>
+              <input
+                type="checkbox"
+                checked={settings.enablePingReviewers}
+                onChange={(e) => save({ enablePingReviewers: e.target.checked })}
+              />
+            </label>
+            {settings.enablePingReviewers && (
+              <div className="toggle-sub" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <span style={{ marginBottom: 4 }}>ping comment template</span>
+                <textarea
+                  className="ping-template"
+                  value={settings.pingTemplate}
+                  rows={3}
+                  onChange={(e) => save({ pingTemplate: e.target.value })}
+                  aria-label="Ping comment template"
+                  data-testid="ping-template"
+                />
+                <span className="muted" style={{ fontSize: 10 }}>
+                  Use {'{reviewers}'} to insert the @-mentions inline.
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>

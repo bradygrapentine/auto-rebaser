@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import type { PRRecord } from '../../core/types';
+import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { Header } from '../components/Header';
 import { RepoGroup } from '../components/RepoGroup';
 import { PollSummaryFooter } from '../components/PollSummaryFooter';
@@ -6,22 +8,40 @@ import { usePRStore } from '../hooks/usePRStore';
 import { useGroupedPRs } from '../hooks/useGroupedPRs';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { usePingedStore } from '../hooks/usePingedStore';
 
 interface Props {
   user?: { login: string; avatarUrl: string };
   onSettings: () => void;
   onSignOut: () => void;
   onHelp?: () => void;
+  onPing?: (pr: PRRecord) => void;
   onOpenActivity?: (todayOnly: boolean) => void;
 }
 
-export function PRListView({ user, onSettings, onSignOut, onHelp, onOpenActivity }: Props) {
+export function PRListView({
+  user, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
+}: Props) {
   const store = usePRStore();
   const { prs, lastPollAt, pollInProgress } = store;
   const { settings } = useAutomationSettings();
   const ignored = new Set(settings.ignoredRepos);
   const visiblePRs = prs.filter((pr) => !ignored.has(pr.repo));
-  const groups = useGroupedPRs(visiblePRs);
+  const groups = useGroupedPRs(visiblePRs, {
+    staleCountsAsAttention: settings.staleCountsAsAttention,
+  });
+
+  const pinged = usePingedStore();
+  const pingStateFor = (pr: PRRecord) => {
+    if (!settings.enablePingReviewers || !onPing) return null;
+    const extended = pr as PRRecord & PRRecordPhaseTwo;
+    if (!extended.staleness) return null;
+    const reviewers = extended.requestedReviewers ?? [];
+    if (reviewers.length === 0) return null;
+    const hours = pinged.hoursSince(pr.id);
+    const throttled = pinged.isThrottled(pr.id);
+    return { canPing: !throttled, pingedHoursAgo: hours };
+  };
 
   // Lifted expansion state — repos the user has toggled away from their
   // default. Effective expansion = `defaultExpanded XOR toggled.has(repo)`.
@@ -116,6 +136,9 @@ export function PRListView({ user, onSettings, onSignOut, onHelp, onOpenActivity
                 onToggle={() => toggleGroup(g.repo)}
                 userLogin={user?.login}
                 focusedPRId={effectiveFocusedId}
+                showStaleBadges={settings.enableStaleBadge}
+                pingStateFor={pingStateFor}
+                onPing={onPing}
               />
             );
           })

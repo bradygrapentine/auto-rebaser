@@ -72,6 +72,12 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   autoDismissOptOutRepos: [],
   notificationsScopeGranted: true,
   enableKeyboardShortcuts: true,
+  enableStaleBadge: true,
+  staleThresholdDays: 14,
+  staleThresholdOverrides: {},
+  staleCountsAsAttention: false,
+  enablePingReviewers: false,
+  pingTemplate: 'nudge {reviewers}',
 };
 
 function makeGithubDeps(): OrchestratorDeps {

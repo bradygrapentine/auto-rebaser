@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
+import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { SignInView } from './views/SignInView';
 import { PRListView } from './views/PRListView';
 import { SettingsView } from './views/SettingsView';
 import { ActivityLogView } from './views/ActivityLogView';
 import { HelpView } from './views/HelpView';
+import { PingConfirmView } from './views/PingConfirmView';
+import type { PRRecord } from '../core/types';
 
-type View = 'list' | 'settings' | 'activity-log' | 'help';
+type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm';
 
 export function App() {
   const auth = useAuth();
   const [view, setView] = useState<View>('list');
   const [activityFilter, setActivityFilter] = useState<{ todayOnly?: boolean }>({});
+  const [pingTarget, setPingTarget] = useState<PRRecord | null>(null);
+  const { settings: automation } = useAutomationSettings();
 
   if (auth.status === 'loading') {
     return (
@@ -42,6 +47,25 @@ export function App() {
       );
     case 'help':
       return <HelpView onBack={() => setView('list')} />;
+    case 'ping-confirm':
+      if (!pingTarget) {
+        setView('list');
+        return null;
+      }
+      return (
+        <PingConfirmView
+          pr={pingTarget}
+          template={automation.pingTemplate}
+          onCancel={() => {
+            setPingTarget(null);
+            setView('list');
+          }}
+          onSuccess={() => {
+            setPingTarget(null);
+            setView('list');
+          }}
+        />
+      );
     default:
       return (
         <PRListView
@@ -49,6 +73,10 @@ export function App() {
           onSettings={() => setView('settings')}
           onSignOut={auth.signOut}
           onHelp={() => setView('help')}
+          onPing={(pr) => {
+            setPingTarget(pr);
+            setView('ping-confirm');
+          }}
           onOpenActivity={(todayOnly) => {
             setActivityFilter({ todayOnly });
             setView('activity-log');
