@@ -91,4 +91,52 @@ describe('SettingsView', () => {
     await act(async () => {});
     expect(screen.getByTestId('automations-settings')).toBeInTheDocument();
   });
+
+  it('renders the account section when authMethod is provided', () => {
+    render(<SettingsView onBack={vi.fn()} authMethod="github_app" onSignOut={vi.fn()} />);
+    expect(screen.getByTestId('account-section')).toBeInTheDocument();
+    expect(screen.getByText(/GitHub App/)).toBeInTheDocument();
+  });
+
+  it('shows PAT label when authMethod is pat', () => {
+    render(<SettingsView onBack={vi.fn()} authMethod="pat" onSignOut={vi.fn()} />);
+    expect(screen.getByText(/PAT \(legacy\)/)).toBeInTheDocument();
+    expect(screen.getByTestId('switch-method')).toHaveTextContent(/switch to GitHub App/i);
+  });
+
+  it('switch-method button invokes onSignOut', () => {
+    const onSignOut = vi.fn();
+    render(<SettingsView onBack={vi.fn()} authMethod="github_app" onSignOut={onSignOut} />);
+    fireEvent.click(screen.getByTestId('switch-method'));
+    expect(onSignOut).toHaveBeenCalledOnce();
+  });
+
+  it('enterprise apply with invalid host shows error and does not save', async () => {
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: 'not a valid host' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('enterprise-apply'));
+    });
+    expect(screen.getByTestId('enterprise-host-error')).toBeInTheDocument();
+    expect(mockSaveSettings).not.toHaveBeenCalled();
+  });
+
+  it('enterprise apply with empty host clears the setting', async () => {
+    (useSettings as ReturnType<typeof vi.fn>).mockReturnValue({
+      settings: { intervalMinutes: 5, enterpriseHost: 'github.acme.corp' },
+      saveSettings: mockSaveSettings,
+    });
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: '' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('enterprise-apply'));
+    });
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ enterpriseHost: undefined, enterpriseClientId: undefined }),
+    );
+  });
 });

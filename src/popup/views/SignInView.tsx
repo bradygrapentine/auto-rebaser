@@ -38,9 +38,9 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
       const res = (await chrome.runtime.sendMessage({
         type: 'AUTH_DEVICE_FLOW_STATUS',
       })) as RuntimeResponse;
-      if (cancelled || !res.ok) return;
+      if (cancelled || !res?.ok || !res.data) return;
       const status = res.data as DeviceFlowStatus;
-      if (status.state === 'pending') {
+      if (status?.state === 'pending') {
         setDeviceStart(status.start);
         setView('device');
       }
