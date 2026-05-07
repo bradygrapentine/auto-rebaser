@@ -45,7 +45,7 @@ Engineers who maintain a steady stream of open PRs and want their housekeeping (
 
 ## Required URLs
 
-- **Privacy policy URL** — host `docs/PRIVACY.md` somewhere public. Easiest: enable GitHub Pages on `bradygrapentine/auto-rebaser`, then the URL becomes `https://bradygrapentine.github.io/auto-rebaser/PRIVACY.html` (or `.md` raw).
+- **Privacy policy URL**: https://bradygrapentine.github.io/auto-rebaser/PRIVACY
 - **Support / homepage URL**: https://github.com/bradygrapentine/auto-rebaser
 - **Source URL** (Firefox requires this for review): https://github.com/bradygrapentine/auto-rebaser
 
