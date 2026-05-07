@@ -19,6 +19,7 @@
     "build:chrome": "vite build",
     "build:firefox": "TARGET=firefox vite build",
     "build:all": "vite build && TARGET=firefox vite build",
+    "build:store": "STORE=1 vite build && STORE=1 TARGET=firefox vite build",
     "build:icons": "node scripts/build-icons.mjs",
     "dev": "vite build --watch",
     "test": "vitest run",

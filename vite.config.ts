@@ -1,11 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync, readdirSync } from 'fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 
 const target = process.env.TARGET === 'firefox' ? 'firefox' : 'chrome';
 const outDir = target === 'firefox' ? 'dist-firefox' : 'dist';
 const manifestSrc = target === 'firefox' ? 'manifest.firefox.json' : 'manifest.json';
+// `key` pins the dev-mode extension ID for OAuth redirect URIs. The Chrome
+// Web Store rejects it ("key field is not allowed in manifest"), so strip it
+// from production builds (STORE=1) — dev builds keep it for stable IDs.
+const stripKey = process.env.STORE === '1';
 
 export default defineConfig({
   plugins: [
@@ -13,7 +17,9 @@ export default defineConfig({
     {
       name: 'copy-static',
       closeBundle() {
-        copyFileSync(manifestSrc, `${outDir}/manifest.json`);
+        const manifest = JSON.parse(readFileSync(manifestSrc, 'utf8'));
+        if (stripKey) delete manifest.key;
+        writeFileSync(`${outDir}/manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
         mkdirSync(`${outDir}/icons`, { recursive: true });
         for (const name of readdirSync('icons')) {
           if (name.endsWith('.png')) copyFileSync(`icons/${name}`, `${outDir}/icons/${name}`);
