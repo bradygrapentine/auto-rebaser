@@ -1,12 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Auto Rebaser",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Automatically rebases your open GitHub PRs when they fall behind their base branch.",
   "browser_specific_settings": {
     "gecko": {
       "id": "auto-rebaser@grapentineb.dev",
-      "strict_min_version": "115.0"
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "permissions": ["alarms", "storage"],
