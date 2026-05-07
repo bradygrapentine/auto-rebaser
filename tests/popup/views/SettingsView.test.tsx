@@ -129,7 +129,7 @@ describe('SettingsView', () => {
     (globalThis as { chrome: typeof chrome }).chrome = {
       ...chrome,
       permissions: { request: requestMock, remove: removeMock },
-    } as typeof chrome;
+    } as unknown as typeof chrome;
     render(<SettingsView onBack={vi.fn()} />);
     fireEvent.change(screen.getByTestId('enterprise-host-input'), {
       target: { value: 'github.acme.corp' },
@@ -151,7 +151,7 @@ describe('SettingsView', () => {
     (globalThis as { chrome: typeof chrome }).chrome = {
       ...chrome,
       permissions: { request: requestMock, remove: vi.fn() },
-    } as typeof chrome;
+    } as unknown as typeof chrome;
     render(<SettingsView onBack={vi.fn()} />);
     fireEvent.change(screen.getByTestId('enterprise-host-input'), {
       target: { value: 'github.acme.corp' },
@@ -168,7 +168,7 @@ describe('SettingsView', () => {
     (globalThis as { chrome: typeof chrome }).chrome = {
       ...chrome,
       permissions: { request: vi.fn(), remove: removeMock },
-    } as typeof chrome;
+    } as unknown as typeof chrome;
     (useSettings as ReturnType<typeof vi.fn>).mockReturnValue({
       settings: { intervalMinutes: 5, enterpriseHost: 'github.acme.corp' },
       saveSettings: mockSaveSettings,
