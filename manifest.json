@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Auto Rebaser",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Automatically rebases your open GitHub PRs when they fall behind their base branch.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuFtwSZwF8dhglRR149cYKTzXQahBPe8uScUGwPROVX2to8gQIPKIpi+wsfkDmSM5CAHojIRUaBF9+WIdfQMUP9K3a/Ix4nYYenL1CUys+tY/Ld5ZMPeWo968z5Y5HknYv2tuACt5YrXKSwAW9iYSxV9X89fg9kfiBVGiWdzUqSNmpi3k8f8JsTjp7JYJGajfzc6T3LMxjUYk0XhBtmztTXwmKQHfCu5HOx2/mtqx+PLPsJ2/SmkHuuZagsx592r6e5sV8/w5T4UL6+U22jBZfQ7rpQ5xwh5iNvizsRf26az1TA+19Prxd0sx59L9IdVKjbdoQvbb5pz31wcxeJK+RQIDAQAB",
   "permissions": ["alarms", "storage", "identity"],
