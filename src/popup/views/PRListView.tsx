@@ -200,35 +200,28 @@ export function PRListView({
       </div>
       <footer className="popup-footer">
         <div className="popup-footer__main">
-          <span className="popup-footer__line">
-            {lastPollAt
-              ? `Last poll: ${new Date(lastPollAt).toLocaleTimeString()}`
-              : 'Last poll: never'}
-          </span>
           <PollSummaryFooter onOpenActivity={onOpenActivity} />
-        </div>
-        <div className="popup-footer__actions">
           <a
             href="https://github.com/sponsors/bradygrapentine"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn popup-footer__support-link"
+            className="popup-footer__support-link"
             data-testid="support-link"
           >
-            support ↗
+            Support the project
           </a>
-          {onHelp && (
-            <button
-              type="button"
-              className="btn popup-footer__shortcuts-btn"
-              onClick={onHelp}
-              data-testid="help-link"
-              aria-label="Show keyboard shortcuts"
-            >
-              shortcuts
-            </button>
-          )}
         </div>
+        {onHelp && (
+          <button
+            type="button"
+            className="btn popup-footer__shortcuts-btn"
+            onClick={onHelp}
+            data-testid="help-link"
+            aria-label="Show keyboard shortcuts"
+          >
+            shortcuts
+          </button>
+        )}
       </footer>
     </div>
   );
