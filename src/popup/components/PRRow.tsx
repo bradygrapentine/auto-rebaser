@@ -36,7 +36,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installR
       <a
         href={pr.url}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
         className="pr-row"
         data-focused={focused ? 'true' : undefined}
         title={pr.errorMessage}
@@ -54,7 +54,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installR
                   <a
                     href={installRequestUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     className="pr-row__error-fix"
                   >
