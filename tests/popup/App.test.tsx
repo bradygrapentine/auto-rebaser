@@ -141,6 +141,33 @@ describe('App', () => {
     expect(screen.getByText(/no open prs found/i)).toBeInTheDocument();
   });
 
+  it('renders HelpView when shortcuts button is clicked', () => {
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    fireEvent.click(screen.getByTestId('help-link'));
+    expect(screen.getByTestId('help-view')).toBeInTheDocument();
+  });
+
+  it('navigates back from HelpView to PRListView', () => {
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    fireEvent.click(screen.getByTestId('help-link'));
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    expect(screen.getByText(/no open prs found/i)).toBeInTheDocument();
+  });
+
   it('sign-out returns to signed-out state', async () => {
     const mockSignOut = vi.fn();
     // start signed-in

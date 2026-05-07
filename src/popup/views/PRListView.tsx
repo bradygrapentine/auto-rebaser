@@ -163,7 +163,7 @@ export function PRListView({
               <a
                 href={installRequestUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="btn btn--primary"
               >
                 install or request

@@ -218,7 +218,7 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
             <a
               href="https://github.com/settings/tokens/new?scopes=repo&description=Auto%20Rebaser"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               generate →
             </a>

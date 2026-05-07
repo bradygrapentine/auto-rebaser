@@ -1,5 +1,5 @@
 # Auto-Rebaser Extension — Design Spec
-_2026-05-02_
+_2026-05-02 · status: ✅ shipped (v1.0.x). Frozen reference. Current behaviour may have evolved — `src/` and `docs/superpowers/BACKLOG.md` §7 are authoritative._
 
 ## Overview
 

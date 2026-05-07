@@ -1,6 +1,6 @@
 # GitHub App Authentication — Design Spec
 
-_2026-05-02 · status: proposal_
+_2026-05-02 · status: ✅ shipped (v0.2.0, Phase 4). Frozen reference; `src/core/auth*.ts` + `docs/superpowers/BACKLOG.md` §7 are authoritative._
 
 ## Goal
 

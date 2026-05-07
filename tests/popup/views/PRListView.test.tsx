@@ -64,17 +64,13 @@ describe('PRListView', () => {
     expect(headers[1]).toHaveTextContent(/zzz\/aaa/);
   });
 
-  it('shows "Last poll: never" when lastPollAt is null', () => {
+  it('renders Support link in the footer pointing at GitHub Sponsors', () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
-    expect(screen.getByText(/last poll: never/i)).toBeInTheDocument();
-  });
-
-  it('shows formatted time when lastPollAt is set', () => {
-    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [], lastPollAt: 1000 });
-    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
-    expect(screen.getByText(/last poll:/i)).toBeInTheDocument();
-    expect(screen.queryByText(/never/i)).not.toBeInTheDocument();
+    const link = screen.getByTestId('support-link') as HTMLAnchorElement;
+    expect(link).toHaveAttribute('href', 'https://github.com/sponsors/bradygrapentine');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.rel).toContain('noopener');
   });
 
   it('Poll now button sends POLL_NOW message', () => {

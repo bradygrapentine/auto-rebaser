@@ -1,7 +1,88 @@
-# Auto-Rebaser — MVP Backlog
-_2026-05-02_
+# Auto-Rebaser — Backlog
+_Last `/backlog-sync`: 2026-05-07_
 
-Stories are numbered to match roadmap features (1.x). Each story includes technical details and acceptance criteria.
+Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
+
+---
+
+## §0 Status board
+
+| Status | Count |
+|---|---|
+| 🟢 Ready | 0 |
+| ⚡ In progress | 0 |
+| 🔎 In review | 0 |
+| 🚧 Blocked | 0 |
+| ✅ Shipped | 22 |
+| 🧊 Deferred / dropped | 3 |
+
+---
+
+## §1 Ready
+_(none — v1.0.1 shipped 2026-05-07)_
+
+## §2 In progress
+_(none)_
+
+## §3 In review
+_(none)_
+
+## §4 Blocked
+_(none)_
+
+## §5 Future / unscoped
+_Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
+
+---
+
+## §7 Shipped log
+
+PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### Phase 1 — v0.1 baseline (initial commit)
+- **1.1** GitHub OAuth Sign-in
+- **1.2** Authored PR Discovery
+- **1.3** Auto-Rebase Behind PRs
+- **1.4** State Tracking
+- **1.5** User-Configurable Poll Interval
+- **1.6** Popup PR List
+- **1.7** Poll Now Button
+- **1.8** Badge Count
+- **1.9** ETag Caching
+- **1.10** Error Handling
+
+### Phase 2 — Automations (initial commit / pre-PR-1)
+- **2.6** Auto-Delete Merged Branch
+- **2.7** Auto-Enable Auto-Merge
+- **2.8** Auto-Resolve Obsolete Review Threads
+
+### Phase 4 — Enterprise authentication
+- **4.1** GitHub App registration & publication
+- **4.2** OAuth Device Flow sign-in — PR #6
+- **4.3** Token refresh + storage — PR #7
+- **4.4** Dual-path auth UI — PR #8
+- **4.5** Per-installation scoping & "Request access" — PR #9
+- **4.6** GitHub Enterprise Server (GHES) base-URL config — PR #10
+
+### Phase 5 — Companion automations
+- **5.1** Stale-PR badge + ping reviewers — PR #4
+- **5.4** Smart merge-method selection — PR #2
+- **5.5** Keyboard shortcuts — PR #3
+- **5.6** Activity log — PR #1
+
+---
+
+## 🧊 Deferred / dropped
+
+- **2.9** Auto-Dismiss Stale PR Notifications — **dropped** in PR #46. The required `notifications` PAT scope is unavailable to GitHub Apps, so the automation could only run on the legacy PAT path. Not worth maintaining.
+- **5.2** push-since-approval — **dropped**. GitHub branch protection ("Dismiss stale approvals on new commits") covers gating when admins opt in; surfacing-only didn't carry its weight against the existing native option.
+- **5.3** flaky-CI auto-retry — **deferred**. Supporting infrastructure (pattern editor, activity log entries, GitHub App permission bump for Checks: Write + Actions: Write) is sized for a headline release. Revisit if/when flaky-CI becomes an explicit Pro-tier anchor.
+
+---
+
+# Original story specs (frozen v1 reference)
+
+The sections below are the original v1 story specs as written on 2026-05-02. They are kept verbatim for historical reference; mark live work in §1–§5 above instead of editing this section.
 
 ---
 
@@ -304,6 +385,8 @@ Stories 2.6–2.9. Each is independently shippable on top of the MVP. All apply 
 ---
 
 ## Story 2.9 — Auto-Dismiss Stale PR Notifications
+
+> 🧊 **Dropped (2026-05-06, PR #46).** The required `notifications` PAT scope is unavailable to GitHub Apps, so this automation could only run on the legacy PAT path. See 🧊 Deferred / dropped above.
 
 **As a user, I want my GitHub notification inbox cleared of threads tied to PRs that are already closed or merged.**
 

@@ -25,7 +25,7 @@ describe('PRRow', () => {
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/pull/42');
     expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noreferrer');
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it('shows errorMessage as title attribute when present', () => {

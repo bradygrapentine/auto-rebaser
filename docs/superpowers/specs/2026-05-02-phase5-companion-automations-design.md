@@ -1,6 +1,6 @@
 # Phase 5 — Companion automations (final design)
 
-_2026-05-02 · status: approved for backlog_
+_2026-05-02 · status: ✅ shipped (v0.2.1 → v1.0.x; 5.1, 5.4, 5.5, 5.6 all on `main`). Frozen reference; `src/` and `docs/superpowers/BACKLOG.md` §7 are authoritative._
 
 Four additions in the spirit of 2.6–2.9: same shape (poll-driven, deterministic, per-repo opt-out, kill-switch defaulted-OFF for any new write action), no admin scope, no backend, **all UI lives in the toolbar popup**.
 

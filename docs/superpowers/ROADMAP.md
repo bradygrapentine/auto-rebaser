@@ -1,5 +1,7 @@
-# Auto-Rebaser — MVP Roadmap
-_2026-05-02_
+# Auto-Rebaser — Roadmap
+_Last updated: 2026-05-07_
+
+> **Status:** v1.0.1 shipped 2026-05-07. Phases 1, 2 (minus 2.9), 4, and 5 are all on `main`. Chrome Web Store + Firefox AMO submissions in flight. Phase 3 deferred.
 
 ## Goal
 
@@ -7,9 +9,9 @@ Eliminate the manual "Update branch" click on GitHub PRs. The extension polls yo
 
 ---
 
-## Phase 1 — MVP (this plan)
+## Phase 1 — MVP ✅ shipped (v0.1.0)
 
-Standalone Chrome extension, github.com only, single authenticated user.
+Standalone Chrome extension, github.com only, single authenticated user. Initial commit `1fef878`.
 
 ### Features
 
@@ -40,33 +42,33 @@ Standalone Chrome extension, github.com only, single authenticated user.
 
 | # | Feature | Status |
 |---|---|---|
-| 2.1 | Firefox support (MV3, minor manifest adjustments) | not started |
-| 2.2 | Chrome Web Store submission | not started |
-| 2.3 | Backend proxy for OAuth token exchange (removes embedded client_secret) | not started |
-| 2.4 | Desktop notifications for rebased/conflicted PRs (opt-in) | not started |
-| 2.5 | Filter by repo or org | not started |
-| 2.6 | **Auto-delete merged branch** — when an authored PR merges and the repo doesn't auto-delete, the extension deletes the head ref via API. Per-repo opt-out. | logic + endpoint ready (prep branch) |
-| 2.7 | **Auto-enable auto-merge** — for authored PRs without auto-merge enabled, flip the toggle (squash by default, configurable) so GitHub merges as soon as required checks/reviews pass. | logic + endpoint ready (prep branch) |
-| 2.8 | **Auto-resolve obsolete review threads** — when a review thread's referenced line no longer exists in the current diff, mark the thread resolved via GraphQL. | logic + endpoint ready (prep branch) |
-| 2.9 | **Auto-dismiss stale PR notifications** — for notification threads whose PR is closed/merged, mark the thread as read so the inbox stays clean. | logic + endpoint ready (prep branch) |
-
-> Features 2.6–2.9 prep is complete on `feat/phase2-endpoints-prep` (12 files, 89 tests, 100% coverage on new code). Remaining wiring + UI work is split into Part A and Part B — see `PHASE2_STATE.md`.
+| 2.1 | Firefox support (MV3, manifest adjustments) | ✅ shipped (build target lives at `manifest.firefox.json`; `npm run build:firefox`) |
+| 2.2 | Chrome Web Store + Firefox AMO submission | ⚡ in flight (v1.0.1 release zips published 2026-05-07; store uploads pending) |
+| 2.3 | Backend proxy for OAuth token exchange | 🧊 obsoleted by Phase 4 (Device Flow has no client_secret to hide) |
+| 2.4 | Desktop notifications for rebased/conflicted PRs | 🟢 unscoped (deferred from MVP, no v1.x slot yet) |
+| 2.5 | Filter by repo or org | 🟢 unscoped |
+| 2.6 | **Auto-delete merged branch** | ✅ shipped |
+| 2.7 | **Auto-enable auto-merge** | ✅ shipped |
+| 2.8 | **Auto-resolve obsolete review threads** | ✅ shipped |
+| 2.9 | **Auto-dismiss stale PR notifications** | 🧊 dropped (PR #46) — `notifications` scope unavailable to GitHub Apps |
 
 ---
 
-## Phase 3 — Production / Multi-user
+## Phase 3 — Production / Multi-user (deferred)
 
-| # | Feature |
-|---|---|
-| 3.1 | GitHub Enterprise host configuration |
-| 3.2 | Multi-account support |
-| 3.3 | Webhook-driven updates via backend (real-time instead of polling) |
-| 3.4 | Usage analytics + error reporting |
-| 3.5 | Subscription / billing layer |
+Originally scoped pre-Phase 4. Item 3.1 (GHES) is now actually delivered as Story **4.6**. The rest stays deferred — none are required for v1.x.
+
+| # | Feature | Status |
+|---|---|---|
+| 3.1 | GitHub Enterprise host configuration | ✅ shipped as Story 4.6 |
+| 3.2 | Multi-account support | 🟢 unscoped |
+| 3.3 | Webhook-driven updates via backend (real-time instead of polling) | 🟢 unscoped |
+| 3.4 | Usage analytics + error reporting | 🧊 explicitly out of scope per privacy policy (no telemetry) |
+| 3.5 | Subscription / billing layer | 🧊 not aligned with the project scale (per memory: V1 ships without Marketplace) |
 
 ---
 
-## Phase 4 — Enterprise authentication (v0.2.0)
+## Phase 4 — Enterprise authentication ✅ shipped (v0.2.0)
 
 PATs are blocked or strongly discouraged at most companies. Phase 4 adds **GitHub App + OAuth Device Flow** as the primary auth method, with PAT retained as a legacy fallback.
 
@@ -91,7 +93,7 @@ Phase 3 is "production / multi-user" which implies subscription billing, analyti
 
 ---
 
-## Phase 5 — Companion automations (v0.2.1)
+## Phase 5 — Companion automations ✅ shipped (v0.2.1 → v1.0.x)
 
 Four small additions in the spirit of 2.6–2.9. All UI in the toolbar popup; no admin scope; no backend.
 
