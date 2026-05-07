@@ -22,3 +22,4 @@ worktrees/
 
 # Store-submission build outputs (regenerable via `npm run build` + zip).
 artifacts/
+auto-rebaser-firefox.xpi
