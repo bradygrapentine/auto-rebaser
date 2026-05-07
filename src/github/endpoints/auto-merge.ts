@@ -27,7 +27,11 @@ export async function enablePullRequestAutoMerge(
     return { enabled: true, unsupported: false };
   } catch (err) {
     if (err instanceof GraphQLError) {
-      const msg = err.errors[0]?.message ?? '';
+      // GitHub's GraphQL mutation prefixes its error with "Pull request " on
+      // top of messages that already start with "Pull request" — yielding
+      // "Pull request Pull request is in clean status". Strip the duplicate.
+      const raw = err.errors[0]?.message ?? '';
+      const msg = raw.replace(/^Pull request Pull request /, 'Pull request ');
       if (
         /not enabled/i.test(msg) ||
         /not allowed/i.test(msg) ||

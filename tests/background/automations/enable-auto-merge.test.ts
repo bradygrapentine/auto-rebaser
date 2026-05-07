@@ -70,10 +70,10 @@ describe('runEnableAutoMerge', () => {
     expect(deps.enable).not.toHaveBeenCalled();
   });
 
-  it('previously-unsupported PR skipped', async () => {
+  it('previously-unsupported PR re-attempted each cycle (orchestrator dedups via reason)', async () => {
     const deps = makeDeps();
     await runEnableAutoMerge([pr({ unsupported: true })], onSettings, deps);
-    expect(deps.enable).not.toHaveBeenCalled();
+    expect(deps.enable).toHaveBeenCalled();
   });
 
   it('unsupported result records PR id and does not count as enabled', async () => {

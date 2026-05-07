@@ -127,15 +127,17 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
         autoMergeMethodByPRId[prId] = method;
       }
       for (const prId of result.unsupportedPRs) {
-        prUpdates.push({ prId, patch: { autoMergeUnsupported: true } });
-        // Log a one-shot transition entry the first time a PR is marked
-        // unsupported. Repeat polls don't re-log because the orchestrator
-        // skips already-unsupported PRs in eligibility.
-        const prevUnsupported = (prs.find((p) => p.id === prId) as
+        const reason = result.unsupportedReasons[prId] ?? 'auto-merge unsupported';
+        prUpdates.push({
+          prId,
+          patch: { autoMergeUnsupported: true, autoMergeUnsupportedReason: reason },
+        });
+        // Log only when the reason text changes (or first time). Suppresses
+        // duplicate entries on repeat polls when nothing has changed.
+        const prevReason = (prs.find((p) => p.id === prId) as
           | (PRRecord & PRRecordPhaseTwo)
-          | undefined)?.autoMergeUnsupported === true;
-        if (!prevUnsupported) {
-          const reason = result.unsupportedReasons[prId] ?? 'auto-merge unsupported';
+          | undefined)?.autoMergeUnsupportedReason;
+        if (prevReason !== reason) {
           failedAutoMergeEntries.push({ prId, error: reason });
         }
       }

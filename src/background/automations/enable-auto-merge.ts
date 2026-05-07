@@ -102,12 +102,16 @@ export async function runEnableAutoMerge(
       pr.isDraft ||
       pr.mergeableState === 'dirty' ||
       pr.autoMergeEnabled ||
-      pr.unsupported ||
       optOut.has(pr.repo)
     ) {
       result.skipped++;
       continue;
     }
+    // Note: previously-unsupported PRs are re-evaluated each poll so that
+    // when the underlying condition changes (repo settings flipped, PR no
+    // longer in clean status, etc.) the orchestrator can log the new state.
+    // The orchestrator uses `autoMergeUnsupportedReason` to suppress dup
+    // activity entries when the reason text is unchanged.
 
     const method = resolveMergeMethod(settings.mergeMethodPreference, pr.allowedMethods);
     if (method === null) {

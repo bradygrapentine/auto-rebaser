@@ -465,9 +465,20 @@ async function runAutomationsPass(
     }
 
     // Story 2.7 — auto_merge_enabled failure entries.
-    for (const f of result.failedAutoMergeEntries ?? []) {
-      const pr = prMap.get(f.prId);
-      if (!pr) continue;
+    // Collapse duplicates within a single cycle: when multiple PRs in the
+    // same repo hit the same error (e.g. "Auto merge is not allowed for
+    // this repository"), emit one entry per (repo, errorMessage) using the
+    // lowest-numbered PR as the representative. The link still goes to a
+    // real PR; the message conveys the repo-wide condition.
+    const autoMergeFailKeys = new Set<string>();
+    const sortedFailures = [...(result.failedAutoMergeEntries ?? [])]
+      .map((f) => ({ f, pr: prMap.get(f.prId) }))
+      .filter((x): x is { f: typeof x.f; pr: PRRecord } => !!x.pr)
+      .sort((a, b) => a.pr.number - b.pr.number);
+    for (const { f, pr } of sortedFailures) {
+      const key = `${pr.repo}|${f.error}`;
+      if (autoMergeFailKeys.has(key)) continue;
+      autoMergeFailKeys.add(key);
       cycleEntries.push({
         at: now,
         action: 'auto_merge_enabled',
