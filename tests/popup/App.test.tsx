@@ -6,6 +6,15 @@ vi.mock('../../src/popup/hooks/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock('../../src/github/endpoints/issues', () => ({
+  postIssueComment: vi.fn().mockResolvedValue({ id: 100, html_url: '', body: '' }),
+}));
+
+vi.mock('../../src/core/ping-throttle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/core/ping-throttle')>();
+  return { ...actual, recordPing: vi.fn().mockResolvedValue(undefined) };
+});
+
 vi.mock('../../src/popup/hooks/usePRStore', () => ({
   usePRStore: vi.fn(),
 }));
@@ -152,6 +161,118 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(screen.getByTestId('help-link'));
     expect(screen.getByTestId('help-view')).toBeInTheDocument();
+  });
+
+  it('clicking view-activity routes to ActivityLogView (covers App onOpenActivity handler)', async () => {
+    (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(
+      async (key: string) => {
+        if (key === 'activity') {
+          return {
+            activity: {
+              entries: [
+                { at: Date.now(), action: 'rebase', repo: 'org/repo', prNumber: 7, result: 'success' },
+              ],
+            },
+          };
+        }
+        return {};
+      },
+    );
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    fireEvent.click(await screen.findByTestId('view-activity'));
+    expect(screen.getByTestId('activity-list')).toBeInTheDocument();
+  });
+
+  it('successful ping post returns to PR list (covers App onSuccess handler)', async () => {
+    const stalePR = {
+      id: 1,
+      number: 7,
+      title: 'Stuck',
+      repo: 'org/repo',
+      url: 'https://github.com/org/repo/pull/7',
+      state: 'current' as const,
+      lastUpdated: 0,
+      requestedReviewers: ['alice'],
+      staleness: { idleDays: 21, lastActivityAt: 0 },
+    };
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+      prs: [stalePR],
+      lastPollAt: null,
+    });
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...AUTOMATION_DEFAULTS,
+      enableStaleBadge: true,
+      enablePingReviewers: true,
+      staleCountsAsAttention: true,
+      staleThresholdDays: 14,
+      pingTemplate: 'nudge {reviewers}',
+    });
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      data: { id: 100, html_url: '', body: '' },
+    });
+    render(<App />);
+    fireEvent.click(await screen.findByTestId('ping-link'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('ping-confirm-post'));
+    });
+    expect(screen.queryByTestId('ping-confirm-body')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /poll now/i })).toBeInTheDocument();
+  });
+
+  it('clicking ping on a stale PR routes to PingConfirmView, cancel returns to list', async () => {
+    const stalePR = {
+      id: 1,
+      number: 7,
+      title: 'Stuck',
+      repo: 'org/repo',
+      url: 'https://github.com/org/repo/pull/7',
+      state: 'current' as const,
+      lastUpdated: 0,
+      requestedReviewers: ['alice'],
+      staleness: { idleDays: 21, lastActivityAt: 0 },
+    };
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+      prs: [stalePR],
+      lastPollAt: null,
+    });
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...AUTOMATION_DEFAULTS,
+      enableStaleBadge: true,
+      enablePingReviewers: true,
+      staleCountsAsAttention: true,
+      staleThresholdDays: 14,
+      pingTemplate: 'nudge {reviewers}',
+    });
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    await act(async () => {});
+    fireEvent.click(await screen.findByTestId('ping-link'));
+    expect(screen.getByTestId('ping-confirm-body')).toHaveTextContent('nudge @alice');
+    fireEvent.click(screen.getAllByText('cancel')[0]);
+    expect(screen.queryByTestId('ping-confirm-body')).not.toBeInTheDocument();
+    // Back on the PR list — the Poll-now header button only renders there.
+    expect(screen.getByRole('button', { name: /poll now/i })).toBeInTheDocument();
   });
 
   it('navigates back from HelpView to PRListView', () => {

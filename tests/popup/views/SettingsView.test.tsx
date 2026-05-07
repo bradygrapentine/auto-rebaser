@@ -123,7 +123,52 @@ describe('SettingsView', () => {
     expect(mockSaveSettings).not.toHaveBeenCalled();
   });
 
-  it('enterprise apply with empty host clears the setting', async () => {
+  it('enterprise apply requests host permission and saves on grant', async () => {
+    const requestMock = vi.fn((_perms, cb: (granted: boolean) => void) => cb(true));
+    const removeMock = vi.fn((_perms, cb: () => void) => cb());
+    (globalThis as { chrome: typeof chrome }).chrome = {
+      ...chrome,
+      permissions: { request: requestMock, remove: removeMock },
+    } as unknown as typeof chrome;
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: 'github.acme.corp' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('enterprise-apply'));
+    });
+    expect(requestMock).toHaveBeenCalledWith(
+      { origins: ['https://github.acme.corp/*'] },
+      expect.any(Function),
+    );
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ enterpriseHost: 'github.acme.corp' }),
+    );
+  });
+
+  it('enterprise apply surfaces error when host permission denied', async () => {
+    const requestMock = vi.fn((_perms, cb: (granted: boolean) => void) => cb(false));
+    (globalThis as { chrome: typeof chrome }).chrome = {
+      ...chrome,
+      permissions: { request: requestMock, remove: vi.fn() },
+    } as unknown as typeof chrome;
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: 'github.acme.corp' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('enterprise-apply'));
+    });
+    expect(screen.getByTestId('enterprise-host-error')).toHaveTextContent(/permission denied/i);
+    expect(mockSaveSettings).not.toHaveBeenCalled();
+  });
+
+  it('enterprise apply with empty host clears the setting and removes the permission', async () => {
+    const removeMock = vi.fn((_perms, cb: () => void) => cb());
+    (globalThis as { chrome: typeof chrome }).chrome = {
+      ...chrome,
+      permissions: { request: vi.fn(), remove: removeMock },
+    } as unknown as typeof chrome;
     (useSettings as ReturnType<typeof vi.fn>).mockReturnValue({
       settings: { intervalMinutes: 5, enterpriseHost: 'github.acme.corp' },
       saveSettings: mockSaveSettings,
@@ -135,6 +180,10 @@ describe('SettingsView', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('enterprise-apply'));
     });
+    expect(removeMock).toHaveBeenCalledWith(
+      { origins: ['https://github.acme.corp/*'] },
+      expect.any(Function),
+    );
     expect(mockSaveSettings).toHaveBeenCalledWith(
       expect.objectContaining({ enterpriseHost: undefined, enterpriseClientId: undefined }),
     );
