@@ -46,7 +46,7 @@ export interface AutomationSettings {
   pingTemplate: string;
 }
 
-export type StaleThresholdDays = 1 | 7 | 14 | 30 | 60;
+export type StaleThresholdDays = 3 | 7 | 14 | 30 | 60;
 
 export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   ignoredRepos: [],
