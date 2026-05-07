@@ -38,9 +38,6 @@ describe('automations-store', () => {
     expect(result.autoResolveOutdatedThreads).toBe(
       DEFAULT_AUTOMATION_SETTINGS.autoResolveOutdatedThreads,
     );
-    expect(result.notificationsScopeGranted).toBe(
-      DEFAULT_AUTOMATION_SETTINGS.notificationsScopeGranted,
-    );
   });
 
   // Story 5.4 migration tests
@@ -98,10 +95,6 @@ describe('automations-store', () => {
       autoMergeOptOutRepos: ['org/repo-b'],
       autoResolveOutdatedThreads: true,
       autoResolveOptOutRepos: [],
-      autoDismissStaleNotifications: true,
-      unsubscribeStalePRNotifications: true,
-      autoDismissOptOutRepos: [],
-      notificationsScopeGranted: true,
       enableKeyboardShortcuts: false,
       enableStaleBadge: true,
       staleThresholdDays: 30,

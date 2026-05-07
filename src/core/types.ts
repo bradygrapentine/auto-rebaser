@@ -137,7 +137,6 @@ export interface GitHubUser {
 export type RuntimeMessage =
   | { type: 'POLL_NOW' }
   | { type: 'SET_INTERVAL'; intervalMinutes: IntervalMinutes }
-  | { type: 'REAUTH'; scopes?: string[] }
   // Story 4.2 — Device Flow
   | { type: 'AUTH_BEGIN_DEVICE_FLOW' }
   | { type: 'AUTH_DEVICE_FLOW_STATUS' }

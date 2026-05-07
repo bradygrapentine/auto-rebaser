@@ -30,16 +30,15 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 4 main automation toggles + 1 stale-badge toggle + 2 stale sub-toggles
+    // 3 main automation toggles + 1 stale-badge toggle + 2 stale sub-toggles
     // (counts-as-attention, allow-ping) + 1 keyboard-shortcuts toggle +
     // 3 merge-method preference checkboxes (one per method, in the expanded
-    // auto-merge section). Sub-toggle for unsubscribe is hidden when 2.9 is off.
+    // auto-merge section).
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(12);
+    expect(checkboxes).toHaveLength(10);
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
     expect(screen.getByLabelText(/Auto-resolve outdated review threads/)).not.toBeChecked();
-    expect(screen.getByLabelText(/Dismiss stale PR notifications/)).not.toBeChecked();
     expect(screen.getByLabelText(/Enable keyboard shortcuts/)).toBeChecked();
     expect(screen.getByLabelText(/Show stale-PR badge/)).toBeChecked();
     expect(screen.getByLabelText(/Allow ping reviewers/)).not.toBeChecked();
@@ -111,88 +110,6 @@ describe('AutomationsSettings', () => {
     );
   });
 
-  it('unsubscribe sub-toggle visible regardless of 2.9 (turning it on auto-enables 2.9)', async () => {
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
-      DEFAULT_AUTOMATION_SETTINGS
-    );
-    render(<AutomationsSettings />);
-    await flush();
-    expect(screen.getByText('Also unsubscribe')).toBeInTheDocument();
-  });
-
-  it('flipping unsubscribe ON also enables Dismiss stale PR notifications', async () => {
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
-      DEFAULT_AUTOMATION_SETTINGS,
-    );
-    render(<AutomationsSettings />);
-    await flush();
-    await act(async () => {
-      fireEvent.click(screen.getByLabelText(/Also unsubscribe/));
-    });
-    expect(saveAutomationSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        autoDismissStaleNotifications: true,
-        unsubscribeStalePRNotifications: true,
-      }),
-    );
-  });
-
-  it('unsubscribe sub-toggle visible when 2.9 is on', async () => {
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...DEFAULT_AUTOMATION_SETTINGS,
-      autoDismissStaleNotifications: true,
-      notificationsScopeGranted: true,
-    });
-    render(<AutomationsSettings />);
-    await flush();
-    expect(screen.getByText('Also unsubscribe')).toBeInTheDocument();
-  });
-
-  it('grant-notifications CTA shown only when 2.9 on AND scope missing', async () => {
-    // Off → no CTA
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
-      DEFAULT_AUTOMATION_SETTINGS
-    );
-    const { rerender } = render(<AutomationsSettings />);
-    await flush();
-    expect(screen.queryByTestId('grant-notifications-cta')).not.toBeInTheDocument();
-
-    // On + scope granted → no CTA
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...DEFAULT_AUTOMATION_SETTINGS,
-      autoDismissStaleNotifications: true,
-      notificationsScopeGranted: true,
-    });
-    rerender(<AutomationsSettings key="b" />);
-    await flush();
-    expect(screen.queryByTestId('grant-notifications-cta')).not.toBeInTheDocument();
-
-    // On + scope missing → CTA visible
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...DEFAULT_AUTOMATION_SETTINGS,
-      autoDismissStaleNotifications: true,
-      notificationsScopeGranted: false,
-    });
-    rerender(<AutomationsSettings key="c" />);
-    await flush();
-    expect(screen.getByTestId('grant-notifications-cta')).toBeInTheDocument();
-  });
-
-  it('CTA click sends REAUTH message with notifications scope', async () => {
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...DEFAULT_AUTOMATION_SETTINGS,
-      autoDismissStaleNotifications: true,
-      notificationsScopeGranted: false,
-    });
-    render(<AutomationsSettings />);
-    await flush();
-    fireEvent.click(screen.getByTestId('grant-notifications-cta'));
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-      type: 'REAUTH',
-      scopes: ['notifications'],
-    });
-  });
-
   it('toggling 2.8 (resolve outdated threads) persists', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
       DEFAULT_AUTOMATION_SETTINGS
@@ -204,20 +121,6 @@ describe('AutomationsSettings', () => {
     });
     expect(saveAutomationSettings).toHaveBeenCalledWith(
       expect.objectContaining({ autoResolveOutdatedThreads: true })
-    );
-  });
-
-  it('toggling 2.9 (dismiss stale notifications) persists', async () => {
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
-      DEFAULT_AUTOMATION_SETTINGS
-    );
-    render(<AutomationsSettings />);
-    await flush();
-    await act(async () => {
-      fireEvent.click(screen.getByLabelText(/Dismiss stale PR notifications/));
-    });
-    expect(saveAutomationSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ autoDismissStaleNotifications: true })
     );
   });
 
@@ -235,22 +138,6 @@ describe('AutomationsSettings', () => {
     );
   });
 
-  it('toggling unsubscribe sub-setting persists', async () => {
-    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...DEFAULT_AUTOMATION_SETTINGS,
-      autoDismissStaleNotifications: true,
-      notificationsScopeGranted: true,
-    });
-    render(<AutomationsSettings />);
-    await flush();
-    await act(async () => {
-      fireEvent.click(screen.getByLabelText(/Also unsubscribe/));
-    });
-    expect(saveAutomationSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ unsubscribeStalePRNotifications: true })
-    );
-  });
-
   it('renders global ignore + per-automation skip-repos lists', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
       DEFAULT_AUTOMATION_SETTINGS
@@ -258,15 +145,14 @@ describe('AutomationsSettings', () => {
     render(<AutomationsSettings />);
     await flush();
     const lists = screen.getAllByTestId('repo-opt-out-list');
-    // 1 global ignored-repos + 4 per-automation skip-repos
-    expect(lists).toHaveLength(5);
+    // 1 global ignored-repos + 3 per-automation skip-repos (auto-delete, auto-merge, auto-resolve)
+    expect(lists).toHaveLength(4);
   });
 
   it.each([
     ['ignored-repos', 'ignored-repos section'],
     ['auto-delete', 'auto-delete-branch section'],
     ['auto-resolve', 'auto-resolve-threads section'],
-    ['dismiss', 'dismiss-notifications section'],
   ])(
     '%s chevron toggles aria-expanded',
     async (_name, ariaSuffix) => {
@@ -295,8 +181,8 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // All 5 lists visible by default (sections expanded).
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
+    // 4 lists visible by default (sections expanded).
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
 
     // Collapse the auto-merge section — its skip-repos list and merge_method
     // sub-row should disappear.
@@ -304,14 +190,14 @@ describe('AutomationsSettings', () => {
     await act(async () => {
       fireEvent.click(chevron);
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(3);
     expect(screen.queryByTestId('merge-method-preference')).not.toBeInTheDocument();
 
     // Clicking again re-expands.
     await act(async () => {
       fireEvent.click(screen.getByLabelText(/Expand auto-merge section/));
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
     expect(screen.getByTestId('merge-method-preference')).toBeInTheDocument();
   });
 
@@ -335,7 +221,6 @@ describe('AutomationsSettings', () => {
     [0, 'autoDeleteOptOutRepos'],
     [1, 'autoMergeOptOutRepos'],
     [2, 'autoResolveOptOutRepos'],
-    [3, 'autoDismissOptOutRepos'],
   ] as const)(
     'per-automation skip-repos list #%i persists to %s',
     async (index, field) => {
@@ -344,9 +229,9 @@ describe('AutomationsSettings', () => {
       );
       render(<AutomationsSettings />);
       await flush();
-      // 4 per-automation skip-repos lists, in order: 2.6, 2.7, 2.8, 2.9.
+      // 3 per-automation skip-repos lists, in order: 2.6, 2.7, 2.8.
       const inputs = screen.getAllByLabelText('Skip repos input');
-      expect(inputs).toHaveLength(4);
+      expect(inputs).toHaveLength(3);
       await act(async () => {
         fireEvent.change(inputs[index], { target: { value: 'octo/skip' } });
         fireEvent.keyDown(inputs[index], { key: 'Enter' });

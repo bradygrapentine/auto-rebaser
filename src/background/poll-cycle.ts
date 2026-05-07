@@ -11,11 +11,6 @@ import { getRepo } from '../github/endpoints/repos';
 import { deleteRef } from '../github/endpoints/git-refs';
 import { enablePullRequestAutoMerge } from '../github/endpoints/auto-merge';
 import { listReviewThreads, resolveReviewThread } from '../github/endpoints/review-threads';
-import {
-  listNotifications as listNotificationThreads,
-  markThreadRead,
-  unsubscribeThread,
-} from '../github/endpoints/notifications';
 import { runAllAutomations, type OrchestratorDeps } from './automations/orchestrator';
 import type { PullRequestDetail } from './automations/adapters';
 import { clearBadge, setBadgeCount } from './badge';
@@ -360,16 +355,6 @@ async function runAutomationsPass(
       enableAutoMerge: enablePullRequestAutoMerge,
       listThreads: listReviewThreads,
       resolveThread: resolveReviewThread,
-      listNotifications: async () => {
-        const threads = await listNotificationThreads();
-        return threads.map((t) => ({
-          threadId: t.id,
-          prApiUrl: t.subject.url,
-          subjectType: t.subject.type,
-        }));
-      },
-      markRead: markThreadRead,
-      unsubscribe: unsubscribeThread,
     };
 
     const result = await runAllAutomations({
@@ -520,35 +505,6 @@ async function runAutomationsPass(
         result: 'failed',
         threadId: t.threadId,
         errorMessage: t.error,
-      });
-    }
-
-    // Story 2.9 — notification_dismissed entries.
-    for (const d of result.dismissedNotifEntries ?? []) {
-      const pr = prByRepoNumber.get(`${d.repo}#${d.prNumber}`);
-      cycleEntries.push({
-        at: now,
-        action: 'notification_dismissed',
-        repo: d.repo,
-        prNumber: d.prNumber,
-        prTitle: pr?.title ?? '',
-        ...(pr?.url ? { prUrl: pr.url } : {}),
-        result: 'success',
-        threadId: d.threadId,
-      });
-    }
-    for (const d of result.failedNotifEntries ?? []) {
-      const pr = prByRepoNumber.get(`${d.repo}#${d.prNumber}`);
-      cycleEntries.push({
-        at: now,
-        action: 'notification_dismissed',
-        repo: d.repo,
-        prNumber: d.prNumber,
-        prTitle: pr?.title ?? '',
-        ...(pr?.url ? { prUrl: pr.url } : {}),
-        result: 'failed',
-        threadId: d.threadId,
-        errorMessage: d.error,
       });
     }
 

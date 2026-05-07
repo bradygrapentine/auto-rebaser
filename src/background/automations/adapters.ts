@@ -19,7 +19,6 @@ import type { PullRequest } from '../../core/types';
 import type { MergedPRInput } from './delete-merged-branch';
 import type { EligiblePR, RepoAllowedMethods } from './enable-auto-merge';
 import type { PRRef } from './resolve-obsolete-threads';
-import type { PRStateMap } from './dismiss-stale-notifs';
 
 /**
  * Extended PullRequest shape that carries the extra fields the GitHub REST API
@@ -94,30 +93,3 @@ export function toPRRef(pr: PRRecord): PRRef {
   };
 }
 
-/**
- * Build the PRStateMap used by `runDismissStaleNotifs`.
- * Key format: "owner/repo#number" → state mapped to 'open' | 'closed' | 'merged'.
- *
- * Mapping:
- *   'merged' → 'merged' (poll-cycle stamps this when a PR disappears merged)
- *   'closed' → 'closed' (poll-cycle stamps this when a PR disappears non-merged)
- *   'branch-deleted' / 'delete-failed' → 'merged' (Story 2.6 already ran)
- *   anything else → 'open'
- */
-export function toPRStateMap(prs: PRRecord[]): PRStateMap {
-  const map: PRStateMap = {};
-  for (const pr of prs) {
-    const key = `${pr.repo}#${pr.number}`;
-    const s = pr.state as string;
-    let mapped: 'open' | 'closed' | 'merged';
-    if (s === 'merged' || s === 'branch-deleted' || s === 'delete-failed') {
-      mapped = 'merged';
-    } else if (s === 'closed') {
-      mapped = 'closed';
-    } else {
-      mapped = 'open';
-    }
-    map[key] = mapped;
-  }
-  return map;
-}

@@ -26,13 +26,4 @@ export const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 /** Always-required scopes, granted on every sign-in. */
 export const BASE_SCOPES = 'repo';
 
-/**
- * Scopes that are conditionally requested at sign-in based on which
- * automations the user has enabled.
- */
-export const OPTIONAL_SCOPES = {
-  /** Required by Story 2.9 — auto-dismiss stale PR notifications. */
-  notifications: 'notifications',
-} as const;
-
 export const BADGE_BACKGROUND_COLOR = '#2da44e';

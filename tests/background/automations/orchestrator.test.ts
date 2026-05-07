@@ -14,20 +14,15 @@ vi.mock('../../../src/background/automations/delete-merged-branch', () => ({
 vi.mock('../../../src/background/automations/resolve-obsolete-threads', () => ({
   runResolveObsoleteThreads: vi.fn(),
 }));
-vi.mock('../../../src/background/automations/dismiss-stale-notifs', () => ({
-  runDismissStaleNotifs: vi.fn(),
-}));
 
 import { runAllAutomations } from '../../../src/background/automations/orchestrator';
 import { runEnableAutoMerge } from '../../../src/background/automations/enable-auto-merge';
 import { runDeleteMergedBranch } from '../../../src/background/automations/delete-merged-branch';
 import { runResolveObsoleteThreads } from '../../../src/background/automations/resolve-obsolete-threads';
-import { runDismissStaleNotifs } from '../../../src/background/automations/dismiss-stale-notifs';
 
 const mockEnableAutoMerge = vi.mocked(runEnableAutoMerge);
 const mockDeleteMergedBranch = vi.mocked(runDeleteMergedBranch);
 const mockResolveObsoleteThreads = vi.mocked(runResolveObsoleteThreads);
-const mockDismissStaleNotifs = vi.mocked(runDismissStaleNotifs);
 
 function makePR(overrides: Partial<PRRecord & { mergedAt?: number; branchDeleted?: boolean }> = {}): PRRecord {
   return {
@@ -67,10 +62,6 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   autoMergeOptOutRepos: [],
   autoResolveOutdatedThreads: true,
   autoResolveOptOutRepos: [],
-  autoDismissStaleNotifications: true,
-  unsubscribeStalePRNotifications: false,
-  autoDismissOptOutRepos: [],
-  notificationsScopeGranted: true,
   enableKeyboardShortcuts: true,
   enableStaleBadge: true,
   staleThresholdDays: 14,
@@ -92,9 +83,6 @@ function makeGithubDeps(): OrchestratorDeps {
     enableAutoMerge: vi.fn().mockResolvedValue({ enabled: true, unsupported: false }),
     listThreads: vi.fn().mockResolvedValue([]),
     resolveThread: vi.fn().mockResolvedValue(undefined),
-    listNotifications: vi.fn().mockResolvedValue([]),
-    markRead: vi.fn().mockResolvedValue(undefined),
-    unsubscribe: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -123,14 +111,6 @@ beforeEach(() => {
     resolvedStore: { t1: 1000 },
     resolvedEntries: [], failedEntries: [],
   });
-  mockDismissStaleNotifs.mockResolvedValue({
-    dismissed: 4,
-    unsubscribed: 0,
-    skipped: 0,
-    failed: [],
-    scopeMissing: false,
-    dismissedEntries: [], failedEntries: [],
-  });
 });
 
 describe('runAllAutomations', () => {
@@ -149,12 +129,10 @@ describe('runAllAutomations', () => {
     expect(mockEnableAutoMerge).toHaveBeenCalledOnce();
     expect(mockDeleteMergedBranch).toHaveBeenCalledOnce();
     expect(mockResolveObsoleteThreads).toHaveBeenCalledOnce();
-    expect(mockDismissStaleNotifs).toHaveBeenCalledOnce();
 
     expect(result.summary.autoMergeEnabled).toBe(2);
     expect(result.summary.branchesDeleted).toBe(1);
     expect(result.summary.threadsResolved).toBe(3);
-    expect(result.summary.notificationsDismissed).toBe(4);
     expect(result.summary.errors).toBe(0);
   });
 
@@ -193,7 +171,6 @@ describe('runAllAutomations', () => {
     expect(result.summary.errors).toBe(1);
     expect(mockDeleteMergedBranch).toHaveBeenCalledOnce();
     expect(mockResolveObsoleteThreads).toHaveBeenCalledOnce();
-    expect(mockDismissStaleNotifs).toHaveBeenCalledOnce();
   });
 
   it('deleteMergedBranch throws — others still run, error count increments', async () => {
@@ -213,7 +190,6 @@ describe('runAllAutomations', () => {
     expect(result.summary.errors).toBe(1);
     expect(mockEnableAutoMerge).toHaveBeenCalledOnce();
     expect(mockResolveObsoleteThreads).toHaveBeenCalledOnce();
-    expect(mockDismissStaleNotifs).toHaveBeenCalledOnce();
   });
 
   it('resolveObsoleteThreads throws — others still run', async () => {
@@ -230,24 +206,6 @@ describe('runAllAutomations', () => {
     const result = await runAllAutomations(opts);
 
     expect(result.summary.errors).toBe(1);
-    expect(mockDismissStaleNotifs).toHaveBeenCalledOnce();
-  });
-
-  it('dismissStaleNotifs throws — error count increments, summary still returned', async () => {
-    mockDismissStaleNotifs.mockRejectedValue(new Error('notif failed'));
-
-    const opts: OrchestratorOpts = {
-      prs: [makePR()],
-      prDetails: new Map([[1, makeDetail()]]),
-      settings: ALL_ON_SETTINGS,
-      resolvedThreads: {},
-      github: makeGithubDeps(),
-    };
-
-    const result = await runAllAutomations(opts);
-
-    expect(result.summary.errors).toBe(1);
-    expect(result.summary.threadsResolved).toBe(3);
   });
 
   it('kill-switch autoEnableAutoMerge=false: step 1 skipped, no error', async () => {
@@ -300,46 +258,7 @@ describe('runAllAutomations', () => {
     expect(result.summary.errors).toBe(0);
   });
 
-  it('kill-switch notificationsScopeGranted=false + autoDismissStaleNotifications=true: step 4 skipped', async () => {
-    const settings = {
-      ...ALL_ON_SETTINGS,
-      autoDismissStaleNotifications: true,
-      notificationsScopeGranted: false,
-    };
-    const opts: OrchestratorOpts = {
-      prs: [makePR()],
-      prDetails: new Map([[1, makeDetail()]]),
-      settings,
-      resolvedThreads: {},
-      github: makeGithubDeps(),
-    };
-
-    const result = await runAllAutomations(opts);
-
-    expect(mockDismissStaleNotifs).not.toHaveBeenCalled();
-    expect(result.summary.errors).toBe(0);
-  });
-
-  it('kill-switch autoDismissStaleNotifications=false: step 4 skipped even when scope granted', async () => {
-    const settings = {
-      ...ALL_ON_SETTINGS,
-      autoDismissStaleNotifications: false,
-      notificationsScopeGranted: true,
-    };
-    const opts: OrchestratorOpts = {
-      prs: [makePR()],
-      prDetails: new Map([[1, makeDetail()]]),
-      settings,
-      resolvedThreads: {},
-      github: makeGithubDeps(),
-    };
-
-    await runAllAutomations(opts);
-
-    expect(mockDismissStaleNotifs).not.toHaveBeenCalled();
-  });
-
-  it('ordering: steps called in sequence 1→2→3→4', async () => {
+  it('ordering: steps called in sequence 1→2→3', async () => {
     const callOrder: string[] = [];
     mockEnableAutoMerge.mockImplementation(async () => {
       callOrder.push('enableAutoMerge');
@@ -352,10 +271,6 @@ describe('runAllAutomations', () => {
     mockResolveObsoleteThreads.mockImplementation(async () => {
       callOrder.push('resolveObsoleteThreads');
       return { resolved: 0, skipped: 0, failed: [], resolvedStore: {}, resolvedEntries: [], failedEntries: [] };
-    });
-    mockDismissStaleNotifs.mockImplementation(async () => {
-      callOrder.push('dismissStaleNotifs');
-      return { dismissed: 0, unsubscribed: 0, skipped: 0, failed: [], scopeMissing: false, dismissedEntries: [], failedEntries: [] };
     });
 
     const mergedPR = makePR({ id: 1, mergedAt: 1000 } as Parameters<typeof makePR>[0]);
@@ -373,7 +288,6 @@ describe('runAllAutomations', () => {
       'enableAutoMerge',
       'deleteMergedBranch',
       'resolveObsoleteThreads',
-      'dismissStaleNotifs',
     ]);
   });
 

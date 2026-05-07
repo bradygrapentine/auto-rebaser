@@ -4,7 +4,6 @@ export interface AutomationResults {
   branchesDeleted: number;
   autoMergeEnabled: number;
   threadsResolved: number;
-  notificationsDismissed: number;
 }
 
 export function buildPollSummary(
@@ -18,7 +17,6 @@ export function buildPollSummary(
     branchesDeleted: results.branchesDeleted,
     autoMergeEnabled: results.autoMergeEnabled,
     threadsResolved: results.threadsResolved,
-    notificationsDismissed: results.notificationsDismissed,
     errors,
   };
 }

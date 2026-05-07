@@ -19,7 +19,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'dismiss' | 'shortcuts' | 'stale';
+type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'shortcuts' | 'stale';
 
 const STALE_THRESHOLDS: StaleThresholdDays[] = [7, 14, 30, 60];
 
@@ -137,29 +137,19 @@ function MergeMethodPreferenceEditor({
   );
 }
 
-interface AutomationsSettingsProps {
-  /** Story 4.4 — drives the 2.9 notifications-scope CTA messaging. */
-  authMethod?: 'github_app' | 'pat';
-}
-
-export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {}) {
+export function AutomationsSettings() {
   const { settings, save } = useAutomationSettings();
   const [expanded, setExpanded] = useState<Record<SubKey, boolean>>({
     ignored: true,
     autoDelete: true,
     autoMerge: true,
     autoResolve: true,
-    dismiss: true,
     shortcuts: true,
     stale: true,
   });
 
   const toggle = (k: SubKey) =>
     setExpanded((e) => ({ ...e, [k]: !e[k] }));
-
-  const handleReauth = () => {
-    chrome.runtime.sendMessage({ type: 'REAUTH', scopes: ['notifications'] });
-  };
 
   /**
    * Sub-toggle behaviour:
@@ -286,69 +276,6 @@ export function AutomationsSettings({ authMethod }: AutomationsSettingsProps = {
             repos={settings.autoResolveOptOutRepos}
             onChange={(autoResolveOptOutRepos) => save({ autoResolveOptOutRepos })}
           />
-        )}
-      </div>
-
-      {/* 2.9 */}
-      <div className="automation-block">
-        <div className="automation-row">
-          <Chevron
-            expanded={expanded.dismiss}
-            onClick={() => toggle('dismiss')}
-            label="dismiss-notifications section"
-          />
-          <label className="toggle">
-            <span className="toggle__name">Dismiss stale PR notifications</span>
-            <input
-              type="checkbox"
-              checked={settings.autoDismissStaleNotifications}
-              onChange={(e) => save({ autoDismissStaleNotifications: e.target.checked })}
-            />
-          </label>
-        </div>
-        {expanded.dismiss && (
-          <>
-            <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
-              <span>Also unsubscribe</span>
-              <input
-                type="checkbox"
-                checked={settings.unsubscribeStalePRNotifications}
-                onChange={(e) => subToggle(
-                  'autoDismissStaleNotifications',
-                  'unsubscribeStalePRNotifications',
-                  e.target.checked,
-                )}
-              />
-            </label>
-            {settings.autoDismissStaleNotifications && authMethod === 'github_app' && (
-              <p
-                className="muted"
-                data-testid="notifications-app-blocked"
-                style={{ marginLeft: 18, marginTop: 6, fontSize: 11 }}
-              >
-                Notification cleanup is unavailable when signed in via GitHub App —
-                switch to PAT (settings → account) to enable
-              </p>
-            )}
-            {settings.autoDismissStaleNotifications && authMethod !== 'github_app'
-              && !settings.notificationsScopeGranted && (
-              <div style={{ marginLeft: 18, marginTop: 6 }}>
-                <button
-                  type="button"
-                  onClick={handleReauth}
-                  data-testid="grant-notifications-cta"
-                  className="btn"
-                >
-                  grant notifications scope
-                </button>
-              </div>
-            )}
-            <RepoOptOutList
-              label="Skip repos"
-              repos={settings.autoDismissOptOutRepos}
-              onChange={(autoDismissOptOutRepos) => save({ autoDismissOptOutRepos })}
-            />
-          </>
         )}
       </div>
 
