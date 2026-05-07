@@ -91,6 +91,9 @@ export interface PRRecordPhaseTwo {
   autoMergeEnabled?: boolean;
   /** True after Story 2.7 records that the repo rejected the merge method. */
   autoMergeUnsupported?: boolean;
+  /** Last GraphQL reason text when autoMergeUnsupported flipped. Used to
+   * suppress duplicate activity entries until the reason changes. */
+  autoMergeUnsupportedReason?: string;
   /**
    * Story 5.4 — set when no method in the user's `mergeMethodPreference` is
    * allowed by the repo. Surfaces an inline badge; not retried until settings
