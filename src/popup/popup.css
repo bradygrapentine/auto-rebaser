@@ -821,21 +821,10 @@ code, .mono {
   flex-shrink: 0;
   align-self: center;
 }
-.popup-footer__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-  align-items: stretch;
-}
-.popup-footer__support-link {
-  line-height: 1.4;
-  text-align: center;
-  text-decoration: none;
-}
 .popup-footer__delta strong { color: var(--term-green); font-weight: 700; }
 .popup-footer__counter,
-.popup-footer__view-activity {
+.popup-footer__view-activity,
+.popup-footer__support-link {
   display: inline-block;
   align-self: flex-start;
   background: transparent;
@@ -856,12 +845,15 @@ code, .mono {
   font-weight: 700;
 }
 .popup-footer__counter:hover:not(:disabled),
-.popup-footer__view-activity:hover { color: var(--term-cyan); }
+.popup-footer__view-activity:hover,
+.popup-footer__support-link:hover { color: var(--term-cyan); }
 .popup-footer__counter:disabled { cursor: default; }
-.popup-footer__view-activity::before {
+.popup-footer__view-activity::before,
+.popup-footer__support-link::before {
   content: "»» ";
   color: var(--term-cyan);
 }
+.popup-footer__support-link { text-decoration: none; }
 
 /* ─── Activity log view ────────────────────────────────────────────────── */
 .activity-view { padding: 10px 14px; }
