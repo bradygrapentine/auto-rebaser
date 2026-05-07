@@ -36,10 +36,15 @@ export async function enablePullRequestAutoMerge(
         /not enabled/i.test(msg) ||
         /not allowed/i.test(msg) ||
         /does not support/i.test(msg) ||
-        /clean status/i.test(msg)
+        /clean status/i.test(msg) ||
+        /is closed/i.test(msg) ||
+        /is already merged/i.test(msg)
       ) {
         return { enabled: false, unsupported: true, reason: msg };
       }
+      // Re-throw with the cleaned message so callers (orchestrator → activity
+      // log) don't surface the doubled prefix.
+      throw new Error(msg);
     }
     throw err;
   }
