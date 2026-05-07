@@ -207,17 +207,28 @@ export function PRListView({
           </span>
           <PollSummaryFooter onOpenActivity={onOpenActivity} />
         </div>
-        {onHelp && (
-          <button
-            type="button"
-            className="btn popup-footer__shortcuts-btn"
-            onClick={onHelp}
-            data-testid="help-link"
-            aria-label="Show keyboard shortcuts"
+        <div className="popup-footer__actions">
+          <a
+            href="https://github.com/sponsors/bradygrapentine"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn popup-footer__support-link"
+            data-testid="support-link"
           >
-            shortcuts
-          </button>
-        )}
+            support ↗
+          </a>
+          {onHelp && (
+            <button
+              type="button"
+              className="btn popup-footer__shortcuts-btn"
+              onClick={onHelp}
+              data-testid="help-link"
+              aria-label="Show keyboard shortcuts"
+            >
+              shortcuts
+            </button>
+          )}
+        </div>
       </footer>
     </div>
   );

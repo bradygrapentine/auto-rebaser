@@ -821,6 +821,18 @@ code, .mono {
   flex-shrink: 0;
   align-self: center;
 }
+.popup-footer__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: stretch;
+}
+.popup-footer__support-link {
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+}
 .popup-footer__delta strong { color: var(--term-green); font-weight: 700; }
 .popup-footer__counter,
 .popup-footer__view-activity {
