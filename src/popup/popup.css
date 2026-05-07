@@ -39,8 +39,16 @@ html, body, #root {
   background: var(--term-bg);
   font-feature-settings: "calt" 1, "liga" 1;
   position: relative;
+  /* Chrome's max popup height is ~600px. Cap the root so .view-body
+     becomes the only scroll surface and header/footer stay pinned. */
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
   overflow: hidden;
 }
+.popup-root > .popup-header,
+.popup-root > .popup-footer { flex: 0 0 auto; }
+.popup-root > .view-body { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
 
 a {
   color: var(--term-cyan);
