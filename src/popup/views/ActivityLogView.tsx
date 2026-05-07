@@ -16,7 +16,6 @@ const ACTION_LABELS: Record<ActivityAction | 'all', string> = {
   branch_deleted: 'branch_deleted',
   auto_merge_enabled: 'auto_merge_enabled',
   thread_resolved: 'thread_resolved',
-  notification_dismissed: 'notification_dismissed',
   reviewer_pinged: 'reviewer_pinged',
 };
 

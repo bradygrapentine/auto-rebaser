@@ -28,13 +28,6 @@ export interface AutomationSettings {
   /** Per-automation skip list. Repos here do NOT get outdated review threads resolved. */
   autoResolveOptOutRepos: string[];
 
-  autoDismissStaleNotifications: boolean;
-  unsubscribeStalePRNotifications: boolean;
-  /** Per-automation skip list. Repos here do NOT get notifications dismissed. */
-  autoDismissOptOutRepos: string[];
-  /** True when the OAuth token was minted with the `notifications` scope. */
-  notificationsScopeGranted: boolean;
-
   /** Story 5.5 — popup keyboard shortcuts (r/s/?/j/k/Enter/Esc). Default ON. */
   enableKeyboardShortcuts: boolean;
 
@@ -64,10 +57,6 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   autoMergeOptOutRepos: [],
   autoResolveOutdatedThreads: false,      // opt-in per backlog 2.8
   autoResolveOptOutRepos: [],
-  autoDismissStaleNotifications: false,   // opt-in per backlog 2.9
-  unsubscribeStalePRNotifications: false,
-  autoDismissOptOutRepos: [],
-  notificationsScopeGranted: false,
   enableKeyboardShortcuts: true,
   enableStaleBadge: true,
   staleThresholdDays: 14,
@@ -136,6 +125,5 @@ export interface PollSummary {
   branchesDeleted: number;
   autoMergeEnabled: number;
   threadsResolved: number;
-  notificationsDismissed: number;
   errors: number;
 }

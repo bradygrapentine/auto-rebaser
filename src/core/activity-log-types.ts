@@ -6,7 +6,6 @@ export type ActivityAction =
   | 'branch_deleted'
   | 'auto_merge_enabled'
   | 'thread_resolved'
-  | 'notification_dismissed'
   | 'reviewer_pinged';
 
 export type ActivityEntry = {

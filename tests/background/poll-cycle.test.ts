@@ -29,12 +29,6 @@ vi.mock('../../src/background/automations/orchestrator', () => ({
   runAllAutomations: vi.fn(),
 }));
 
-vi.mock('../../src/github/endpoints/notifications', () => ({
-  listNotifications: vi.fn(),
-  markThreadRead: vi.fn(),
-  unsubscribeThread: vi.fn(),
-}));
-
 vi.mock('../../src/core/activity-log', () => ({
   appendActivity: vi.fn().mockResolvedValue(undefined),
 }));
@@ -86,7 +80,7 @@ beforeEach(() => {
   (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
   (getResolvedThreads as ReturnType<typeof vi.fn>).mockResolvedValue({});
   (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
-    summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0 },
+    summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
     prUpdates: [],
     resolvedThreads: {},
   });
@@ -420,9 +414,6 @@ describe('phase-2 automation pass (A3 integration)', () => {
       enableAutoMerge: expect.any(Function),
       listThreads: expect.any(Function),
       resolveThread: expect.any(Function),
-      listNotifications: expect.any(Function),
-      markRead: expect.any(Function),
-      unsubscribe: expect.any(Function),
     });
   });
 
@@ -435,7 +426,7 @@ describe('phase-2 automation pass (A3 integration)', () => {
       .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'clean' }));
 
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
-      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 1, autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0 },
+      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 1, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
       prUpdates: [],
       resolvedThreads: {},
     });
@@ -463,7 +454,7 @@ describe('phase-2 automation pass (A3 integration)', () => {
       makePR({ id: 42, number: 7, mergeable_state: 'clean' })
     );
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
-      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 1, autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0 },
+      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 1, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
       prUpdates: [{ prId: 42, patch: { branchDeleted: true } }],
       resolvedThreads: {},
     });
@@ -488,7 +479,7 @@ describe('phase-2 automation pass (A3 integration)', () => {
     const sameRef = { 'thread-1': 999 };
     (getResolvedThreads as ReturnType<typeof vi.fn>).mockResolvedValue(sameRef);
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
-      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0 },
+      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
       prUpdates: [],
       resolvedThreads: sameRef, // same reference — no change
     });
@@ -506,7 +497,7 @@ describe('phase-2 automation pass (A3 integration)', () => {
     );
     (getResolvedThreads as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
-      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 1, notificationsDismissed: 0, errors: 0 },
+      summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 1, errors: 0 },
       prUpdates: [],
       resolvedThreads: { 'thread-2': 1234 },
     });
@@ -530,29 +521,6 @@ describe('phase-2 automation pass (A3 integration)', () => {
     expect(updateBranch).toHaveBeenCalled();
     expect(setBadgeCount).toHaveBeenCalledWith(1);
     // No saveStore for summary (the catch swallowed it).
-  });
-
-  it('wraps notifications adapter so threads → NotificationInput[] shape', async () => {
-    const { listNotifications: listNotificationThreads } = await import('../../src/github/endpoints/notifications');
-    (listNotificationThreads as ReturnType<typeof vi.fn>).mockResolvedValue([
-      {
-        id: 'thread-abc',
-        unread: true,
-        reason: 'mention',
-        subject: { title: 'PR title', url: 'https://api.github.com/repos/o/r/pulls/9', type: 'PullRequest' },
-      },
-    ]);
-
-    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(makeSearchResult());
-    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR());
-
-    await runPollCycle();
-
-    const deps = (runAllAutomations as ReturnType<typeof vi.fn>).mock.calls[0][0].github;
-    const notifs = await deps.listNotifications();
-    expect(notifs).toEqual([
-      { threadId: 'thread-abc', prApiUrl: 'https://api.github.com/repos/o/r/pulls/9', subjectType: 'PullRequest' },
-    ]);
   });
 
   it('does NOT call upsertPRs a second time when prUpdates is empty', async () => {
@@ -852,7 +820,7 @@ describe('activity log', () => {
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
       summary: {
         ranAt: 1000, rebased: 0, branchesDeleted: 0,
-        autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0,
+        autoMergeEnabled: 0, threadsResolved: 0, errors: 0,
       },
       prUpdates: [],
       resolvedThreads: {},
@@ -876,7 +844,7 @@ describe('activity log', () => {
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
       summary: {
         ranAt: 1000, rebased: 0, branchesDeleted: 1,
-        autoMergeEnabled: 1, threadsResolved: 0, notificationsDismissed: 0, errors: 0,
+        autoMergeEnabled: 1, threadsResolved: 0, errors: 0,
       },
       prUpdates: [
         { prId: 2, patch: { branchDeleted: true } },
@@ -918,7 +886,7 @@ describe('activity log', () => {
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
       summary: {
         ranAt: 1000, rebased: 0, branchesDeleted: 1,
-        autoMergeEnabled: 0, threadsResolved: 0, notificationsDismissed: 0, errors: 0,
+        autoMergeEnabled: 0, threadsResolved: 0, errors: 0,
       },
       prUpdates: [{ prId: 2, patch: { branchDeleted: true } }],
       resolvedThreads: {},

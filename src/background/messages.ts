@@ -1,7 +1,6 @@
 import type { RuntimeMessage, RuntimeResponse } from '../core/types';
 import { runPollCycle } from './poll-cycle';
 import { setupAlarm } from './alarm';
-import { signIn } from '../core/auth';
 import {
   beginDeviceFlow,
   cancelDeviceFlow,
@@ -57,16 +56,6 @@ export function handleMessage(
     resetDeviceFlowStatus();
     sendResponse({ ok: true });
     return false;
-  }
-
-  if (msg.type === 'REAUTH') {
-    // signIn() recomposes the OAuth scope from automation-settings, so simply
-    // calling it picks up any newly-enabled optional scopes (e.g. notifications).
-    void signIn().then(
-      () => sendResponse({ ok: true }),
-      (err: unknown) => sendResponse({ ok: false, error: err instanceof Error ? err.message : 'REAUTH_FAILED' }),
-    );
-    return true;
   }
 
   sendResponse({ ok: false, error: 'UNKNOWN_MESSAGE' });

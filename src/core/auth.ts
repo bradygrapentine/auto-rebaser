@@ -3,26 +3,10 @@ import {
   GITHUB_AUTHORIZE_URL,
   GITHUB_TOKEN_URL,
   BASE_SCOPES,
-  OPTIONAL_SCOPES,
 } from './constants';
-import { getAutomationSettings, saveAutomationSettings } from './automations-store';
 
-/**
- * Composes the OAuth scope string at sign-in time.
- * Always includes `BASE_SCOPES`; appends optional scopes for any enabled
- * automation that requires elevated permission.
- */
 export async function composeOAuthScope(): Promise<string> {
-  const scopes = [BASE_SCOPES];
-  try {
-    const settings = await getAutomationSettings();
-    if (settings.autoDismissStaleNotifications) {
-      scopes.push(OPTIONAL_SCOPES.notifications);
-    }
-  } catch {
-    // If automation settings can't be loaded, fall back to base scopes.
-  }
-  return scopes.join(' ');
+  return BASE_SCOPES;
 }
 
 export async function signIn(): Promise<void> {
@@ -81,24 +65,6 @@ export async function signIn(): Promise<void> {
   }
 
   await setToken(data.access_token);
-
-  // Persist whether the granted token includes the optional notifications scope.
-  // GitHub's token-exchange response body contains a `scope` field (comma-separated)
-  // listing the scopes the user actually granted — which can differ from what we
-  // requested if the user de-selected one on the consent screen. Trust that, not
-  // the request. Falls back to the requested scope only if `scope` is absent
-  // (e.g., a non-standard OAuth proxy), and silently no-ops if the settings
-  // store is unavailable.
-  try {
-    const settings = await getAutomationSettings();
-    const grantedList = (data.scope ?? scope.replace(/\s+/g, ',')).split(',').map(s => s.trim());
-    const granted = grantedList.includes(OPTIONAL_SCOPES.notifications);
-    if (settings.notificationsScopeGranted !== granted) {
-      await saveAutomationSettings({ ...settings, notificationsScopeGranted: granted });
-    }
-  } catch {
-    // Settings store unavailable — sign-in still succeeded; skip the bookkeeping.
-  }
 }
 
 export async function signOut(): Promise<void> {
@@ -106,12 +72,9 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Saves a Personal Access Token, validates it by calling /user, and reads the
- * granted scopes from the `X-OAuth-Scopes` response header so phase-2
- * automation gates know whether `notifications` was included.
- *
+ * Saves a Personal Access Token and validates it by calling /user.
  * Throws on invalid token (401/403) or network failure. On success, returns
- * the GitHub user login + the scope list (helpful for surfacing in the popup).
+ * the GitHub user login + the scope list (read from `X-OAuth-Scopes` header).
  */
 export async function setTokenFromPAT(pat: string): Promise<{ login: string; scopes: string[] }> {
   const trimmed = pat.trim();
@@ -141,18 +104,6 @@ export async function setTokenFromPAT(pat: string): Promise<{ login: string; sco
 
   const scopesHeader = response.headers.get('x-oauth-scopes') ?? '';
   const scopes = scopesHeader.split(',').map((s) => s.trim()).filter(Boolean);
-
-  // Mirror the actual granted scope into automation_settings so the
-  // dismissStaleNotifs gate (which checks notificationsScopeGranted) is correct.
-  try {
-    const settings = await getAutomationSettings();
-    const granted = scopes.includes(OPTIONAL_SCOPES.notifications);
-    if (settings.notificationsScopeGranted !== granted) {
-      await saveAutomationSettings({ ...settings, notificationsScopeGranted: granted });
-    }
-  } catch {
-    // best-effort; PAT itself is saved.
-  }
 
   return { login: user.login, scopes };
 }

@@ -9,9 +9,6 @@ vi.mock('../../src/background/poll-cycle', () => ({
 vi.mock('../../src/background/alarm', () => ({
   setupAlarm: vi.fn(),
 }));
-vi.mock('../../src/core/auth', () => ({
-  signIn: vi.fn(),
-}));
 vi.mock('../../src/background/auth-device-flow-runner', () => ({
   beginDeviceFlow: vi.fn(),
   cancelDeviceFlow: vi.fn(),
@@ -20,7 +17,6 @@ vi.mock('../../src/background/auth-device-flow-runner', () => ({
 
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { setupAlarm } from '../../src/background/alarm';
-import { signIn } from '../../src/core/auth';
 import {
   beginDeviceFlow,
   cancelDeviceFlow,
@@ -76,36 +72,6 @@ describe('handleMessage', () => {
       const msg: RuntimeMessage = { type: 'SET_INTERVAL', intervalMinutes: 5 };
       const result = handleMessage(msg, vi.fn());
       expect(result).toBe(false);
-    });
-  });
-
-  describe('REAUTH', () => {
-    it('calls signIn and responds ok=true on success', async () => {
-      (signIn as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-      const sendResponse = vi.fn();
-      const msg: RuntimeMessage = { type: 'REAUTH', scopes: ['notifications'] };
-      const isAsync = handleMessage(msg, sendResponse);
-      expect(isAsync).toBe(true);
-      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
-      expect(signIn).toHaveBeenCalledTimes(1);
-      expect(sendResponse).toHaveBeenCalledWith({ ok: true });
-    });
-
-    it('responds with error message when signIn fails', async () => {
-      (signIn as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('AUTH_CANCELLED'));
-      const sendResponse = vi.fn();
-      const msg: RuntimeMessage = { type: 'REAUTH' };
-      handleMessage(msg, sendResponse);
-      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
-      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'AUTH_CANCELLED' });
-    });
-
-    it('responds with REAUTH_FAILED for non-Error rejection', async () => {
-      (signIn as ReturnType<typeof vi.fn>).mockRejectedValue('weird');
-      const sendResponse = vi.fn();
-      handleMessage({ type: 'REAUTH' }, sendResponse);
-      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
-      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'REAUTH_FAILED' });
     });
   });
 

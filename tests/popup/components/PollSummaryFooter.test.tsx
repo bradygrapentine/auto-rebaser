@@ -23,7 +23,6 @@ const summary = (rebased = 0): PollSummary => ({
   branchesDeleted: 0,
   autoMergeEnabled: 0,
   threadsResolved: 0,
-  notificationsDismissed: 0,
   errors: 0,
 });
 

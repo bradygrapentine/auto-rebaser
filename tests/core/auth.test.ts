@@ -144,42 +144,6 @@ describe('auth', () => {
       expect(automationsStore.saveAutomationSettings).not.toHaveBeenCalled();
     });
 
-    it('updates notificationsScopeGranted to true when token has notifications scope', async () => {
-      mockUserResponse({ ok: true, login: 'brady', scopes: 'repo, notifications' });
-      vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({
-        ...DEFAULT_AUTOMATION_SETTINGS,
-        notificationsScopeGranted: false,
-      });
-
-      await setTokenFromPAT('ghp_x');
-
-      expect(automationsStore.saveAutomationSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ notificationsScopeGranted: true }),
-      );
-    });
-
-    it('flips notificationsScopeGranted back to false if a re-pasted PAT loses the scope', async () => {
-      mockUserResponse({ ok: true, login: 'brady', scopes: 'repo' });
-      vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({
-        ...DEFAULT_AUTOMATION_SETTINGS,
-        notificationsScopeGranted: true, // previously had it
-      });
-
-      await setTokenFromPAT('ghp_x');
-
-      expect(automationsStore.saveAutomationSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ notificationsScopeGranted: false }),
-      );
-    });
-
-    it('still saves the token when automation_settings store fails', async () => {
-      mockUserResponse({ ok: true, login: 'brady', scopes: 'repo' });
-      vi.mocked(automationsStore.getAutomationSettings).mockRejectedValue(new Error('storage down'));
-
-      await expect(setTokenFromPAT('ghp_x')).resolves.toEqual({ login: 'brady', scopes: ['repo'] });
-      expect(authStore.setToken).toHaveBeenCalledWith('ghp_x');
-    });
-
     it('handles missing X-OAuth-Scopes header gracefully', async () => {
       mockUserResponse({ ok: true, login: 'brady', scopes: undefined });
 
@@ -189,84 +153,10 @@ describe('auth', () => {
     });
   });
 
-  describe('OAuth scope composition (Phase 2)', () => {
-    it('composeOAuthScope returns "repo" when no automations need elevated scope', async () => {
-      vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
+  describe('OAuth scope composition', () => {
+    it('composeOAuthScope returns base scope', async () => {
       const scope = await composeOAuthScope();
       expect(scope).toBe('repo');
-    });
-
-    it('composeOAuthScope adds notifications when autoDismissStaleNotifications is true', async () => {
-      vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({
-        ...DEFAULT_AUTOMATION_SETTINGS,
-        autoDismissStaleNotifications: true,
-      });
-      const scope = await composeOAuthScope();
-      expect(scope).toBe('repo notifications');
-    });
-
-    it('composeOAuthScope falls back to base scopes if settings store throws', async () => {
-      vi.mocked(automationsStore.getAutomationSettings).mockRejectedValue(new Error('storage unavailable'));
-      const scope = await composeOAuthScope();
-      expect(scope).toBe('repo');
-    });
-
-    it('signIn requests the composed scope via launchWebAuthFlow URL', async () => {
-      vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({
-        ...DEFAULT_AUTOMATION_SETTINGS,
-        autoDismissStaleNotifications: true,
-      });
-      const flow = vi.fn().mockResolvedValue(
-        buildRedirectURL({ code: 'c123', state: 'fixed-state' })
-      );
-      chrome.identity.launchWebAuthFlow = flow;
-      mockFetch.mockResolvedValue({
-        json: vi.fn().mockResolvedValue({ access_token: 'abc' }),
-      });
-
-      await signIn();
-
-      const calledWith = flow.mock.calls[0][0];
-      const calledScope = new URL(calledWith.url).searchParams.get('scope');
-      expect(calledScope).toBe('repo notifications');
-    });
-
-    it('signIn persists notificationsScopeGranted=true after successful elevated sign-in', async () => {
-      vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({
-        ...DEFAULT_AUTOMATION_SETTINGS,
-        autoDismissStaleNotifications: true,
-        notificationsScopeGranted: false, // not granted yet
-      });
-      chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-        buildRedirectURL({ code: 'c123', state: 'fixed-state' })
-      );
-      mockFetch.mockResolvedValue({
-        json: vi.fn().mockResolvedValue({ access_token: 'abc' }),
-      });
-
-      await signIn();
-
-      expect(automationsStore.saveAutomationSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ notificationsScopeGranted: true })
-      );
-    });
-
-    it('signIn still succeeds when scope-bookkeeping settings load fails', async () => {
-      // composeOAuthScope succeeds, but the post-token bookkeeping load fails.
-      vi.mocked(automationsStore.getAutomationSettings)
-        .mockResolvedValueOnce({ ...DEFAULT_AUTOMATION_SETTINGS })
-        .mockRejectedValueOnce(new Error('storage unavailable'));
-
-      chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-        buildRedirectURL({ code: 'c123', state: 'fixed-state' })
-      );
-      mockFetch.mockResolvedValue({
-        json: vi.fn().mockResolvedValue({ access_token: 'abc' }),
-      });
-
-      await expect(signIn()).resolves.toBeUndefined();
-      expect(authStore.setToken).toHaveBeenCalledWith('abc');
-      expect(automationsStore.saveAutomationSettings).not.toHaveBeenCalled();
     });
   });
 });

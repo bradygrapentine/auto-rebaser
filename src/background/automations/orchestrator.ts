@@ -8,15 +8,12 @@ import type {
 import { runEnableAutoMerge, type MergeMethod } from './enable-auto-merge';
 import { runDeleteMergedBranch } from './delete-merged-branch';
 import { runResolveObsoleteThreads } from './resolve-obsolete-threads';
-import { runDismissStaleNotifs } from './dismiss-stale-notifs';
 import {
   toEligiblePR,
   toMergedPRInput,
   toPRRef,
-  toPRStateMap,
   type PullRequestDetail,
 } from './adapters';
-import type { NotificationInput } from './dismiss-stale-notifs';
 
 export interface OrchestratorRepoInfo {
   delete_branch_on_merge: boolean;
@@ -31,9 +28,6 @@ export interface OrchestratorDeps {
   enableAutoMerge: (prNodeId: string, method: MergeMethod) => Promise<{ enabled: boolean; unsupported: boolean }>;
   listThreads: (owner: string, repo: string, number: number) => Promise<Array<{ id: string; isResolved: boolean; isOutdated: boolean; line: number | null }>>;
   resolveThread: (threadId: string) => Promise<void>;
-  listNotifications: () => Promise<NotificationInput[]>;
-  markRead: (threadId: string) => Promise<void>;
-  unsubscribe: (threadId: string) => Promise<void>;
 }
 
 export interface OrchestratorOpts {
@@ -60,10 +54,6 @@ export interface OrchestratorResult {
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
   /** Story 2.8 — per-thread failure detail for activity-log entries. */
   failedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
-  /** Story 2.9 — per-notification detail for activity-log entries. */
-  dismissedNotifEntries: Array<{ threadId: string; repo: string; prNumber: number; unsubscribed: boolean }>;
-  /** Story 2.9 — per-notification failure detail for activity-log entries. */
-  failedNotifEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
 }
 
 export async function runAllAutomations(opts: OrchestratorOpts): Promise<OrchestratorResult> {
@@ -74,8 +64,6 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   const failedAutoMergeEntries: OrchestratorResult['failedAutoMergeEntries'] = [];
   const resolvedThreadEntries: OrchestratorResult['resolvedThreadEntries'] = [];
   const failedThreadEntries: OrchestratorResult['failedThreadEntries'] = [];
-  const dismissedNotifEntries: OrchestratorResult['dismissedNotifEntries'] = [];
-  const failedNotifEntries: OrchestratorResult['failedNotifEntries'] = [];
   let resolvedThreads: ResolvedThreadsStore = { ...opts.resolvedThreads };
   let errors = 0;
 
@@ -83,7 +71,6 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   let autoMergeEnabled = 0;
   let branchesDeleted = 0;
   let threadsResolved = 0;
-  let notificationsDismissed = 0;
 
   // ── Step 1: enableAutoMerge ─────────────────────────────────────────────────
   if (settings.autoEnableAutoMerge) {
@@ -228,44 +215,12 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     }
   }
 
-  // ── Step 4: dismissStaleNotifs ──────────────────────────────────────────────
-  if (settings.autoDismissStaleNotifications && settings.notificationsScopeGranted) {
-    try {
-      const notifications = await github.listNotifications();
-      const prStateMap = toPRStateMap(prs);
-
-      const result = await runDismissStaleNotifs(
-        notifications,
-        {
-          enabled: true,
-          unsubscribe: settings.unsubscribeStalePRNotifications,
-          scopeGranted: true,
-          optOutRepos: settings.autoDismissOptOutRepos,
-        },
-        prStateMap,
-        {
-          markRead: github.markRead,
-          unsubscribe: github.unsubscribe,
-        },
-      );
-
-      notificationsDismissed += result.dismissed;
-      errors += result.failed.length;
-      dismissedNotifEntries.push(...result.dismissedEntries);
-      failedNotifEntries.push(...result.failedEntries);
-    } catch (err) {
-      errors++;
-      console.error('[orchestrator] dismissStaleNotifs threw:', err);
-    }
-  }
-
   const summary: PollSummary = {
     ranAt: Date.now(),
     rebased: 0, // caller sets rebased count; orchestrator doesn't know
     branchesDeleted,
     autoMergeEnabled,
     threadsResolved,
-    notificationsDismissed,
     errors,
   };
 
@@ -277,7 +232,5 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     failedAutoMergeEntries,
     resolvedThreadEntries,
     failedThreadEntries,
-    dismissedNotifEntries,
-    failedNotifEntries,
   };
 }

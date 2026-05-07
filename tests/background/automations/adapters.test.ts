@@ -3,7 +3,6 @@ import {
   toMergedPRInput,
   toEligiblePR,
   toPRRef,
-  toPRStateMap,
   type PullRequestDetail,
 } from '../../../src/background/automations/adapters';
 import type { PRRecord } from '../../../src/core/types';
@@ -137,47 +136,5 @@ describe('toPRRef', () => {
     const result = toPRRef(pr);
     expect(result.repo).toBe('org/project');
     expect(result.number).toBe(99);
-  });
-});
-
-describe('toPRStateMap', () => {
-  it('collapses array to PRStateMap keyed by owner/repo#number', () => {
-    const prs: PRRecord[] = [
-      makePR({ id: 1, number: 1, repo: 'o/r', state: 'behind' }),
-      makePR({ id: 2, number: 2, repo: 'o/r', state: 'current' }),
-    ];
-    const map = toPRStateMap(prs);
-    expect(map['o/r#1']).toBe('open');
-    expect(map['o/r#2']).toBe('open');
-  });
-
-  it('branch-deleted state → merged', () => {
-    const prs: PRRecord[] = [
-      makePR({ id: 1, number: 1, repo: 'o/r', state: 'branch-deleted' as PRRecord['state'] }),
-    ];
-    const map = toPRStateMap(prs);
-    expect(map['o/r#1']).toBe('merged');
-  });
-
-  it('delete-failed state → merged', () => {
-    const prs: PRRecord[] = [
-      makePR({ id: 1, number: 1, repo: 'o/r', state: 'delete-failed' as PRRecord['state'] }),
-    ];
-    const map = toPRStateMap(prs);
-    expect(map['o/r#1']).toBe('merged');
-  });
-
-  it('merged state → merged', () => {
-    const prs = [makePR({ id: 1, number: 1, repo: 'o/r', state: 'merged' })];
-    expect(toPRStateMap(prs)['o/r#1']).toBe('merged');
-  });
-
-  it('closed state → closed', () => {
-    const prs = [makePR({ id: 1, number: 1, repo: 'o/r', state: 'closed' })];
-    expect(toPRStateMap(prs)['o/r#1']).toBe('closed');
-  });
-
-  it('empty array → empty map', () => {
-    expect(toPRStateMap([])).toEqual({});
   });
 });

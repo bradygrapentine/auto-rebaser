@@ -186,7 +186,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
           </div>
         </section>
 
-        <AutomationsSettings authMethod={authMethod} />
+        <AutomationsSettings />
       </div>
     </div>
   );
