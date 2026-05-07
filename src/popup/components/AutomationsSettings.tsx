@@ -21,7 +21,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
 
 type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'shortcuts' | 'stale';
 
-const STALE_THRESHOLDS: StaleThresholdDays[] = [1, 7, 14, 30, 60];
+const STALE_THRESHOLDS: StaleThresholdDays[] = [3, 7, 14, 30, 60];
 
 function Chevron({
   expanded,
