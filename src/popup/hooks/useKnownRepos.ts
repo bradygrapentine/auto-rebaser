@@ -11,7 +11,13 @@ export function useKnownRepos(): string[] {
   useEffect(() => {
     let cancelled = false;
     getKnownRepos().then((r) => {
-      if (!cancelled) setRepos(r);
+      if (cancelled) return;
+      setRepos(r);
+      if (r.length === 0) {
+        chrome.runtime.sendMessage({ type: 'POLL_NOW' })?.catch(() => {
+          // best-effort
+        });
+      }
     });
 
     const onChanged = (

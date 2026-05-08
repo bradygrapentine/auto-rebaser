@@ -37,6 +37,28 @@ describe('useKnownRepos', () => {
     });
   });
 
+  it('sends POLL_NOW message when cache is empty', async () => {
+    (getKnownRepos as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    renderHook(() => useKnownRepos());
+
+    await waitFor(() => {
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
+    });
+  });
+
+  it('does NOT send POLL_NOW when cache is non-empty', async () => {
+    (getKnownRepos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { fullName: 'a/b', lastSeenAt: 1 },
+    ]);
+
+    renderHook(() => useKnownRepos());
+
+    await waitFor(() => {
+      expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+    });
+  });
+
   it('updates when chrome.storage.onChanged fires', async () => {
     (getKnownRepos as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
