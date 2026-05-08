@@ -41,6 +41,13 @@ describe('getKnownRepos', () => {
     });
     expect(await getKnownRepos()).toEqual([good]);
   });
+
+  it('returns [] when storage holds a non-array', async () => {
+    chrome.storage.local.get = vi.fn().mockResolvedValue({
+      [KNOWN_REPOS_KEY]: 'corrupted',
+    });
+    expect(await getKnownRepos()).toEqual([]);
+  });
 });
 
 describe('recordKnownRepos', () => {
@@ -81,6 +88,18 @@ describe('recordKnownRepos', () => {
     const written: KnownRepo[] = (chrome.storage.local.set as ReturnType<typeof vi.fn>).mock.calls[0][0][KNOWN_REPOS_KEY];
     expect(written).toHaveLength(1);
     expect(written[0].fullName).toBe('good/repo');
+  });
+
+  it('does not write when called with [] and storage is non-empty', async () => {
+    const existing: KnownRepo = { fullName: 'owner/repo', lastSeenAt: 1000 };
+    chrome.storage.local.get = vi.fn().mockResolvedValue({
+      [KNOWN_REPOS_KEY]: [existing],
+    });
+    chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+
+    await recordKnownRepos([]);
+
+    expect(chrome.storage.local.set).not.toHaveBeenCalled();
   });
 
   it('caps at KNOWN_REPOS_CAP, evicting oldest first', async () => {

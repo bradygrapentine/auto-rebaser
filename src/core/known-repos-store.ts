@@ -14,7 +14,8 @@ export function isValidFullName(s: string): boolean {
 
 export async function getKnownRepos(): Promise<KnownRepo[]> {
   const result = await chrome.storage.local.get(KNOWN_REPOS_KEY);
-  const raw: unknown[] = result[KNOWN_REPOS_KEY] ?? [];
+  const raw = result[KNOWN_REPOS_KEY];
+  if (!Array.isArray(raw)) return [];
   return (raw as KnownRepo[]).filter(
     (entry) => entry && isValidFullName(entry.fullName) && typeof entry.lastSeenAt === 'number',
   );
@@ -22,12 +23,8 @@ export async function getKnownRepos(): Promise<KnownRepo[]> {
 
 export async function recordKnownRepos(fullNames: readonly string[]): Promise<void> {
   const valid = fullNames.filter(isValidFullName);
-  if (valid.length === 0) {
-    const existing = await getKnownRepos();
-    if (existing.length === 0) return;
-  }
-
   const existing = await getKnownRepos();
+  if (valid.length === 0) return;
   const map = new Map<string, KnownRepo>(existing.map((r) => [r.fullName, r]));
   const now = Date.now();
 
