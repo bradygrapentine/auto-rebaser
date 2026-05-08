@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
+import { useKnownRepos } from '../hooks/useKnownRepos';
 import { RepoOptOutList } from './RepoOptOutList';
 import type { MergeMethod, StaleThresholdDays } from '../../core/automations-types';
 
@@ -139,6 +140,7 @@ function MergeMethodPreferenceEditor({
 
 export function AutomationsSettings() {
   const { settings, save } = useAutomationSettings();
+  const knownRepos = useKnownRepos();
   const [expanded, setExpanded] = useState<Record<SubKey, boolean>>({
     ignored: true,
     autoDelete: true,
@@ -190,6 +192,7 @@ export function AutomationsSettings() {
             label="Ignored repos"
             repos={settings.ignoredRepos}
             onChange={(ignoredRepos) => save({ ignoredRepos })}
+            suggestions={knownRepos}
           />
         )}
       </div>
@@ -216,6 +219,7 @@ export function AutomationsSettings() {
             label="Skip repos"
             repos={settings.autoDeleteOptOutRepos}
             onChange={(autoDeleteOptOutRepos) => save({ autoDeleteOptOutRepos })}
+            suggestions={knownRepos}
           />
         )}
       </div>
@@ -248,6 +252,7 @@ export function AutomationsSettings() {
               label="Skip repos"
               repos={settings.autoMergeOptOutRepos}
               onChange={(autoMergeOptOutRepos) => save({ autoMergeOptOutRepos })}
+              suggestions={knownRepos}
             />
           </>
         )}
@@ -275,6 +280,7 @@ export function AutomationsSettings() {
             label="Skip repos"
             repos={settings.autoResolveOptOutRepos}
             onChange={(autoResolveOptOutRepos) => save({ autoResolveOptOutRepos })}
+            suggestions={knownRepos}
           />
         )}
       </div>

@@ -8,6 +8,10 @@ vi.mock('../../../src/core/automations-store', () => ({
   saveAutomationSettings: vi.fn(),
 }));
 
+vi.mock('../../../src/popup/hooks/useKnownRepos', () => ({
+  useKnownRepos: () => [],
+}));
+
 import {
   getAutomationSettings,
   saveAutomationSettings,

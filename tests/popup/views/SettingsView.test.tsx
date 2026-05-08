@@ -6,6 +6,10 @@ vi.mock('../../../src/popup/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }));
 
+vi.mock('../../../src/popup/hooks/useKnownRepos', () => ({
+  useKnownRepos: () => [],
+}));
+
 vi.mock('../../../src/core/automations-store', () => ({
   // Inline literal — vi.mock factories are hoisted above imports.
   getAutomationSettings: vi.fn().mockResolvedValue({
