@@ -17,6 +17,7 @@ import { clearBadge, setBadgeCount } from './badge';
 import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './state-machine';
 import { appendActivity } from '../core/activity-log';
 import type { ActivityEntry } from '../core/activity-log-types';
+import { recordKnownRepos } from '../core/known-repos-store';
 
 const ABORT_ERRORS = new Set(['AUTH_ERROR', 'NOT_AUTHENTICATED', 'RATE_LIMITED']);
 
@@ -124,6 +125,7 @@ async function runPollCycleInner(): Promise<void> {
   let updatedCount = 0;
   // Collect per-PR rebase activity entries for the activity log.
   const rebaseActivityEntries: ActivityEntry[] = [];
+  const seenFullNames = new Set<string>();
 
   for (const item of searchResult.items) {
     // Parse repo
@@ -134,6 +136,8 @@ async function runPollCycleInner(): Promise<void> {
       console.error('Failed to parse repository_url:', item.repository_url, err);
       continue;
     }
+
+    seenFullNames.add(fullName);
 
     // Globally ignored repo → drop entirely. PR will not enter the store, will
     // not be displayed in the popup, will not be rebased, and (since it never
@@ -247,6 +251,13 @@ async function runPollCycleInner(): Promise<void> {
         : {}),
       ...(errorMessage !== undefined ? { errorMessage } : {}),
     } as PRRecord);
+  }
+
+  // Best-effort: persist the set of repos we saw in this scan.
+  try {
+    await recordKnownRepos([...seenFullNames]);
+  } catch (err) {
+    console.warn('[auto-rebaser] failed to record known repos', err);
   }
 
   // ── Transition detection: PRs open last poll, absent from search now ────────
