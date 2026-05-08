@@ -171,4 +171,30 @@ describe('RepoOptOutList', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Use owner/repo format');
     });
   });
+
+  describe('provenance caption', () => {
+    it('renders caption when suggestions present', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={() => {}}
+          suggestions={['octo/cat']}
+        />
+      );
+      expect(screen.getByText('Suggestions come from your open PRs.')).toBeInTheDocument();
+    });
+
+    it('does NOT render caption when suggestions empty', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={() => {}}
+          suggestions={[]}
+        />
+      );
+      expect(screen.queryByText('Suggestions come from your open PRs.')).not.toBeInTheDocument();
+    });
+  });
 });
