@@ -28,6 +28,17 @@ export interface OrchestratorDeps {
   enableAutoMerge: (prNodeId: string, method: MergeMethod) => Promise<{ enabled: boolean; unsupported: boolean }>;
   listThreads: (owner: string, repo: string, number: number) => Promise<Array<{ id: string; isResolved: boolean; isOutdated: boolean; line: number | null }>>;
   resolveThread: (threadId: string) => Promise<void>;
+  /**
+   * MERGE-2 — direct REST merge for clean PRs when auto-merge can't apply.
+   * Throws `METHOD_NOT_ALLOWED` (405) for fall-through to next method, or
+   * `SHA_MISMATCH` (409) when the head moved since snapshot.
+   */
+  mergePR: (
+    owner: string,
+    repo: string,
+    number: number,
+    opts: { sha: string; merge_method: 'squash' | 'rebase' | 'merge' },
+  ) => Promise<{ merged: boolean; sha: string }>;
 }
 
 export interface OrchestratorOpts {
@@ -57,6 +68,16 @@ export interface OrchestratorResult {
    * activity log.
    */
   skippedAutoMergeEntries: Array<{ prId: number; skipReason: 'already_clean' | 'already_merged' }>;
+  /**
+   * MERGE-2 — PRs that fell through to direct merge (toggle on, PR was clean).
+   * One entry per PR regardless of method-fallback iterations.
+   */
+  mergedNowEntries: Array<{
+    prId: number;
+    method: MergeMethod;
+    result: 'success' | 'failed';
+    error?: string;
+  }>;
   /** Story 2.8 — per-thread detail for activity-log entries. */
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
   /** Story 2.8 — per-thread failure detail for activity-log entries. */
@@ -70,6 +91,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
   const failedAutoMergeEntries: OrchestratorResult['failedAutoMergeEntries'] = [];
   const skippedAutoMergeEntries: OrchestratorResult['skippedAutoMergeEntries'] = [];
+  const mergedNowEntries: OrchestratorResult['mergedNowEntries'] = [];
   const resolvedThreadEntries: OrchestratorResult['resolvedThreadEntries'] = [];
   const failedThreadEntries: OrchestratorResult['failedThreadEntries'] = [];
   let resolvedThreads: ResolvedThreadsStore = { ...opts.resolvedThreads };
@@ -142,6 +164,80 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
             skippedAutoMergeEntries.push({ prId, skipReason: 'already_merged' });
           } else {
             failedAutoMergeEntries.push({ prId, error: reason });
+          }
+        }
+      }
+
+      // MERGE-2 — fall-through direct merge for `already_clean` skips when
+      // the user has opted in. Suppresses the upstream skipped entry on
+      // success (E3); failures are surfaced as `auto_merged_now · failed`.
+      if (settings.mergeCleanPRsImmediately) {
+        const cleanIds = new Set(
+          skippedAutoMergeEntries
+            .filter((s) => s.skipReason === 'already_clean')
+            .map((s) => s.prId),
+        );
+        const consumedSkipIds = new Set<number>();
+        for (const eligible of eligiblePRs) {
+          if (!cleanIds.has(eligible.id)) continue;
+          const detail = prDetails.get(eligible.id);
+          const headSha = detail?.head?.sha;
+          if (!headSha) continue;
+          const [owner, name] = eligible.repo.split('/');
+          if (!owner || !name) continue;
+          const pr = prs.find((p) => p.id === eligible.id);
+          if (!pr) continue;
+
+          let merged = false;
+          let lastError: string | undefined;
+          let usedMethod: MergeMethod | null = null;
+          for (const method of settings.mergeMethodPreference) {
+            const restMethod = method.toLowerCase() as 'squash' | 'rebase' | 'merge';
+            try {
+              await github.mergePR(owner, name, pr.number, {
+                sha: headSha,
+                merge_method: restMethod,
+              });
+              merged = true;
+              usedMethod = method;
+              break;
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              if (msg === 'METHOD_NOT_ALLOWED') continue;
+              lastError = msg;
+              break;
+            }
+          }
+
+          if (merged && usedMethod) {
+            mergedNowEntries.push({ prId: eligible.id, method: usedMethod, result: 'success' });
+            consumedSkipIds.add(eligible.id);
+            // Clear the upstream `autoMergeUnsupported` flag we just set —
+            // the PR is now actually merged, not unsupported.
+            prUpdates.push({
+              prId: eligible.id,
+              patch: { autoMergeUnsupported: false, autoMergeUnsupportedReason: undefined },
+            });
+          } else {
+            mergedNowEntries.push({
+              prId: eligible.id,
+              method: settings.mergeMethodPreference[0] ?? 'SQUASH',
+              result: 'failed',
+              error: lastError ?? 'NO_ALLOWED_MERGE_METHOD',
+            });
+            consumedSkipIds.add(eligible.id);
+          }
+        }
+
+        // E3 — suppress the now-redundant `already_clean` skip entries for
+        // PRs we attempted to fall through (success or fail; the merged_now
+        // entry is the canonical signal).
+        if (consumedSkipIds.size > 0) {
+          for (let i = skippedAutoMergeEntries.length - 1; i >= 0; i--) {
+            const e = skippedAutoMergeEntries[i];
+            if (e.skipReason === 'already_clean' && consumedSkipIds.has(e.prId)) {
+              skippedAutoMergeEntries.splice(i, 1);
+            }
           }
         }
       }
@@ -248,6 +344,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     autoMergeMethodByPRId,
     failedAutoMergeEntries,
     skippedAutoMergeEntries,
+    mergedNowEntries,
     resolvedThreadEntries,
     failedThreadEntries,
   };

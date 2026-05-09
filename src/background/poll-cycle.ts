@@ -10,6 +10,7 @@ import { searchAuthoredPRs, getPR, updateBranch } from '../github/endpoints';
 import { getRepo } from '../github/endpoints/repos';
 import { deleteRef } from '../github/endpoints/git-refs';
 import { enablePullRequestAutoMerge } from '../github/endpoints/auto-merge';
+import { mergePR } from '../github/endpoints/merge-pr';
 import { listReviewThreads, resolveReviewThread } from '../github/endpoints/review-threads';
 import { runAllAutomations, type OrchestratorDeps } from './automations/orchestrator';
 import type { PullRequestDetail } from './automations/adapters';
@@ -366,6 +367,7 @@ async function runAutomationsPass(
       enableAutoMerge: enablePullRequestAutoMerge,
       listThreads: listReviewThreads,
       resolveThread: resolveReviewThread,
+      mergePR,
     };
 
     const result = await runAllAutomations({
@@ -500,6 +502,23 @@ async function runAutomationsPass(
         prUrl: pr.url,
         result: 'skipped',
         skipReason: s.skipReason,
+      });
+    }
+
+    // MERGE-2 — auto_merged_now entries (fall-through direct merges).
+    for (const m of result.mergedNowEntries ?? []) {
+      const pr = prMap.get(m.prId);
+      if (!pr) continue;
+      cycleEntries.push({
+        at: now,
+        action: 'auto_merged_now',
+        repo: pr.repo,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        prUrl: pr.url,
+        result: m.result,
+        mergeMethod: m.method,
+        ...(m.error ? { errorMessage: m.error } : {}),
       });
     }
 

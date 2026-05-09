@@ -84,6 +84,7 @@ function makeGithubDeps(): OrchestratorDeps {
     enableAutoMerge: vi.fn().mockResolvedValue({ enabled: true, unsupported: false }),
     listThreads: vi.fn().mockResolvedValue([]),
     resolveThread: vi.fn().mockResolvedValue(undefined),
+    mergePR: vi.fn().mockResolvedValue({ merged: true, sha: 'abc' }),
   };
 }
 
@@ -381,6 +382,114 @@ describe('runAllAutomations', () => {
     const result = await runAllAutomations(opts);
     expect(result.skippedAutoMergeEntries).toEqual([]);
     expect(result.failedAutoMergeEntries).toHaveLength(1);
+  });
+
+  it('falls through to direct merge when toggle ON and PR is in clean status', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'feature/x', sha: 'sha-deadbeef', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(github.mergePR).toHaveBeenCalledWith(
+      'owner', 'repo', 42,
+      { sha: 'sha-deadbeef', merge_method: 'squash' },
+    );
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'success' },
+    ]);
+    // E3 — the upstream skipped entry was suppressed.
+    expect(result.skippedAutoMergeEntries).toEqual([]);
+  });
+
+  it('falls through to next method on METHOD_NOT_ALLOWED', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('METHOD_NOT_ALLOWED'))
+      .mockResolvedValueOnce({ merged: true, sha: 'abc' });
+
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 's', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true, mergeMethodPreference: ['REBASE', 'SQUASH'] },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(github.mergePR).toHaveBeenCalledTimes(2);
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'success' },
+    ]);
+  });
+
+  it('records failed mergedNowEntry when SHA mismatch', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>)
+      .mockRejectedValue(new Error('SHA_MISMATCH'));
+
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 's', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'failed', error: 'SHA_MISMATCH' },
+    ]);
+  });
+
+  it('does NOT call mergePR when toggle OFF; logs skipped entry instead', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail()]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: false },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(github.mergePR).not.toHaveBeenCalled();
+    expect(result.mergedNowEntries).toEqual([]);
+    expect(result.skippedAutoMergeEntries).toEqual([
+      { prId: 1, skipReason: 'already_clean' },
+    ]);
   });
 
   it('resolvedThreads from resolveObsoleteThreads is returned', async () => {
