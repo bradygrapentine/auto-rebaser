@@ -102,6 +102,7 @@ describe('automations-store', () => {
       staleCountsAsAttention: false,
       enablePingReviewers: true,
       pingTemplate: 'hi {reviewers}',
+      mergeCleanPRsImmediately: true,
     };
     chrome.storage.sync.get = vi
       .fn()

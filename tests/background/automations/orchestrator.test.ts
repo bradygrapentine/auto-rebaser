@@ -68,6 +68,7 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   staleThresholdOverrides: {},
   staleCountsAsAttention: false,
   enablePingReviewers: false,
+  mergeCleanPRsImmediately: false,
   pingTemplate: 'nudge {reviewers}',
 };
 
