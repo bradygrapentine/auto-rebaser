@@ -70,9 +70,6 @@ export function RepoOptOutList({ label, repos, onChange, disabled, suggestions =
           Add
         </button>
       </div>
-      {filteredSuggestions.length > 0 && (
-        <div className="chip-list-wrap__hint">Suggestions come from your open PRs.</div>
-      )}
       {error && (
         <div role="alert" className="alert alert--inline">
           {error}
