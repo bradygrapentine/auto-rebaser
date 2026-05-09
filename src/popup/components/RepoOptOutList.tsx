@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 interface Props {
   label: string;
   repos: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
+  suggestions?: string[];
 }
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 
-export function RepoOptOutList({ label, repos, onChange, disabled }: Props) {
+export function RepoOptOutList({ label, repos, onChange, disabled, suggestions = [] }: Props) {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const listId = useId();
+  const filteredSuggestions = suggestions.filter((s) => !repos.includes(s));
 
   const add = () => {
     const trimmed = input.trim();
@@ -42,6 +45,7 @@ export function RepoOptOutList({ label, repos, onChange, disabled }: Props) {
           aria-label={`${label} input`}
           placeholder="owner/repo"
           disabled={disabled}
+          list={filteredSuggestions.length > 0 ? listId : undefined}
           onChange={(e) => {
             setInput(e.target.value);
             if (error) setError(null);
@@ -55,10 +59,20 @@ export function RepoOptOutList({ label, repos, onChange, disabled }: Props) {
           className="input input--small"
           style={{ flex: 1 }}
         />
+        {filteredSuggestions.length > 0 && (
+          <datalist id={listId}>
+            {filteredSuggestions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        )}
         <button type="button" disabled={disabled} onClick={add} className="btn" style={{ marginLeft: 4 }}>
           Add
         </button>
       </div>
+      {filteredSuggestions.length > 0 && (
+        <div className="chip-list-wrap__hint">Suggestions come from your open PRs.</div>
+      )}
       {error && (
         <div role="alert" className="alert alert--inline">
           {error}

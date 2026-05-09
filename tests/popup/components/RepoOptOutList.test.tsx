@@ -90,4 +90,111 @@ describe('RepoOptOutList', () => {
     expect(screen.getByText('Add')).toBeDisabled();
     expect(screen.getByLabelText('Remove a/b')).toBeDisabled();
   });
+
+  describe('datalist autocomplete', () => {
+    it('renders datalist with suggestions in given order', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={() => {}}
+          suggestions={['octo/cat', 'mona/lisa']}
+        />
+      );
+      const options = document.querySelectorAll('datalist option');
+      expect(options).toHaveLength(2);
+      expect(options[0]).toHaveAttribute('value', 'octo/cat');
+      expect(options[1]).toHaveAttribute('value', 'mona/lisa');
+    });
+
+    it('wires list= on the input to the datalist id', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={() => {}}
+          suggestions={['octo/cat']}
+        />
+      );
+      const input = screen.getByLabelText('Skip input');
+      const datalist = document.querySelector('datalist');
+      expect(datalist).not.toBeNull();
+      expect(input.getAttribute('list')).toBe(datalist!.id);
+    });
+
+    it('filters out already-added repos from datalist', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={['octo/cat']}
+          onChange={() => {}}
+          suggestions={['octo/cat', 'mona/lisa']}
+        />
+      );
+      const options = document.querySelectorAll('datalist option');
+      expect(options).toHaveLength(1);
+      expect(options[0]).toHaveAttribute('value', 'mona/lisa');
+    });
+
+    it('saves free-text repo not in suggestions', () => {
+      const onChange = vi.fn();
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={onChange}
+          suggestions={['octo/cat']}
+        />
+      );
+      fireEvent.change(screen.getByLabelText('Skip input'), {
+        target: { value: 'brand/new' },
+      });
+      fireEvent.click(screen.getByText('Add'));
+      expect(onChange).toHaveBeenCalledWith(['brand/new']);
+    });
+
+    it('shows inline error for malformed input', () => {
+      const onChange = vi.fn();
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={onChange}
+          suggestions={['octo/cat']}
+        />
+      );
+      fireEvent.change(screen.getByLabelText('Skip input'), {
+        target: { value: 'bad-name' },
+      });
+      fireEvent.click(screen.getByText('Add'));
+      expect(onChange).not.toHaveBeenCalled();
+      expect(screen.getByRole('alert')).toHaveTextContent('Use owner/repo format');
+    });
+  });
+
+  describe('provenance caption', () => {
+    it('renders caption when suggestions present', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={() => {}}
+          suggestions={['octo/cat']}
+        />
+      );
+      expect(screen.getByText('Suggestions come from your open PRs.')).toBeInTheDocument();
+    });
+
+    it('does NOT render caption when suggestions empty', () => {
+      render(
+        <RepoOptOutList
+          label="Skip"
+          repos={[]}
+          onChange={() => {}}
+          suggestions={[]}
+        />
+      );
+      expect(screen.queryByText('Suggestions come from your open PRs.')).not.toBeInTheDocument();
+    });
+  });
 });
