@@ -248,15 +248,17 @@ export function AutomationsSettings() {
               disabled={!settings.autoEnableAutoMerge}
               onChange={(mergeMethodPreference) => save({ mergeMethodPreference })}
             />
-            <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
-              <span>Merge clean PRs immediately</span>
-              <input
-                type="checkbox"
-                checked={settings.mergeCleanPRsImmediately}
-                disabled={!settings.autoEnableAutoMerge}
-                onChange={(e) => save({ mergeCleanPRsImmediately: e.target.checked })}
-              />
-            </label>
+            <div className="automation-row automation-row--leaf">
+              <label className="toggle">
+                <span className="toggle__name">Merge clean PRs immediately</span>
+                <input
+                  type="checkbox"
+                  checked={settings.mergeCleanPRsImmediately}
+                  disabled={!settings.autoEnableAutoMerge}
+                  onChange={(e) => save({ mergeCleanPRsImmediately: e.target.checked })}
+                />
+              </label>
+            </div>
             <RepoOptOutList
               label="Skip repos"
               repos={settings.autoMergeOptOutRepos}
