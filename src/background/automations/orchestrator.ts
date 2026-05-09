@@ -5,7 +5,7 @@ import type {
   PRRecordPhaseTwo,
   PollSummary,
 } from '../../core/automations-types';
-import { runEnableAutoMerge, type MergeMethod } from './enable-auto-merge';
+import { runEnableAutoMerge, resolveMergeMethod, type MergeMethod } from './enable-auto-merge';
 import { runDeleteMergedBranch } from './delete-merged-branch';
 import { runResolveObsoleteThreads } from './resolve-obsolete-threads';
 import {
@@ -168,15 +168,20 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
         }
       }
 
-      // MERGE-2 — fall-through direct merge for `already_clean` skips when
-      // the user has opted in. Suppresses the upstream skipped entry on
-      // success (E3); failures are surfaced as `auto_merged_now · failed`.
+      // MERGE-2 — fall-through direct merge for clean-status rejections when
+      // the user has opted in. Eligibility is evaluated against the FRESH
+      // `unsupportedReasons` from this cycle (not against the dedup'd
+      // `skippedAutoMergeEntries`), so:
+      //   - toggling the setting on after a prior poll already cached the
+      //     reason still triggers a merge attempt on the next poll
+      //   - a transient SHA_MISMATCH retries on the next poll
+      // The skipped-log dedup remains separate (handled above).
       if (settings.mergeCleanPRsImmediately) {
-        const cleanIds = new Set(
-          skippedAutoMergeEntries
-            .filter((s) => s.skipReason === 'already_clean')
-            .map((s) => s.prId),
-        );
+        const cleanIds = new Set<number>();
+        for (const prId of result.unsupportedPRs) {
+          const reason = result.unsupportedReasons[prId] ?? '';
+          if (/clean status/i.test(reason)) cleanIds.add(prId);
+        }
         const consumedSkipIds = new Set<number>();
         for (const eligible of eligiblePRs) {
           if (!cleanIds.has(eligible.id)) continue;
@@ -188,43 +193,118 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
           const pr = prs.find((p) => p.id === eligible.id);
           if (!pr) continue;
 
+          // No execution-side cooldown: the REST `mergePR` helper maps 405
+          // generically (not "this merge method specifically"), so a 405
+          // can mask a transient repo/branch-protection condition that
+          // resolves later. Skipping based on a prior failed SHA would
+          // strand the PR indefinitely. Re-attempt every poll; log dedup
+          // (if needed) belongs at the activity-entry layer, not here.
+          //
+          // Pick a SINGLE method up-front from the repo's allowed-methods
+          // intersected with the user's preference list. If we used the
+          // raw preference and let 405 cascade to the next method, a
+          // transient generic 405 ("merge cannot be performed right now")
+          // would silently shift the user to a lower-preference method
+          // on the next attempt — irreversible once it lands. Mirror the
+          // upstream `resolveMergeMethod` discipline: one method per
+          // attempt, fail loudly if it errors.
+          const chosenMethod = resolveMergeMethod(
+            settings.mergeMethodPreference,
+            eligible.allowedMethods,
+          );
+
           let merged = false;
           let lastError: string | undefined;
           let usedMethod: MergeMethod | null = null;
-          for (const method of settings.mergeMethodPreference) {
-            const restMethod = method.toLowerCase() as 'squash' | 'rebase' | 'merge';
+          if (chosenMethod === null) {
+            lastError = 'NO_ALLOWED_MERGE_METHOD';
+          } else {
+            const restMethod = chosenMethod.toLowerCase() as 'squash' | 'rebase' | 'merge';
             try {
-              await github.mergePR(owner, name, pr.number, {
+              const apiResult = await github.mergePR(owner, name, pr.number, {
                 sha: headSha,
                 merge_method: restMethod,
               });
-              merged = true;
-              usedMethod = method;
-              break;
+              // GitHub's PUT /merge can resolve with 200 + `merged: false` for
+              // edge cases (e.g. unstable branch protection check). Trust the
+              // payload, not just the absence of a thrown error.
+              if (apiResult.merged === true) {
+                merged = true;
+                usedMethod = chosenMethod;
+              } else {
+                lastError = 'NOT_MERGED';
+              }
             } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
-              if (msg === 'METHOD_NOT_ALLOWED') continue;
-              lastError = msg;
-              break;
+              lastError = err instanceof Error ? err.message : String(err);
             }
           }
 
           if (merged && usedMethod) {
             mergedNowEntries.push({ prId: eligible.id, method: usedMethod, result: 'success' });
             consumedSkipIds.add(eligible.id);
-            // Clear the upstream `autoMergeUnsupported` flag we just set —
-            // the PR is now actually merged, not unsupported.
+            // Update local PR state to reflect the merge: clear the
+            // unsupported flag + dedup marker, mark merged, stamp
+            // mergedAt. Same-cycle branch-delete cleanup is a known
+            // follow-up.
             prUpdates.push({
               prId: eligible.id,
-              patch: { autoMergeUnsupported: false, autoMergeUnsupportedReason: undefined },
+              patch: {
+                state: 'merged',
+                mergedAt: Date.now(),
+                lastUpdated: Date.now(),
+                autoMergeUnsupported: false,
+                autoMergeUnsupportedReason: undefined,
+                lastDirectMergeFailure: undefined,
+              },
             });
           } else {
-            mergedNowEntries.push({
-              prId: eligible.id,
-              method: settings.mergeMethodPreference[0] ?? 'SQUASH',
-              result: 'failed',
-              error: lastError ?? 'NO_ALLOWED_MERGE_METHOD',
-            });
+            const failureReason = lastError ?? 'NO_ALLOWED_MERGE_METHOD';
+            // The activity log records the method we ACTUALLY attempted
+            // (or the resolved-but-errored choice). When the preference
+            // list yielded no allowed method, fall back to the first
+            // preference for display purposes only.
+            const reportedMethod: MergeMethod =
+              chosenMethod ?? settings.mergeMethodPreference[0] ?? 'SQUASH';
+            // Log dedup keyed on { sha, method, error } so a different
+            // failure mode (different status, or different attempted
+            // method after a settings change) emits a fresh entry.
+            // Network retry still runs every poll; aggregate error count
+            // still increments. Mirrors autoMergeUnsupportedReason dedup.
+            const prev = (pr as PRRecord & PRRecordPhaseTwo).lastDirectMergeFailure;
+            const isNewFailure =
+              prev?.sha !== headSha ||
+              prev?.error !== failureReason ||
+              prev?.method !== reportedMethod;
+            if (isNewFailure) {
+              mergedNowEntries.push({
+                prId: eligible.id,
+                method: reportedMethod,
+                result: 'failed',
+                error: failureReason,
+              });
+              // Clear the upstream `autoMergeUnsupported` flag set above.
+              // The PR is clean + direct-merge-failed, not "auto-merge
+              // unsupported" — the latter would render a misleading badge
+              // in PRRow. The actual failure mode is now expressed via
+              // `lastDirectMergeFailure` + its dedicated badge.
+              prUpdates.push({
+                prId: eligible.id,
+                patch: {
+                  autoMergeUnsupported: false,
+                  autoMergeUnsupportedReason: undefined,
+                  lastDirectMergeFailure: {
+                    sha: headSha,
+                    error: failureReason,
+                    method: reportedMethod,
+                  },
+                },
+              });
+            }
+            // Always surface failed direct merges in the cycle's aggregate
+            // error count, even when the activity entry was deduped — the
+            // failure still happened on the wire and the summary should
+            // reflect it.
+            errors++;
             consumedSkipIds.add(eligible.id);
           }
         }

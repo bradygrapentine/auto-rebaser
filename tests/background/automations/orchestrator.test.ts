@@ -1,13 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PRRecord } from '../../../src/core/types';
-import type { AutomationSettings } from '../../../src/core/automations-types';
+import type { AutomationSettings, PRRecordPhaseTwo } from '../../../src/core/automations-types';
 import type { OrchestratorDeps, OrchestratorOpts } from '../../../src/background/automations/orchestrator';
 import type { PullRequestDetail } from '../../../src/background/automations/adapters';
 
 // Mock the four automation modules
-vi.mock('../../../src/background/automations/enable-auto-merge', () => ({
-  runEnableAutoMerge: vi.fn(),
-}));
+vi.mock('../../../src/background/automations/enable-auto-merge', async () => {
+  const actual = await vi.importActual<typeof import('../../../src/background/automations/enable-auto-merge')>(
+    '../../../src/background/automations/enable-auto-merge',
+  );
+  return {
+    ...actual,
+    // resolveMergeMethod stays real (used by orchestrator's fall-through path).
+    runEnableAutoMerge: vi.fn(),
+  };
+});
 vi.mock('../../../src/background/automations/delete-merged-branch', () => ({
   runDeleteMergedBranch: vi.fn(),
 }));
@@ -413,7 +420,10 @@ describe('runAllAutomations', () => {
     expect(result.skippedAutoMergeEntries).toEqual([]);
   });
 
-  it('falls through to next method on METHOD_NOT_ALLOWED', async () => {
+  it('does NOT fall through merge methods on 405 — fails loudly with the chosen method', async () => {
+    // GitHub's 405 is generic ("merge cannot be performed"), not method-specific.
+    // We must not silently shift the user to a lower-preference method —
+    // that would change merge semantics irreversibly.
     mockEnableAutoMerge.mockResolvedValue({
       enabled: 0, skipped: 0,
       unsupportedPRs: [1],
@@ -422,9 +432,7 @@ describe('runAllAutomations', () => {
       enabledPRs: [], failed: [],
     });
     const github = makeGithubDeps();
-    (github.mergePR as ReturnType<typeof vi.fn>)
-      .mockRejectedValueOnce(new Error('METHOD_NOT_ALLOWED'))
-      .mockResolvedValueOnce({ merged: true, sha: 'abc' });
+    (github.mergePR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('METHOD_NOT_ALLOWED'));
 
     const opts: OrchestratorOpts = {
       prs: [makePR()],
@@ -435,9 +443,10 @@ describe('runAllAutomations', () => {
     };
     const result = await runAllAutomations(opts);
 
-    expect(github.mergePR).toHaveBeenCalledTimes(2);
+    // One call only — no silent re-attempt with the second method.
+    expect(github.mergePR).toHaveBeenCalledTimes(1);
     expect(result.mergedNowEntries).toEqual([
-      { prId: 1, method: 'SQUASH', result: 'success' },
+      { prId: 1, method: 'REBASE', result: 'failed', error: 'METHOD_NOT_ALLOWED' },
     ]);
   });
 
@@ -465,6 +474,249 @@ describe('runAllAutomations', () => {
     expect(result.mergedNowEntries).toEqual([
       { prId: 1, method: 'SQUASH', result: 'failed', error: 'SHA_MISMATCH' },
     ]);
+  });
+
+  it('still attempts direct merge when reason is unchanged (e.g. toggle enabled after prior cache)', async () => {
+    // The PR has the same `autoMergeUnsupportedReason` it had last cycle,
+    // so the dedup'd `skippedAutoMergeEntries` is empty — but the merge must
+    // still fire because the toggle is on and the reason is currently clean.
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    const stalePR = makePR({
+      id: 1,
+      autoMergeUnsupported: true,
+      autoMergeUnsupportedReason: 'Pull request is in clean status',
+    } as Parameters<typeof makePR>[0]);
+    const opts: OrchestratorOpts = {
+      prs: [stalePR],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 'sha-current', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    // Even though no skipped log entry was emitted (reason unchanged),
+    // the direct merge still fired.
+    expect(github.mergePR).toHaveBeenCalled();
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'success' },
+    ]);
+    expect(result.skippedAutoMergeEntries).toEqual([]);
+  });
+
+  it('failed merged_now entries increment summary.errors', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('SHA_MISMATCH'));
+
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 's', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'failed', error: 'SHA_MISMATCH' },
+    ]);
+    expect(result.summary.errors).toBeGreaterThanOrEqual(1);
+  });
+
+  it('successful direct merge emits state=merged + mergedAt patch', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 's', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github: makeGithubDeps(),
+    };
+    const result = await runAllAutomations(opts);
+
+    const merged = result.prUpdates
+      .filter((u) => u.prId === 1)
+      .reduce((acc, u) => ({ ...acc, ...u.patch }), {} as PRRecord & PRRecordPhaseTwo);
+    expect(merged.state).toBe('merged');
+    expect(merged.mergedAt).toBeGreaterThan(0);
+    expect(merged.autoMergeUnsupported).toBe(false);
+  });
+
+  it('retries direct merge on every poll (no execution cooldown) — recovers same SHA', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('HTTP_403'))
+      .mockResolvedValueOnce({ merged: true, sha: 'abc' });
+
+    const opts1: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 'sha-stable', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result1 = await runAllAutomations(opts1);
+    expect(result1.mergedNowEntries[0].result).toBe('failed');
+
+    const result2 = await runAllAutomations({ ...opts1 });
+    expect(github.mergePR).toHaveBeenCalledTimes(2);
+    expect(result2.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'success' },
+    ]);
+  });
+
+  it('dedups repeated identical failures: log entry only emitted on first occurrence', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_403'));
+
+    // Second poll: PR already carries the lastDirectMergeFailure marker
+    // matching the current attempt's signature, so no new log entry.
+    const stalePR = makePR({
+      id: 1,
+      lastDirectMergeFailure: { sha: 'sha-same', method: 'SQUASH', error: 'HTTP_403' },
+    } as Parameters<typeof makePR>[0]);
+    const opts: OrchestratorOpts = {
+      prs: [stalePR],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 'sha-same', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    // Network call still fires (no execution cooldown)…
+    expect(github.mergePR).toHaveBeenCalled();
+    // …but the activity log entry is suppressed.
+    expect(result.mergedNowEntries).toEqual([]);
+    // Aggregate error count still increments (failure still happened).
+    expect(result.summary.errors).toBeGreaterThanOrEqual(1);
+  });
+
+  it('emits a fresh log entry when the failure signature changes (different error class)', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_422'));
+
+    const stalePR = makePR({
+      id: 1,
+      lastDirectMergeFailure: { sha: 'sha-same', method: 'SQUASH', error: 'HTTP_403' },
+    } as Parameters<typeof makePR>[0]);
+    const opts: OrchestratorOpts = {
+      prs: [stalePR],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 'sha-same', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'failed', error: 'HTTP_422' },
+    ]);
+  });
+
+  it('treats 200 { merged: false } as a failure, not silent success', async () => {
+    // GitHub can return 200 with merged: false in unusual states (e.g. partial
+    // branch-protection pass). Trust the boolean, not just the absence of throw.
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>).mockResolvedValue({
+      merged: false,
+      sha: 'whatever',
+    });
+
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 'sha-x', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    expect(result.mergedNowEntries).toEqual([
+      { prId: 1, method: 'SQUASH', result: 'failed', error: 'NOT_MERGED' },
+    ]);
+    const accumulated = result.prUpdates
+      .filter((u) => u.prId === 1)
+      .reduce((acc, u) => ({ ...acc, ...u.patch }), {} as PRRecord & PRRecordPhaseTwo);
+    expect(accumulated.state).not.toBe('merged');
+  });
+
+  it('failed fall-through clears autoMergeUnsupported flag', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const github = makeGithubDeps();
+    (github.mergePR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_422'));
+
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail({ head: { ref: 'f', sha: 'sha-x', repo: { full_name: 'owner/repo' } } } as Parameters<typeof makeDetail>[0])]]),
+      settings: { ...ALL_ON_SETTINGS, mergeCleanPRsImmediately: true },
+      resolvedThreads: {},
+      github,
+    };
+    const result = await runAllAutomations(opts);
+
+    const accumulated = result.prUpdates
+      .filter((u) => u.prId === 1)
+      .reduce((acc, u) => ({ ...acc, ...u.patch }), {} as PRRecord & PRRecordPhaseTwo);
+    expect(accumulated.autoMergeUnsupported).toBe(false);
+    expect(accumulated.autoMergeUnsupportedReason).toBeUndefined();
+    expect(accumulated.lastDirectMergeFailure).toEqual({
+      sha: 'sha-x', method: 'SQUASH', error: 'HTTP_422',
+    });
   });
 
   it('does NOT call mergePR when toggle OFF; logs skipped entry instead', async () => {
