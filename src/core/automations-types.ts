@@ -23,6 +23,13 @@ export interface AutomationSettings {
   mergeMethodPreference: MergeMethod[];
   /** Per-automation skip list. Repos here do NOT get auto-merge enabled. */
   autoMergeOptOutRepos: string[];
+  /**
+   * MERGE-2 — when ON and a PR is already in `clean` state (so GitHub refuses
+   * to enable auto-merge with "Pull request is in clean status"), fall through
+   * to a direct REST merge using `mergeMethodPreference`. Default OFF: opt-in
+   * gate against the surprise-merge case for brand-new clean PRs.
+   */
+  mergeCleanPRsImmediately: boolean;
 
   autoResolveOutdatedThreads: boolean;
   /** Per-automation skip list. Repos here do NOT get outdated review threads resolved. */
@@ -55,6 +62,7 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   autoEnableAutoMerge: false,             // opt-in per backlog 2.7
   mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
   autoMergeOptOutRepos: [],
+  mergeCleanPRsImmediately: false,         // opt-in — guards against surprise-merge of brand-new clean PRs
   autoResolveOutdatedThreads: false,      // opt-in per backlog 2.8
   autoResolveOptOutRepos: [],
   enableKeyboardShortcuts: true,

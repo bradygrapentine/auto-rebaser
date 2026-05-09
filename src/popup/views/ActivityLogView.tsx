@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<ActivityAction | 'all', string> = {
   rebase: 'rebase',
   branch_deleted: 'branch_deleted',
   auto_merge_enabled: 'auto_merge_enabled',
+  auto_merged_now: 'auto_merged_now',
   thread_resolved: 'thread_resolved',
   reviewer_pinged: 'reviewer_pinged',
 };
@@ -177,10 +178,18 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
                   <span className="activity-entry__action">
                     {e.action}
                     {e.result === 'failed' ? <> · failed</> : null}
+                    {e.result === 'skipped' ? <> · skipped</> : null}
                     {entryDetails(e) ? <> · {entryDetails(e)}</> : <> · #{e.prNumber}</>}
                   </span>
                   {e.errorMessage && (
                     <span className="activity-entry__error">"{e.errorMessage}"</span>
+                  )}
+                  {e.result === 'skipped' && e.skipReason && (
+                    <span className="activity-entry__skip-reason">
+                      {e.skipReason === 'already_clean'
+                        ? 'already mergeable — no action needed'
+                        : 'already merged — landed before our call'}
+                    </span>
                   )}
                 </a>
               </li>

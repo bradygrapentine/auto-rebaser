@@ -954,6 +954,12 @@ code, .mono {
   color: var(--term-red);
   font-style: italic;
 }
+.activity-entry__skip-reason {
+  grid-column: 1 / -1;
+  color: var(--term-fg-muted);
+  font-style: italic;
+  font-size: 11px;
+}
 
 /* ─── Alerts ───────────────────────────────────────────────────────────── */
 .alert {

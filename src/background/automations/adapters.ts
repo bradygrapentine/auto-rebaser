@@ -31,6 +31,8 @@ export interface PullRequestDetail extends PullRequest {
   auto_merge?: { enabled?: boolean } | null;
   head?: {
     ref?: string;
+    /** SHA of the head commit at snapshot time. Used by MERGE-2 fall-through merge. */
+    sha?: string;
     repo?: {
       full_name?: string;
     } | null;

@@ -248,6 +248,15 @@ export function AutomationsSettings() {
               disabled={!settings.autoEnableAutoMerge}
               onChange={(mergeMethodPreference) => save({ mergeMethodPreference })}
             />
+            <label className="toggle toggle--sub">
+              <span className="toggle__name">Merge clean PRs immediately</span>
+              <input
+                type="checkbox"
+                checked={settings.mergeCleanPRsImmediately}
+                disabled={!settings.autoEnableAutoMerge}
+                onChange={(e) => save({ mergeCleanPRsImmediately: e.target.checked })}
+              />
+            </label>
             <RepoOptOutList
               label="Skip repos"
               repos={settings.autoMergeOptOutRepos}

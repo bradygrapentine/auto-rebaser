@@ -5,8 +5,13 @@ export type ActivityAction =
   | 'rebase'
   | 'branch_deleted'
   | 'auto_merge_enabled'
+  | 'auto_merged_now'
   | 'thread_resolved'
   | 'reviewer_pinged';
+
+export type ActivityResult = 'success' | 'failed' | 'skipped';
+
+export type ActivitySkipReason = 'already_clean' | 'already_merged';
 
 export type ActivityEntry = {
   at: number;           // epoch ms
@@ -14,10 +19,11 @@ export type ActivityEntry = {
   repo: string;         // "owner/repo"
   prNumber: number;
   prTitle: string;      // captured at action time (titles change)
-  result: 'success' | 'failed';
+  result: ActivityResult;
   errorMessage?: string;
+  skipReason?: ActivitySkipReason;            // present when result === 'skipped'
   branchRef?: string;                         // for branch_deleted
-  mergeMethod?: 'SQUASH' | 'MERGE' | 'REBASE'; // for auto_merge_enabled
+  mergeMethod?: 'SQUASH' | 'MERGE' | 'REBASE'; // for auto_merge_enabled / auto_merged_now
   threadId?: string;                          // for thread_resolved
   reviewers?: string[];                       // for reviewer_pinged (Track 2C)
   prUrl?: string;                             // absolute URL to the PR; entry row links to this

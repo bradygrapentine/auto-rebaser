@@ -1,0 +1,2630 @@
+=== npm test: npm test --silent ===
+
+ RUN  v1.6.0 /Users/bradygrapentine/projects/auto-rebaser
+
+ ✓ tests/core/automations-store.test.ts  (10 tests) 13ms
+ ✓ tests/core/activity-log.test.ts  (20 tests) 19ms
+stderr | tests/background/automations/orchestrator.test.ts > runAllAutomations > enableAutoMerge throws — others still run, error count increments
+[orchestrator] enableAutoMerge threw: Error: enable failed
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/automations/orchestrator.test.ts:158:43
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+
+stderr | tests/background/automations/orchestrator.test.ts > runAllAutomations > deleteMergedBranch throws — others still run, error count increments
+[orchestrator] deleteMergedBranch threw: Error: delete failed
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/automations/orchestrator.test.ts:177:46
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+
+stderr | tests/background/automations/orchestrator.test.ts > runAllAutomations > resolveObsoleteThreads throws — others still run
+[orchestrator] resolveObsoleteThreads threw: Error: resolve failed
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/automations/orchestrator.test.ts:196:50
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+
+ ✓ tests/background/automations/orchestrator.test.ts  (11 tests) 21ms
+stdout | tests/background/poll-cycle.test.ts > all-clean cycle > 2 clean PRs → both current, no rebase, badge cleared then 0
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > all-clean cycle > 2 clean PRs → both current, no rebase, badge cleared then 0
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:98:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > behind PR rebase > single behind PR → rebased, state=updated, badge=1
+automations: ran {
+  ranAt: 1000,
+  rebased: 1,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > behind PR rebase > single behind PR → rebased, state=updated, badge=1
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:120:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > behind + HTTP_422 > needs-manual state on 422
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > behind + HTTP_422 > needs-manual state on 422
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:139:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > behind + HTTP_409 > conflict state on 409
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > behind + HTTP_409 > conflict state on 409
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:157:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > dirty PR > conflict state, no rebase call
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > dirty PR > conflict state, no rebase call
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:174:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > unknown mergeable_state > keeps previousState from store
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > unknown mergeable_state > keeps previousState from store
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:196:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > AUTH_ERROR from getPR aborts cycle > returns early, no upsertPRs after failure
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:211:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > NOT_AUTHENTICATED from getPR aborts cycle > returns early, no upsertPRs
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:225:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > RATE_LIMITED from searchAuthoredPRs > aborts cycle, no saveStore at all
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:235:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > NOT_AUTHENTICATED from searchAuthoredPRs > aborts cycle
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:247:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > pruneStale > called with active ids only
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > pruneStale > called with active ids only
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:262:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > stampPollTime > called after upsert
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > stampPollTime > called after upsert
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:281:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > multiple updates badge count > badge=2 when 2 behind PRs rebase successfully
+automations: ran {
+  ranAt: 1000,
+  rebased: 2,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > multiple updates badge count > badge=2 when 2 behind PRs rebase successfully
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:296:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > HTTP_500 from getPR keeps cycle running > errored PR recorded, other PRs still processed
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > HTTP_500 from getPR keeps cycle running > errored PR recorded, other PRs still processed
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:311:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > AUTH_ERROR from updateBranch aborts cycle > no upsertPRs after auth error in rebase
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:332:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > error PR retried on next cycle > PR previously in error transitions to current when getPR succeeds next cycle
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > error PR retried on next cycle > PR previously in error transitions to current when getPR succeeds next cycle
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:358:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > error PR retried on next cycle > PR previously in error stays in error when getPR fails again
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > error PR retried on next cycle > PR previously in error stays in error when getPR fails again
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:384:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > calls runAllAutomations with processedPRs, prDetails, settings, and resolvedThreads
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > calls runAllAutomations with processedPRs, prDetails, settings, and resolvedThreads
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:402:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > persists lastPollSummary with rebased count stamped from cycle
+automations: ran {
+  ranAt: 1000,
+  rebased: 1,
+  branchesDeleted: 1,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > persists lastPollSummary with rebased count stamped from cycle
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:434:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > applies prUpdates patches via second upsertPRs call
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 1,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > applies prUpdates patches via second upsertPRs call
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:462:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > saves resolvedThreads only when orchestrator returns a different reference
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > saves resolvedThreads only when orchestrator returns a different reference
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:487:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > saves resolvedThreads when orchestrator returns a new reference
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 1,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > saves resolvedThreads when orchestrator returns a new reference
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:505:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > orchestrator throwing does not break v1 rebase path or block badge update
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:518:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+[poll-cycle] automation pass failed: Error: orchestrator boom
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:516:71
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+
+stdout | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > does NOT call upsertPRs a second time when prUpdates is empty
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > phase-2 automation pass (A3 integration) > does NOT call upsertPRs a second time when prUpdates is empty
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:535:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Phase-2 field carry-over (Codex finding #2 fix) > preserves branchDeleted/autoMergeEnabled/nodeId from prior store on next poll
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Phase-2 field carry-over (Codex finding #2 fix) > preserves branchDeleted/autoMergeEnabled/nodeId from prior store on next poll
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:562:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > PR open last cycle, absent from search now, returns merged_at → state=merged + mergedAt set
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > PR open last cycle, absent from search now, returns merged_at → state=merged + mergedAt set
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:596:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > PR open last cycle, absent from search now, returns no merged_at → state=closed
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > PR open last cycle, absent from search now, returns no merged_at → state=closed
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:624:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > Merged PR with branchDeleted=true is NOT re-detected (eligible for prune)
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > Merged PR with branchDeleted=true is NOT re-detected (eligible for prune)
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:644:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > Merged PR with branchDeleted=false IS re-detected (retry pending deletion)
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > Merged PR with branchDeleted=false IS re-detected (retry pending deletion)
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:673:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > PR absent from search but detail.state=open → preserve as open, do not stamp closed (Codex H1.2)
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > PR absent from search but detail.state=open → preserve as open, do not stamp closed (Codex H1.2)
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:704:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > Transient transition-fetch errors preserve the prior record (no permanent drop)
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > Transition detection: open→merged/closed (Codex finding #1 fix) > Transient transition-fetch errors preserve the prior record (no permanent drop)
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:727:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > ignoredRepos filter > drops search items whose repo is in ignoredRepos and never fetches their PR
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > ignoredRepos filter > drops search items whose repo is in ignoredRepos and never fetches their PR
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:752:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > ignoredRepos filter > drops store transitions for ignored repos so pruneStale evicts them
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > ignoredRepos filter > drops store transitions for ignored repos so pruneStale evicts them
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:779:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stderr | tests/background/poll-cycle.test.ts > ignoredRepos filter > falls back to "no repos ignored" when settings load fails
+[poll-cycle] could not read automation settings; ignoring repo-ignore list Error: storage down
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:791:75
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:798:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+[poll-cycle] automation pass failed: Error: storage down
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:791:75
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+
+stdout | tests/background/poll-cycle.test.ts > activity log > calls appendActivity EXACTLY ONCE per cycle even with multiple write actions
+automations: ran {
+  ranAt: 1000,
+  rebased: 1,
+  branchesDeleted: 1,
+  autoMergeEnabled: 1,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > activity log > calls appendActivity EXACTLY ONCE per cycle even with multiple write actions
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:856:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > activity log > activity entries include rebase and branch_deleted
+automations: ran {
+  ranAt: 1000,
+  rebased: 1,
+  branchesDeleted: 1,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > activity log > activity entries include rebase and branch_deleted
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:895:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > activity log > storage write failure in appendActivity is non-fatal — cycle completes normally
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > activity log > storage write failure in appendActivity is non-fatal — cycle completes normally
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:923:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+[poll-cycle] automation pass failed: Error: quota exceeded
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:919:7
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:135:14
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:60:26
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:17)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+    at withEnv (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
+
+stdout | tests/background/poll-cycle.test.ts > activity log > rebase failure is recorded as failed activity entry
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > activity log > rebase failure is recorded as failed activity entry
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:937:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+stdout | tests/background/poll-cycle.test.ts > activity log > no activity entries written when cycle has no write actions
+automations: ran {
+  ranAt: 1000,
+  rebased: 0,
+  branchesDeleted: 0,
+  autoMergeEnabled: 0,
+  threadsResolved: 0,
+  errors: 0
+}
+
+stderr | tests/background/poll-cycle.test.ts > activity log > no activity entries written when cycle has no write actions
+[poll-cycle] could not read installations; treating all as active TypeError: Cannot read properties of undefined (reading 'auth')
+    at Module.getAuth (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-store.ts:35:18)
+    at runPollCycleInner (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:93:18)
+    at Module.runPollCycle (/Users/bradygrapentine/projects/auto-rebaser/src/background/poll-cycle.ts:64:12)
+    at /Users/bradygrapentine/projects/auto-rebaser/tests/background/poll-cycle.test.ts:953:5
+    at runTest (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:781:11)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runSuite (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:909:15)
+    at runFiles (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:958:5)
+    at startTests (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/@vitest/runner/dist/index.js:967:3)
+    at file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
+
+ ✓ tests/background/poll-cycle.test.ts  (39 tests) 48ms
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > shows empty state when no PRs
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > shows one PR row when its repo group is expanded
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > groups PRs by repo with non-current groups auto-expanded
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > lists groups alphabetically by repo
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > renders Support link in the footer pointing at GitHub Sponsors
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > Poll now button sends POLL_NOW message
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > mounts PollSummaryFooter when activity entries exist and onOpenActivity is wired
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > shows refresh icon button in header that sends POLL_NOW
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > passes user.login down so RepoGroup receives userLogin
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > pressing j focuses the first visible PR row
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > pressing s calls onSettings
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > pressing ? calls onHelp
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > pressing r sends POLL_NOW
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > j skips PRs in collapsed groups
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+ ✓ tests/popup/views/PRListView.test.tsx  (15 tests) 146ms
+stderr | tests/popup/views/PRListView.test.tsx > PRListView > refresh button is disabled and labeled "Polling" when pollInProgress
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+
+stderr | tests/popup/App.test.tsx > App > shows loading state
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > shows SignInView when signed-out
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > shows SignInView with error when status=error
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > shows PRListView when signed-in by default
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > navigates to SettingsView on settings click
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: A component is changing a controlled input to be uncontrolled. This is likely caused by the value changing from a defined to undefined, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components
+    at input
+    at label
+    at div
+    at div
+    at section
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > navigates back to PRListView from SettingsView
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > renders HelpView when shortcuts button is clicked
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > clicking view-activity routes to ActivityLogView (covers App onOpenActivity handler)
+Warning: An update to ActivityLogView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActivityLogView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/ActivityLogView.tsx:40:28)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to ActivityLogView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActivityLogView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/ActivityLogView.tsx:40:28)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to ActivityLogView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActivityLogView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/ActivityLogView.tsx:40:28)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > shows current interval in dropdown
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > changing dropdown calls saveSettings
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: A component is changing a controlled input to be uncontrolled. This is likely caused by the value changing from a defined to undefined, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components
+    at input
+    at label
+    at div
+    at div
+    at section
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > back button calls onBack
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > shows all interval options
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+stderr | tests/popup/App.test.tsx > App > clicking ping on a stale PR routes to PingConfirmView, cancel returns to list
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+stderr | tests/popup/App.test.tsx > App > navigates back from HelpView to PRListView
+Warning: An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PollSummaryFooter inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PollSummaryFooter (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/PollSummaryFooter.tsx:9:45)
+    at div
+    at footer
+    at div
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+Warning: An update to PRListView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at PRListView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/PRListView.tsx:26:3)
+    at App (/Users/bradygrapentine/projects/auto-rebaser/src/popup/App.tsx:23:49)
+
+ ✓ tests/popup/App.test.tsx  (12 tests) 210ms
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > renders the account section when authMethod is provided
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > shows PAT label when authMethod is pat
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+stderr | tests/popup/views/SettingsView.test.tsx > SettingsView > switch-method button invokes onSignOut
+Warning: An update to AutomationsSettings inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at AutomationsSettings (/Users/bradygrapentine/projects/auto-rebaser/src/popup/components/AutomationsSettings.tsx:196:52)
+    at div
+    at div
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SettingsView.tsx:46:25)
+
+ ✓ tests/popup/views/ActivityLogView.test.tsx  (16 tests) 318ms
+ ✓ tests/popup/views/SettingsView.test.tsx  (12 tests) 347ms
+ ✓ tests/popup/components/AutomationsSettings.test.tsx  (17 tests) 395ms
+ ✓ tests/core/auth-store.test.ts  (13 tests) 16ms
+ ✓ tests/core/auth.test.ts  (14 tests) 18ms
+ ✓ tests/github/http.test.ts  (13 tests) 19ms
+ ✓ tests/background/messages.test.ts  (15 tests) 169ms
+ ✓ tests/background/automations/enable-auto-merge.test.ts  (16 tests) 17ms
+ ✓ tests/background/automations/resolve-obsolete-threads.test.ts  (11 tests) 13ms
+ ✓ tests/core/auth-device-flow.test.ts  (10 tests) 25ms
+ ✓ tests/core/etag-cache.test.ts  (8 tests) 19ms
+ ✓ tests/core/auth-refresh.test.ts  (12 tests) 23ms
+ ✓ tests/core/pr-store.test.ts  (11 tests) 41ms
+ ✓ tests/popup/components/RepoGroup.test.tsx  (11 tests) 167ms
+ ✓ tests/background/automations/adapters.test.ts  (12 tests) 14ms
+ ✓ tests/github/http-extra.test.ts  (10 tests) 11ms
+stderr | tests/popup/views/SignInView.test.tsx > SignInView > shows app title and both choice buttons by default
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+
+stderr | tests/popup/views/SignInView.test.tsx > SignInView > PAT button disabled when input is empty
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+
+stderr | tests/popup/views/SignInView.test.tsx > SignInView > PAT button disabled when busy=true
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+
+stderr | tests/popup/views/SignInView.test.tsx > SignInView > shows error message when provided in PAT view
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+
+stderr | tests/popup/views/SignInView.test.tsx > SignInView > does not show error section when no error
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+
+stderr | tests/popup/views/SignInView.test.tsx > SignInView > does not submit when PAT input is whitespace only
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+Warning: An update to SignInView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SignInView (/Users/bradygrapentine/projects/auto-rebaser/src/popup/views/SignInView.tsx:5:23)
+
+ ✓ tests/popup/views/SignInView.test.tsx  (9 tests) 210ms
+ ✓ tests/background/state-machine.test.ts  (30 tests) 36ms
+stderr | tests/background/auth-device-flow-runner.test.ts > beginDeviceFlow > starts the flow and transitions through pending → success
+[device-flow] could not fetch installations: Error: [vitest] No "getAuth" export is defined on the "../../src/core/auth-store" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/vendor/execute.fL3szUAI.js:79:19)
+    at Object.get (file:///Users/bradygrapentine/projects/auto-rebaser/node_modules/vitest/dist/vendor/execute.fL3szUAI.js:153:22)
+    at Module.ensureFreshToken (/Users/bradygrapentine/projects/auto-rebaser/src/core/auth-refresh.ts:31:22)
+    at Module.request (/Users/bradygrapentine/projects/auto-rebaser/src/github/http.ts:19:23)
+    at Module.getUserInstallations (/Users/bradygrapentine/projects/auto-rebaser/src/github/endpoints/installations.ts:30:22)
+    at /Users/bradygrapentine/projects/auto-rebaser/src/background/auth-device-flow-runner.ts:57:37 {
+  codeFrame: 'vi.mock("../../src/core/auth-store", async (importOriginal) => {\n' +
+    '  const actual = await importOriginal()\n' +
+    '  return {\n' +
+    '    ...actual,\n' +
+    '    // your mocked methods\n' +
+    '  }\n' +
+    '})'
+}
+
+ ✓ tests/background/auth-device-flow-runner.test.ts  (6 tests) 19ms
+ ✓ tests/popup/hooks/useActivityLog.test.tsx  (7 tests) 44ms
+ ✓ tests/popup/views/PingConfirmView.test.tsx  (6 tests) 36ms
+ ✓ tests/background/automations/delete-merged-branch.test.ts  (8 tests) 8ms
+ ✓ tests/popup/hooks/useAuth.test.tsx  (5 tests) 28ms
+ ✓ tests/popup/components/PollSummaryFooter.test.tsx  (6 tests) 44ms
+ ✓ tests/popup/components/PRRow.test.tsx  (11 tests) 94ms
+ ✓ tests/github/endpoints.test.ts  (10 tests) 22ms
+ ✓ tests/core/host-config.test.ts  (13 tests) 6ms
+ ✓ tests/core/ping-throttle.test.ts  (9 tests) 12ms
+ ✓ tests/popup/components/Header.test.tsx  (12 tests) 122ms
+ ✓ tests/popup/hooks/useGroupedPRs.test.ts  (15 tests) 36ms
+ ✓ tests/popup/hooks/usePRStore.test.tsx  (5 tests) 36ms
+stderr | tests/popup/hooks/useAutomationSettings.test.tsx > useAutomationSettings > starts with defaults and loading=true
+Warning: An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at TestComponent (/Users/bradygrapentine/projects/auto-rebaser/node_modules/@testing-library/react/dist/pure.js:307:5)
+
+ ✓ tests/github/endpoints/auto-merge.test.ts  (8 tests) 8ms
+ ✓ tests/popup/hooks/useAutomationSettings.test.tsx  (5 tests) 26ms
+ ✓ tests/popup/hooks/usePingedStore.test.tsx  (5 tests) 48ms
+ ✓ tests/popup/components/RepoOptOutList.test.tsx  (8 tests) 171ms
+ ✓ tests/github/graphql.test.ts  (7 tests) 8ms
+ ✓ tests/github/endpoints/review-threads.test.ts  (8 tests) 6ms
+ ✓ tests/popup/hooks/useKeyboardShortcuts.test.tsx  (8 tests) 27ms
+ ✓ tests/core/installations-helpers.test.ts  (10 tests) 8ms
+ ✓ tests/core/staleness.test.ts  (9 tests) 7ms
+ ✓ tests/popup/components/MigrationBanner.test.tsx  (4 tests) 47ms
+ ✓ tests/core/settings-store.test.ts  (4 tests) 4ms
+ ✓ tests/popup/hooks/useSettings.test.tsx  (4 tests) 31ms
+ ✓ tests/background/poll-summary.test.ts  (4 tests) 2ms
+ ✓ tests/background/alarm.test.ts  (4 tests) 5ms
+ ✓ tests/github/endpoints/git-refs.test.ts  (6 tests) 10ms
+ ✓ tests/github/endpoints/installations.test.ts  (3 tests) 5ms
+ ✓ tests/github/endpoints/repos.test.ts  (4 tests) 8ms
+ ✓ tests/popup/components/Select.test.tsx  (2 tests) 101ms
+ ✓ tests/github/endpoints/issues.test.ts  (2 tests) 3ms
+ ✓ tests/background/badge.test.ts  (4 tests) 2ms
+ ✓ tests/popup/views/HelpView.test.tsx  (3 tests) 42ms
+ ✓ tests/popup/components/StatusBadge.test.tsx  (18 tests) 21ms
+
+ Test Files  59 passed (59)
+      Tests  590 passed (590)
+   Start at  03:49:31
+   Duration  3.69s (transform 963ms, setup 3.07s, collect 3.17s, tests 3.41s, environment 14.33s, prepare 2.71s)
+
+PASS: npm test
+=== npm run typecheck: npm run typecheck --silent ===
+PASS: npm run typecheck
+=== gh pr checks ===
+no checks reported on the 'chore/strip-key-for-store' branch
