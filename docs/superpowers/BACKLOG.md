@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-07_
+_Last `/backlog-sync`: 2026-05-09_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,7 +9,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 0 |
+| 🟢 Ready | 5 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
@@ -19,7 +19,56 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 ---
 
 ## §1 Ready
-_(none — v1.0.1 shipped 2026-05-07)_
+
+### MKT-1 — Apply rewritten store listings (Chrome + AMO)
+**Status:** 🟢 Ready
+**Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. Listing edits don't require a version bump or rebuild.
+**How:** Apply the title, short description, long description, tag list, and screenshot captions from `docs/STORE_LISTING_REWRITES.md` to both store dashboards once the current reviews clear.
+**Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
+
+### MKT-2 — Add GitHub repo topics
+**Status:** 🟢 Ready
+**Why:** Free SEO via GitHub's topic index — repos with relevant topics surface in topic-scoped searches and the "Explore" graph. ~1-minute change.
+**How:** On the repo page → "About" → gear icon → add: `chrome-extension`, `firefox-extension`, `github-extension`, `pull-request`, `rebase`, `auto-merge`, `developer-tools`.
+**Done when:** Topics visible on https://github.com/bradygrapentine/auto-rebaser.
+
+### MERGE-1 — Reclassify no-op auto-merge attempts in activity log
+**Status:** 🟢 Ready
+**Why:** Two GitHub responses currently log as red `failed` but are not failures: `"Pull request is already merged"` (race — landed before our call) and `"Pull request is in clean status"` (PR already mergeable; GitHub refuses to enable auto-merge because there's nothing to wait on). The red entries make the audit log look alarming when the extension is doing nothing wrong.
+**How:**
+- In the auto-merge adapter, classify these two error strings as no-ops rather than failures.
+- Either downgrade them to `result: 'skipped'` with a `reason` field, or suppress entirely once MERGE-2 ships (since MERGE-2 will replace the "in clean status" case with an actual merge).
+- Update the activity log UI to render `skipped` entries in a neutral color, distinct from the red `failed` treatment.
+**Done when:** No `auto_merge_enabled · failed` entries appear in the activity log for the two listed reasons; audit log visually distinguishes skip from failure.
+
+### MERGE-2 — Fall-through direct merge when GitHub rejects auto-merge on clean PRs
+**Status:** 🟢 Ready
+**Why:** When a PR is already mergeable (`mergeable_state === 'clean'`), GitHub's `enablePullRequestAutoMerge` mutation refuses with `"Pull request is in clean status"` because there's nothing to wait on. The extension currently logs the rejection and walks away — so PRs that are ready the moment we see them never get merged. The user's "auto-enable auto-merge" intent is to land the PR; the extension fails to do so for clean PRs.
+
+**Design (per brainstorm 2026-05-09 — A1 + B1 + C1 + D1 + E1 + E3):**
+- **A1 (consent gate):** Add a new sub-toggle under the auto-merge block: `Merge clean PRs immediately` (default OFF). Only when ON does the fall-through fire. Preserves explicit opt-in; no surprise merges for users who only ticked "auto-enable auto-merge."
+- **B1 (race protection):** REST `PUT /repos/{o}/{r}/pulls/{n}/merge` call passes `sha` precondition from PR detail. New commit between detection and merge → GitHub returns `409 head-sha-mismatch`, we log and move on.
+- **C1 (branch-protection edges):** Trust GitHub server-side rejection. No pre-flight check; if a custom required status appears in the gap, the merge call fails cleanly and is logged.
+- **D1 (method preference):** Try `mergeMethodPreference` order. On `405 Method Not Allowed`, fall through to the next method. Same fallback pattern auto-merge already uses.
+- **E1 (audit clarity):** New activity log action `auto_merged_now`, distinct from `auto_merge_enabled`. Filterable.
+- **E3 (suppress upstream):** When the fall-through merge succeeds, suppress the upstream `auto_merge_enabled · "in clean status"` log entry (it's not user-actionable and clutters the audit).
+
+**Per-repo opt-out:** reuses the existing auto-merge skip list — no new toggle.
+
+**Cold-start / cons remaining:** none material with A1 in place. Brand-new clean PRs only direct-merge if the user explicitly opted into "merge clean PRs immediately."
+
+**Done when:**
+- New setting `mergeCleanPRsImmediately: boolean` exists in automation settings (default false), surfaced in the popup auto-merge section.
+- When enabled and a clean PR triggers the rejection, extension calls REST merge with SHA precondition and logs `auto_merged_now`.
+- When disabled, behavior matches today (no-op log entry, cleaned up by MERGE-1).
+- Method preference fallback verified against repos that disable squash or rebase.
+- Tests cover: clean-PR with toggle on (merges), clean-PR with toggle off (skips), method fallback on 405, SHA mismatch rejection.
+
+### MKT-3 — Show HN launch post
+**Status:** 🟢 Ready (blocked on store approvals)
+**Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
+**How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
+**Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
 
 ## §2 In progress
 _(none)_

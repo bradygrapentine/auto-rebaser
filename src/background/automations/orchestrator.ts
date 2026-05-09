@@ -50,6 +50,13 @@ export interface OrchestratorResult {
   autoMergeMethodByPRId: Record<number, MergeMethod>;
   /** Story 2.7 — per-PR auto-merge failure detail for activity-log entries. */
   failedAutoMergeEntries: Array<{ prId: number; error: string }>;
+  /**
+   * MERGE-1 — per-PR no-op outcomes from auto-merge enablement. These come
+   * back from GitHub when the PR is already mergeable (clean) or already
+   * merged. They are not failures and should render as neutral skips in the
+   * activity log.
+   */
+  skippedAutoMergeEntries: Array<{ prId: number; skipReason: 'already_clean' | 'already_merged' }>;
   /** Story 2.8 — per-thread detail for activity-log entries. */
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
   /** Story 2.8 — per-thread failure detail for activity-log entries. */
@@ -62,6 +69,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
   const failedAutoMergeEntries: OrchestratorResult['failedAutoMergeEntries'] = [];
+  const skippedAutoMergeEntries: OrchestratorResult['skippedAutoMergeEntries'] = [];
   const resolvedThreadEntries: OrchestratorResult['resolvedThreadEntries'] = [];
   const failedThreadEntries: OrchestratorResult['failedThreadEntries'] = [];
   let resolvedThreads: ResolvedThreadsStore = { ...opts.resolvedThreads };
@@ -125,7 +133,16 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
           | (PRRecord & PRRecordPhaseTwo)
           | undefined)?.autoMergeUnsupportedReason;
         if (prevReason !== reason) {
-          failedAutoMergeEntries.push({ prId, error: reason });
+          // MERGE-1: classify the two no-op responses as skipped, not failed.
+          // GitHub returns these when the PR is already mergeable (no auto-
+          // merge possible) or already merged (race with the merge landing).
+          if (/clean status/i.test(reason)) {
+            skippedAutoMergeEntries.push({ prId, skipReason: 'already_clean' });
+          } else if (/is already merged/i.test(reason)) {
+            skippedAutoMergeEntries.push({ prId, skipReason: 'already_merged' });
+          } else {
+            failedAutoMergeEntries.push({ prId, error: reason });
+          }
         }
       }
       const noAllowedSet = new Set(result.noAllowedMethodPRs);
@@ -230,6 +247,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
     resolvedThreads,
     autoMergeMethodByPRId,
     failedAutoMergeEntries,
+    skippedAutoMergeEntries,
     resolvedThreadEntries,
     failedThreadEntries,
   };

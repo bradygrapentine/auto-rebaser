@@ -487,6 +487,22 @@ async function runAutomationsPass(
       });
     }
 
+    // MERGE-1 — auto_merge_enabled skipped entries (no-op responses from GitHub).
+    for (const s of result.skippedAutoMergeEntries ?? []) {
+      const pr = prMap.get(s.prId);
+      if (!pr) continue;
+      cycleEntries.push({
+        at: now,
+        action: 'auto_merge_enabled',
+        repo: pr.repo,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        prUrl: pr.url,
+        result: 'skipped',
+        skipReason: s.skipReason,
+      });
+    }
+
     // Story 2.8 — thread_resolved entries.
     const prByRepoNumber = new Map<string, PRRecord>(
       processedPRs.map((p) => [`${p.repo}#${p.number}`, p]),

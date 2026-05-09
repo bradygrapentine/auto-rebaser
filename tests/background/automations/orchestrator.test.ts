@@ -322,6 +322,66 @@ describe('runAllAutomations', () => {
     expect(clearPatch).toBeDefined();
   });
 
+  it('routes "in clean status" reason to skippedAutoMergeEntries (already_clean)', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is in clean status' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail()]]),
+      settings: ALL_ON_SETTINGS,
+      resolvedThreads: {},
+      github: makeGithubDeps(),
+    };
+    const result = await runAllAutomations(opts);
+    expect(result.skippedAutoMergeEntries).toEqual([{ prId: 1, skipReason: 'already_clean' }]);
+    expect(result.failedAutoMergeEntries).toEqual([]);
+  });
+
+  it('routes "is already merged" reason to skippedAutoMergeEntries (already_merged)', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Pull request is already merged' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail()]]),
+      settings: ALL_ON_SETTINGS,
+      resolvedThreads: {},
+      github: makeGithubDeps(),
+    };
+    const result = await runAllAutomations(opts);
+    expect(result.skippedAutoMergeEntries).toEqual([{ prId: 1, skipReason: 'already_merged' }]);
+    expect(result.failedAutoMergeEntries).toEqual([]);
+  });
+
+  it('keeps "not allowed for this repository" as failed (legitimate problem)', async () => {
+    mockEnableAutoMerge.mockResolvedValue({
+      enabled: 0, skipped: 0,
+      unsupportedPRs: [1],
+      unsupportedReasons: { 1: 'Auto merge is not allowed for this repository' },
+      noAllowedMethodPRs: [],
+      enabledPRs: [], failed: [],
+    });
+    const opts: OrchestratorOpts = {
+      prs: [makePR()],
+      prDetails: new Map([[1, makeDetail()]]),
+      settings: ALL_ON_SETTINGS,
+      resolvedThreads: {},
+      github: makeGithubDeps(),
+    };
+    const result = await runAllAutomations(opts);
+    expect(result.skippedAutoMergeEntries).toEqual([]);
+    expect(result.failedAutoMergeEntries).toHaveLength(1);
+  });
+
   it('resolvedThreads from resolveObsoleteThreads is returned', async () => {
     const updatedStore = { 'thread-1': 9999 };
     mockResolveObsoleteThreads.mockResolvedValue({
