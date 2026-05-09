@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<ActivityAction | 'all', string> = {
   rebase: 'rebase',
   branch_deleted: 'branch_deleted',
   auto_merge_enabled: 'auto_merge_enabled',
+  auto_merged_now: 'auto_merged_now',
   thread_resolved: 'thread_resolved',
   reviewer_pinged: 'reviewer_pinged',
 };
