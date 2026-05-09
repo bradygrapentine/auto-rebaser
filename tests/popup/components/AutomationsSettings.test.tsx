@@ -37,11 +37,12 @@ describe('AutomationsSettings', () => {
     // 3 main automation toggles + 1 stale-badge toggle + 2 stale sub-toggles
     // (counts-as-attention, allow-ping) + 1 keyboard-shortcuts toggle +
     // 3 merge-method preference checkboxes (one per method, in the expanded
-    // auto-merge section).
+    // auto-merge section) + 1 merge-clean-PRs-immediately sub-toggle.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(10);
+    expect(checkboxes).toHaveLength(11);
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
+    expect(screen.getByLabelText(/Merge clean PRs immediately/)).not.toBeChecked();
     expect(screen.getByLabelText(/Auto-resolve outdated review threads/)).not.toBeChecked();
     expect(screen.getByLabelText(/Enable keyboard shortcuts/)).toBeChecked();
     expect(screen.getByLabelText(/Show stale-PR badge/)).toBeChecked();
