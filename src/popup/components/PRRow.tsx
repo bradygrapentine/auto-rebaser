@@ -26,6 +26,7 @@ const APP_NOT_INSTALLED_HINT = 'Auto Rebaser App not installed for this repo';
 export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installRequestUrl }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
+  const directMergeFailure = extended.lastDirectMergeFailure;
   const staleness = extended.staleness;
   const idleLabel = staleness && showStaleBadge ? formatIdleDays(staleness.idleDays) : null;
   const showError = pr.state === 'error' && pr.errorMessage;
@@ -77,6 +78,15 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installR
             title="The repo doesn't allow any of your preferred merge methods."
           >
             auto-merge skipped: no allowed method
+          </span>
+        )}
+        {directMergeFailure && !noAllowedMethod && (
+          <span
+            className="pr-row__skip-badge"
+            data-testid="direct-merge-failure-badge"
+            title={`Direct merge (${directMergeFailure.method.toLowerCase()}) failed: ${directMergeFailure.error}`}
+          >
+            merge failed: {directMergeFailure.error}
           </span>
         )}
       </a>

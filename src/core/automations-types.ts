@@ -97,6 +97,15 @@ export interface PRRecordPhaseTwo {
    * or repo permissions change.
    */
   autoMergeSkipReason?: 'no-allowed-method';
+  /**
+   * MERGE-2 — last direct-merge failure signature (SHA + method + error).
+   * Used to dedupe `auto_merged_now · failed` activity entries when the
+   * same failure keeps recurring across polls; suppresses log-flooding
+   * without preventing the network retry from happening. New SHA, new
+   * attempted method, new error class, or success clears the entry.
+   * Mirrors the `autoMergeUnsupportedReason` dedup pattern.
+   */
+  lastDirectMergeFailure?: { sha: string; method: MergeMethod; error: string };
   /** PR head branch name — needed for Story 2.6. */
   headRef?: string;
   /** True when head and base repos are identical (not a fork). */

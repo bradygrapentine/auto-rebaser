@@ -25,11 +25,18 @@ export interface MergePRResult {
  * PUT /repos/{owner}/{repo}/pulls/{number}/merge.
  *
  * Throws:
- * - `METHOD_NOT_ALLOWED` (405) — repo settings disallow the requested merge_method.
- *   Caller should fall through to the next preference.
+ * - `METHOD_NOT_ALLOWED` (405) — generic "merge cannot be performed". GitHub's
+ *   docs treat 405 broadly (could be method-disabled OR a transient state),
+ *   so callers should NOT silently fall through to a different merge method
+ *   on this signal — that risks shifting the user's chosen merge semantics
+ *   on what was actually a transient condition. Surface the failure instead.
  * - `SHA_MISMATCH` (409) — head moved between snapshot and call. Abort; will be
  *   retried on the next poll if still applicable.
  * - `HTTP_<code>` for any other unexpected status.
+ *
+ * On 200 the response payload includes `{ merged: boolean }`. Callers must
+ * check `merged === true` — GitHub can return 200 with `merged: false` in
+ * unusual states.
  */
 export async function mergePR(
   owner: string,
