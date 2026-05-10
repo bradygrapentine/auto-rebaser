@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-10 (post-5.2-A merge)_
+_Last `/backlog-sync`: 2026-05-10 (post-reviewer-automations merge — #103/#104/#105 shipped)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 1 |
-| ✅ Shipped | 40 |
+| ✅ Shipped | 43 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -45,17 +45,7 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
-### REVIEWER-AUTOMATIONS — Act on PRs you don't author
-**Status:** 💭 Idea (needs brainstorm before scoping)
-**Why:** Every automation today acts only on `author:@me` PRs. Users on review-heavy teams want some of these — particularly auto-merge once their approval is the last gate, and auto-rebase of branches they're collaborating on — to fire on PRs where they're a reviewer / assignee / collaborator instead of the author.
-**Why not in V2:** Different discovery query (`review-requested:@me` / `assignee:@me` / `involves:@me`), different consent model (auto-rebasing someone else's PR is intrusive in a way auto-acting on your own isn't), different permission surface (Contents: write on the head repo via the GitHub App), and different UX for opt-in (per-PR? per-org? per-repo?). Worth its own scoping pass.
-**Sketch of safe vs unsafe automations on others' PRs:**
-- Auto-merge — mostly safe; GitHub's native auto-merge requires merge permission and the user already has it.
-- Auto-rebase — needs Contents: write + non-author force-push permission; org-level branch protection often forbids.
-- Branch-delete — not the user's branch to delete.
-- Auto-resolve outdated threads — not the user's threads to resolve.
-- Ping reviewers — N/A; user IS the reviewer.
-**Done when:** scope brainstorm produces a v2 story with explicit consent model + permission flow + per-PR opt-in UX. Closest dropped cousin: 5.2 push-since-approval (surfacing-only, dropped because branch-protection covers it).
+_(empty — REVIEWER-AUTOMATIONS shipped 2026-05-10 via PR #105)_
 
 ---
 
@@ -117,6 +107,11 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 
 ### V2 Sprint 2 — push-since-approval (2026-05-10)
 - **5.2-A** Push-since-approval actionable badge + idempotent reviewer re-request (`POST /pulls/:n/requested_reviewers`). Detector uses head-SHA-cycle-boundary as push-time (not committer-date); negative-cache `staleApproval: result | null` to skip per-cycle listReviews fan-out; first-observation safety (no detection on uncached PRs); 24h per-PR throttle gates badge actionable→passive. Settings: `enablePushSinceApproval` master (default ON, badge-only) + `enableRequestRereview` (default OFF, opt-in click). 3-stage adversarial Opus review (plan / TDD / code) caught and fixed 2 must-fix bugs pre-merge — PR #102
+
+### V2 Sprint 3 — state-machine fix + test harness + reviewer-automations (2026-05-10)
+- **STATE-2** `[updated]` masking fix: re-derive PR state after a successful rebase using fresh `mergeable_state`; only keep `updated` when post-rebase result is `current` / `unknown`. Surfaces failing required checks (`blocked` → Pending) instead of masking them — PR #103
+- **E2E-1** Playwright E2E test harness + GitHub Actions CI pipeline. Three smoke tests (sign-in view, post-rebase regression for #103, settings persistence across popup reload). MV3 service-worker registration handled via `--headless=new` + persistent context. CI runs typecheck + vitest + build + e2e on every PR — PR #104
+- **REVIEWER-AUTOMATIONS** Reviewer dashboard tab (opt-in, default OFF) showing PRs where the user is a requested reviewer or assignee. Conservatively-gated 4-gate auto-merge automation: master toggle + sub-toggle + per-repo allowlist + (my-approval AND `reviewDecision=APPROVED` AND no remaining requested-reviewers). Head-SHA-change invalidation clears the arm cache so a fresh push re-opens the gate. New pure detector with 10 truth-table unit tests; 7-test integration suite for the new poll-cycle phase — PR #105
 
 ---
 
