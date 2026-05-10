@@ -10,13 +10,12 @@ import { test, expect, seedStorage, reloadPopup, mockGitHubApi } from './fixture
 
 test('signed-in: toggling auto-rebase persists across popup reload', async ({ context, popupPage }) => {
   await mockGitHubApi(context);
-  // Seed an active account so saveAutomationSettings takes the v2 per-account
-  // path (writes to per_account_settings:<id>). Without this, the v1 fallback
-  // path writes to `automation_settings`, but global_settings.ignoredRepos is
-  // also populated as a side effect — and on reload getAutomationSettings
-  // sees global_settings, takes v2, reads an empty perAccount, and returns
-  // DEFAULTS. That mismatch is a real bug, but this test isn't the place to
-  // fix it; the multi-account flow is the supported path post-migration.
+  // Seed an active account so saveAutomationSettings exercises the v2
+  // per-account split path (writes per_account_settings:<id> + global_settings).
+  // The v1/v2 split bug that previously dropped the write on the no-account
+  // path was fixed; that scenario is covered by the unit test in
+  // tests/core/automations-store.test.ts. This E2E focuses on the multi-
+  // account v2 round-trip.
   await seedStorage(popupPage, {
     local: {
       auth: { method: 'pat', token: 'fake-token-for-e2e' },
