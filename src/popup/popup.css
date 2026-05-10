@@ -743,7 +743,12 @@ code, .mono {
 }
 
 .automation-block {
-  padding: 12px 0;
+  /* padding-top slightly smaller than padding-bottom: the title text
+     below a dashed line has top-leading inside its line-box, so the
+     visible gap reads as ~2px larger than the layout value. Trimming
+     padding-top by 2px makes the visible margin above and below the
+     content match. */
+  padding: 10px 0 12px 0;
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
