@@ -63,6 +63,14 @@ export interface AutomationSettings {
   enablePingReviewers: boolean;
   /** Comment body posted when the user confirms a ping. `{reviewers}` is replaced with `@user1 @user2`. */
   pingTemplate: string;
+
+  /**
+   * Story 2.5 — display-only filter applied to the popup PR list. Empty array
+   * means no filter; non-empty means show only PRs whose `repo` is in the set.
+   * Persists per-account (lives outside the global keys hoisted by B2). Does
+   * NOT change polling — every signed-in account still polls every repo.
+   */
+  repoFilter: string[];
 }
 
 export type StaleThresholdDays = 3 | 7 | 14 | 30 | 60;
@@ -87,6 +95,7 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   staleCountsAsAttention: false,
   enablePingReviewers: false,             // opt-in — never write to PRs without explicit toggle
   pingTemplate: 'Friendly nudge — could you take a look when you have a moment? {reviewers}',
+  repoFilter: [],
 };
 
 export type PhaseTwoPRState =

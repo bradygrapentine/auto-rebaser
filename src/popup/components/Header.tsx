@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AccountSwitcher } from './AccountSwitcher';
 import type { AccountSummary } from '../../core/storage/account-summary';
 
@@ -17,6 +18,8 @@ interface Props {
   onAddAccount?: () => void;
   onSignOutAccount?: (id: string) => void;
   onSignOutAll?: () => void;
+  /** Story 2.5 — extra controls rendered before the account switcher (e.g. repo filter). */
+  extras?: ReactNode;
 }
 
 export function Header({
@@ -31,6 +34,7 @@ export function Header({
   onAddAccount,
   onSignOutAccount,
   onSignOutAll,
+  extras,
 }: Props) {
   const showSwitcher =
     accounts && accounts.length > 0 && onSwitchAccount && onAddAccount && onSignOutAccount && onSignOutAll;
@@ -59,6 +63,7 @@ export function Header({
       >
         <span aria-hidden>⚙</span>
       </button>
+      {extras}
       {showSwitcher ? (
         <AccountSwitcher
           accounts={accounts}

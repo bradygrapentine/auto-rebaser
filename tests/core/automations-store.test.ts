@@ -106,6 +106,7 @@ describe('automations-store', () => {
       pingTemplate: 'hi {reviewers}',
       mergeCleanPRsImmediately: true,
       mergeCleanPRsOptOutRepos: ['org/repo-skip-merge-clean'],
+      repoFilter: ['org/repo-a'],
     };
     chrome.storage.sync.get = vi
       .fn()
