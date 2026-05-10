@@ -116,10 +116,17 @@ describe('automations-store', () => {
 
   // ── saveAutomationSettings ────────────────────────────────────────────────
 
-  it('writes to chrome.storage.sync under the correct key', async () => {
+  it('writes to chrome.storage.sync under the v1 key when no active account (pre-migration)', async () => {
+    chrome.storage.sync.get = vi.fn().mockResolvedValue({});
+    chrome.storage.local.get = vi.fn().mockResolvedValue({});
     chrome.storage.sync.set = vi.fn().mockResolvedValue(undefined);
     const settings: AutomationSettings = { ...DEFAULT_AUTOMATION_SETTINGS, autoEnableAutoMerge: true };
     await saveAutomationSettings(settings);
+    // Global half always written.
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
+      expect.objectContaining({ global_settings: expect.any(Object) }),
+    );
+    // No active account → falls back to v1 single-key write.
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({
       [AUTOMATION_STORAGE_KEYS.settings]: settings,
     });
