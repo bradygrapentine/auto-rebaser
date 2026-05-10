@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-10_
+_Last `/backlog-sync`: 2026-05-10 (post-B3 merge)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,12 +9,12 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 2 |
+| 🟢 Ready | 1 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 1 |
-| ✅ Shipped | 33 |
+| ✅ Shipped | 37 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -26,17 +26,6 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. Listing edits don't require a version bump or rebuild.
 **How:** Apply the title, short description, long description, tag list, and screenshot captions from `docs/STORE_LISTING_REWRITES.md` to both store dashboards once the current reviews clear.
 **Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
-
-### MA-1 — Wave A-lite — Multi-account storage refactor (V2 prerequisite)
-**Status:** 🟢 Ready
-**Why:** Every V2 deliverable (account switcher, per-account settings, activity-log filter, repo-filter chip) reads or writes account-scoped state. Doing the storage shape first means those are straightforward UI follow-ups; doing them in parallel forces incremental account-awareness retrofits onto each store module. Migration risk is highest now and lowest later — touching it once with a backup escape hatch is safer.
-**How:** See full plan at `docs/superpowers/plans/2026-05-09-wave-a-lite-multi-account-storage.md`. Ships:
-- New `src/core/storage/multi-account.ts` facade (per-account read/write).
-- New `src/core/storage/migration.ts` one-shot v1 → v2 migration with `_migration_backup_v1` escape hatch.
-- Refactor of every `src/core/*-store.ts` to take an `accountId`. `etags` dropped (regenerable). `known_repos` stays global.
-- `chrome.storage.sync` per-account split into separate keys to dodge the 8 KB-per-key quota.
-- Polling stays single-account in this wave (multi-account polling lands in Wave B1).
-**Done when:** all acceptance criteria in the plan are met; tests cover migration happy/idempotent/failure paths; coverage ≥ baseline; bundle delta < 5%.
 
 ### MKT-3 — Show HN launch post
 **Status:** ⏸ Held (decided 2026-05-09: revisit after V2 ships so the launch leads with multi-account as the headline; Firefox AMO clears in the background in the meantime)
@@ -117,6 +106,12 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **DOCS-RUNBOOK-STATE** State-machine validation runbook (`docs/runbooks/state-machine-validation.md`) covering STATE-1 / BEHIND-1 / DRAFT-1 / REBASE-OPT-OUT / MERGE-CLEAN-SKIP — PR #83
 - **UI-SETTINGS-SPACING** Equalize heading→content spacing across all settings sections (drop 4px first-of-type pad on automation-block) — PR #84
 - **ACTIVITY-FILTERS** Replace today-only checkbox with date input + `today` toggle button; add Newest / Oldest / Repo sort dropdown — PR #85
+
+### V2 Sprint 1 — multi-account foundation (2026-05-10)
+- **MA-1** Multi-account storage facade + v1→v2 migration (per-account namespaces, `_migration_backup_v1` escape hatch, sync-quota split, etags dropped) — PR #91
+- **B1** Account-switcher header + add-account device-flow + multi-account poll loop with per-account error boundary and aggregated badge — PR #94
+- **B2** Settings split into `global` (cross-account: poll interval, ignored repos, keyboard shortcuts, GHES host) vs `this account (<login>)` (everything else) with active-login suffix — PR #95
+- **B3** Activity log `this account · all accounts` filter chip (default `this`); merged scope tags non-active rows with `[login]` and adds `accountId?: string` to `ActivityEntry` — PR #96
 
 ---
 
