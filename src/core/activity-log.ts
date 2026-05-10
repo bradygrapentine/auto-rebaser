@@ -6,7 +6,7 @@ import {
   ACTIVITY_MAX_ENTRIES,
   ACTIVITY_MAX_AGE_MS,
 } from './activity-log-types';
-import { readAccountKey, writeAccountKey } from './storage/multi-account';
+import { readAccountKey, writeAccountKey, listAccountIds, getAccountState } from './storage/multi-account';
 
 /**
  * Trim entries to satisfy both the cap (max N) and the age limit (max age ms).
@@ -67,6 +67,26 @@ export async function loadActivity(): Promise<ActivityEntry[]> {
   try {
     const store = await readAccountKey('activity');
     return store?.entries ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Load entries from every signed-in account, merged newest-first.
+ * Each entry is tagged with its source `accountId` so the UI can label rows.
+ */
+export async function loadActivityAll(): Promise<ActivityEntry[]> {
+  try {
+    const ids = await listAccountIds();
+    const merged: ActivityEntry[] = [];
+    for (const id of ids) {
+      const store = (await getAccountState(id, 'activity')) as { entries?: ActivityEntry[] } | undefined;
+      const entries = store?.entries ?? [];
+      for (const e of entries) merged.push({ ...e, accountId: e.accountId ?? id });
+    }
+    merged.sort((a, b) => b.at - a.at);
+    return merged;
   } catch {
     return [];
   }

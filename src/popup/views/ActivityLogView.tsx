@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useAccounts } from '../hooks/useAccounts';
 import { Select } from '../components/Select';
 import type { ActivityAction, ActivityEntry } from '../../core/activity-log-types';
+
+type AccountFilter = 'this' | 'all';
 
 interface Props {
   onBack: () => void;
@@ -53,7 +56,17 @@ function entryDetails(e: ActivityEntry): string {
 }
 
 export function ActivityLogView({ onBack, initialFilter }: Props) {
-  const { entries, loading, clear } = useActivityLog();
+  const { accounts, activeId } = useAccounts();
+  const showAccountChip = accounts.length > 1;
+  const [accountFilter, setAccountFilter] = useState<AccountFilter>('this');
+  const { entries, loading, clear } = useActivityLog({
+    scope: showAccountChip && accountFilter === 'all' ? 'all' : 'account',
+  });
+  const loginById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const a of accounts) m[a.id] = a.login;
+    return m;
+  }, [accounts]);
   const { settings: automation } = useAutomationSettings();
   useKeyboardShortcuts({
     enabled: automation.enableKeyboardShortcuts,
@@ -109,6 +122,17 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
       <div className="view-body activity-view">
         <div className="activity-toolbar">
           <div className="activity-toolbar__filters">
+            {showAccountChip && (
+              <Select
+                ariaLabel="Filter by account"
+                value={accountFilter}
+                onChange={(v) => setAccountFilter(v as AccountFilter)}
+                options={[
+                  { value: 'this', label: 'this account' },
+                  { value: 'all', label: 'all accounts' },
+                ]}
+              />
+            )}
             <Select
               ariaLabel="Filter by action"
               value={actionFilter}
@@ -208,6 +232,11 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
                   className="activity-entry__link"
                 >
                   <span className="activity-entry__time">{formatTime(e.at)}</span>
+                  {showAccountChip && accountFilter === 'all' && e.accountId && e.accountId !== activeId && (
+                    <span className="activity-entry__account-tag" data-testid="activity-account-tag">
+                      [{loginById[e.accountId] ?? e.accountId}]
+                    </span>
+                  )}
                   <span className="activity-entry__repo">{e.repo}</span>
                   <span className="activity-entry__action">
                     {e.action}
