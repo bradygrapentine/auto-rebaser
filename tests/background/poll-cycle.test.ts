@@ -6,6 +6,11 @@ vi.mock('../../src/github/endpoints', () => ({
   updateBranch: vi.fn(),
 }));
 
+vi.mock('../../src/github/endpoints/repos', () => ({
+  getRepo: vi.fn(),
+  getBranchHeadSHA: vi.fn(),
+}));
+
 vi.mock('../../src/core/pr-store', () => ({
   loadStore: vi.fn(),
   saveStore: vi.fn().mockResolvedValue(undefined),
@@ -35,6 +40,7 @@ vi.mock('../../src/core/activity-log', () => ({
 
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { searchAuthoredPRs, getPR, updateBranch } from '../../src/github/endpoints';
+import { getBranchHeadSHA } from '../../src/github/endpoints/repos';
 import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../../src/core/pr-store';
 import { setBadgeCount, clearBadge } from '../../src/background/badge';
 import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../../src/core/automations-store';
@@ -198,6 +204,132 @@ describe('unknown mergeable_state', () => {
     expect(updateBranch).not.toHaveBeenCalled();
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted[0].state).toBe('behind');
+  });
+});
+
+describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
+  it('mergeable_state=blocked + base SHA differs from live → rebases', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'blocked',
+        base: { ref: 'main', sha: 'old', repo: { full_name: 'org/repo' } },
+      })
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockResolvedValue('new');
+
+    await runPollCycle();
+
+    expect(getBranchHeadSHA).toHaveBeenCalledWith('org', 'repo', 'main');
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('updated');
+  });
+
+  it('mergeable_state=blocked + base SHA matches → stays pending, no rebase', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'blocked',
+        base: { ref: 'main', sha: 'same', repo: { full_name: 'org/repo' } },
+      })
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockResolvedValue('same');
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('pending');
+  });
+
+  it('mergeable_state=unstable + behind base → rebases', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'unstable',
+        base: { ref: 'main', sha: 'old', repo: { full_name: 'org/repo' } },
+      })
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockResolvedValue('new');
+
+    await runPollCycle();
+
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+  });
+
+  it('getBranchHeadSHA failure leaves PR as pending (does not abort cycle)', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'blocked',
+        base: { ref: 'main', sha: 'old', repo: { full_name: 'org/repo' } },
+      })
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_500'));
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('pending');
+  });
+
+  it('multiple PRs sharing a base branch only call getBranchHeadSHA once (per-cycle cache)', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 }, { id: 2, number: 2 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockImplementation((_o, _r, n) =>
+      Promise.resolve(makePR({
+        id: 100 + n, number: n,
+        mergeable_state: 'blocked',
+        base: { ref: 'main', sha: 'old', repo: { full_name: 'org/repo' } },
+      }))
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockResolvedValue('new');
+
+    await runPollCycle();
+
+    expect(getBranchHeadSHA).toHaveBeenCalledTimes(1);
+  });
+
+  // STATE-1 regression: previousState=needs-manual + mergeable_state=blocked +
+  // base up-to-date should still move to pending (the sticky-Manual cure).
+  it('preserves STATE-1 sticky-Manual fix when base is up-to-date', async () => {
+    const existingStore: PRStore = {
+      prs: [{ id: 1, number: 1, title: 'PR 1', repo: 'org/repo', url: 'https://github.com/org/repo/pull/1', state: 'needs-manual', lastUpdated: 0 }],
+      lastPollAt: null,
+    };
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue(existingStore);
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'blocked',
+        base: { ref: 'main', sha: 'same', repo: { full_name: 'org/repo' } },
+      })
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockResolvedValue('same');
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('pending');
   });
 });
 

@@ -107,7 +107,13 @@ export interface PullRequest {
   title: string;
   html_url: string;
   mergeable_state: MergeableState;
-  base: { repo: { full_name: string } };
+  base: {
+    /** Base branch name (e.g. "main"). Used for behind detection (BEHIND-1). */
+    ref?: string;
+    /** SHA of the base commit at the time the PR's merge ref was last computed. Compared against the live base branch HEAD to detect "behind base" when GitHub's mergeable_state masks it. */
+    sha?: string;
+    repo: { full_name: string };
+  };
   /** Open vs closed. Returned by GitHub on every PR detail. */
   state?: 'open' | 'closed';
   /** True when a closed PR was merged. */
