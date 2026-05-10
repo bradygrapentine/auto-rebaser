@@ -743,16 +743,20 @@ code, .mono {
 }
 
 .automation-block {
-  padding: 8px 0;
+  /* Asymmetric padding compensates for visual leading differences:
+     the title text below a dashed line carries top-leading (~3-4px
+     visually empty inside the line-box), while the button/input
+     above ends flush at its border. To make the visible gap above
+     and below the dashed line look equal, padding-bottom is
+     smaller than padding-top by roughly that leading amount. */
+  padding: 8px 0 4px 0;
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
-/* Nested automation-block: top-level siblings get 8px above the dashed
-   line "for free" from the prior block's padding-bottom; nested ones
-   sit flush against their preceding sibling's content edge. Add an
-   explicit 8px margin-top so the gap above and below the dashed
-   border-top match. */
-.automation-block .automation-block { margin-top: 8px; }
+/* Nested automation-block: same logic — give the dashed line 4px
+   above (matching padding-bottom convention) while padding-top
+   handles the below-line gap. */
+.automation-block .automation-block { margin-top: 4px; }
 
 /* ─── Chip list ────────────────────────────────────────────────────────── */
 .chip-list-wrap { margin-top: 6px; margin-left: 18px; }
