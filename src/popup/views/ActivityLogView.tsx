@@ -147,6 +147,14 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
               />
+              <button
+                type="button"
+                className="btn btn--small"
+                onClick={() => setDateFilter(toLocalDateString(Date.now()))}
+                aria-label="Set date to today"
+              >
+                today
+              </button>
               {dateFilter && (
                 <button
                   type="button"
