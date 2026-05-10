@@ -222,6 +222,72 @@ describe('AutomationsSettings', () => {
     );
   });
 
+  describe('stale-PR section (5.1)', () => {
+    it('changing idle threshold persists staleThresholdDays + enableStaleBadge:true', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+        DEFAULT_AUTOMATION_SETTINGS
+      );
+      render(<AutomationsSettings />);
+      await flush();
+      const select = screen.getByLabelText('Idle threshold (days)') as HTMLSelectElement;
+      await act(async () => {
+        fireEvent.change(select, { target: { value: '30' } });
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ enableStaleBadge: true, staleThresholdDays: 30 })
+      );
+    });
+
+    it('toggling "Stale counts as attention" persists via subToggle', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        staleCountsAsAttention: false,
+      });
+      render(<AutomationsSettings />);
+      await flush();
+      const cb = screen.getByLabelText(/stale counts as attention/i, { selector: 'input' });
+      await act(async () => {
+        fireEvent.click(cb);
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ enableStaleBadge: true, staleCountsAsAttention: true })
+      );
+    });
+
+    it('toggling "Allow ping reviewers" reveals the template textarea and persists', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        enablePingReviewers: false,
+      });
+      render(<AutomationsSettings />);
+      await flush();
+      expect(screen.queryByTestId('ping-template')).not.toBeInTheDocument();
+      const cb = screen.getByLabelText(/allow ping reviewers/i, { selector: 'input' });
+      await act(async () => {
+        fireEvent.click(cb);
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ enableStaleBadge: true, enablePingReviewers: true })
+      );
+    });
+
+    it('editing ping comment template persists pingTemplate', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        enablePingReviewers: true,
+      });
+      render(<AutomationsSettings />);
+      await flush();
+      const ta = screen.getByTestId('ping-template') as HTMLTextAreaElement;
+      await act(async () => {
+        fireEvent.change(ta, { target: { value: 'hey {reviewers}, mind taking a look?' } });
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ pingTemplate: 'hey {reviewers}, mind taking a look?' })
+      );
+    });
+  });
+
   it.each([
     [0, 'autoDeleteOptOutRepos'],
     [1, 'autoMergeOptOutRepos'],

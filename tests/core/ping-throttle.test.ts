@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getPingedStore,
   recordPing,
+  clearPingedStore,
   isThrottled,
   hoursSinceLastPing,
   PING_THROTTLE_KEY,
@@ -94,5 +95,11 @@ describe('storage round-trip', () => {
     expect(chrome.storage.local.set).toHaveBeenCalledWith(
       expect.objectContaining({ [PING_THROTTLE_KEY]: { 42: { at: 1_700_000_000_000 } } }),
     );
+  });
+
+  it('clearPingedStore drops the entire throttle map', async () => {
+    (chrome.storage.local.remove as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await clearPingedStore();
+    expect(chrome.storage.local.remove).toHaveBeenCalledWith(PING_THROTTLE_KEY);
   });
 });

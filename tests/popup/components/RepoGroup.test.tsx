@@ -127,4 +127,49 @@ describe('RepoGroup', () => {
     fireEvent.click(btn);
     expect(btn).toHaveAttribute('aria-expanded', 'true');
   });
+
+  describe('coverage badges', () => {
+    it('renders "App not installed" badge when coverage=not-installed', () => {
+      const group = makeGroup({});
+      render(
+        <RepoGroup
+          group={group}
+          expanded={false}
+          onToggle={() => {}}
+          coverage="not-installed"
+        />,
+      );
+      const badge = screen.getByTestId('coverage-not-installed');
+      expect(badge).toHaveTextContent('App not installed');
+      expect(badge).toHaveAttribute('title', 'Auto Rebaser App not installed in org');
+    });
+
+    it('renders "suspended" badge when coverage=suspended', () => {
+      const group = makeGroup({});
+      render(
+        <RepoGroup
+          group={group}
+          expanded={false}
+          onToggle={() => {}}
+          coverage="suspended"
+        />,
+      );
+      const badge = screen.getByTestId('coverage-suspended');
+      expect(badge).toHaveTextContent('suspended');
+      expect(badge).toHaveAttribute('title', 'Installation suspended — re-approval required');
+    });
+
+    it('renders no coverage badge when coverage=active or undefined', () => {
+      const group = makeGroup({});
+      const { rerender } = render(
+        <RepoGroup group={group} expanded={false} onToggle={() => {}} coverage="active" />,
+      );
+      expect(screen.queryByTestId('coverage-not-installed')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('coverage-suspended')).not.toBeInTheDocument();
+
+      rerender(<RepoGroup group={group} expanded={false} onToggle={() => {}} />);
+      expect(screen.queryByTestId('coverage-not-installed')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('coverage-suspended')).not.toBeInTheDocument();
+    });
+  });
 });

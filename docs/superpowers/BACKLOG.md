@@ -9,11 +9,11 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 4 |
+| 🟢 Ready | 3 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ✅ Shipped | 24 |
+| ✅ Shipped | 25 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -71,7 +71,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
 
 ### STATE-1 — Map PR badges to GitHub's `mergeable_state` truth (kill sticky-Manual bug)
-**Status:** 🟢 Ready
+**Status:** ✅ Shipped (PR #73)
 **Why:** Today, a single transient 422 from `PUT …/update-branch` paints a PR `[Manual]` red, and the badge sticks across the entire CI window because GitHub returns `mergeable_state: 'unknown'` while it recomputes — and our `deriveStateFromMergeable` keeps the previous state when it sees `unknown`. Result: PRs that are actually waiting on CI on a protected branch (the `blocked` mergeable_state) display as `[Manual]`, implying user action is needed when none is.
 
 The popup also collapses several distinct GitHub states (`blocked`, `unstable`, `draft`, `clean`, `has_hooks`) into a single `Current` bucket, losing useful signal users already understand from the GitHub UI.
@@ -162,6 +162,7 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 ### v1.0.x follow-ups
 - **MERGE-1** Reclassify no-op auto-merge attempts as `skipped` — PR #65
 - **MERGE-2** Fall-through direct merge for clean PRs (`mergeCleanPRsImmediately`) — PRs #65, #66, with UI polish in #67, #68, #69
+- **STATE-1** Map PR badges to GitHub `mergeable_state` truth — PR #73
 
 ---
 
