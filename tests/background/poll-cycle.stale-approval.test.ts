@@ -164,14 +164,18 @@ describe('poll-cycle — stale-approval gating', () => {
     expect(upserted[0].staleApproval).toEqual(cached);
   });
 
-  it('master toggle ON, lastSeenHeadSha missing (new PR): one listReviews call; lastSeenHeadSha + lastHeadShaChangedAt stamped', async () => {
+  it('master toggle ON, lastSeenHeadSha missing (first observation): NO listReviews call; SHA + timestamp stamped, staleApproval null', async () => {
+    // First-observation safety: any pre-existing approvals would be reported
+    // stale against `now` as the push boundary, badging every approved-and-
+    // pushed PR in the user's history on first poll. Skip detection until we
+    // observe a real SHA transition.
     withSettings({ enablePushSinceApproval: true });
-    withStore([]); // no prior record at all
+    withStore([]);
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(search(1));
     (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-NEW' }));
-    (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([]); // no approvers → null
+    (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     await runPollCycle();
-    expect(listReviews).toHaveBeenCalledTimes(1);
+    expect(listReviews).not.toHaveBeenCalled();
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
     expect(upserted[0].lastSeenHeadSha).toBe('sha-NEW');
     expect(typeof upserted[0].lastHeadShaChangedAt).toBe('number');

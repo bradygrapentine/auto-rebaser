@@ -90,6 +90,24 @@ describe('PRListView — stale-approval badge', () => {
     expect(badge.tagName.toLowerCase()).not.toBe('button');
   });
 
+  it('badge becomes passive (non-actionable) when PR is within the 24h re-request throttle window', async () => {
+    const onRerequest = vi.fn();
+    (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(async (key: string) => {
+      if (key === 'rerequestedPRs') return { rerequestedPRs: { 1: { at: Date.now() - 60_000 } } };
+      return {};
+    });
+    setStore([stalePR()]);
+    setSettings({ enablePushSinceApproval: true, enableRequestRereview: true });
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} onRerequest={onRerequest} />);
+    // Two pumps: one for the store load, one for the re-render with the new throttle state.
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { await Promise.resolve(); });
+    const badge = screen.getByTestId('rerequest-badge');
+    expect(badge.tagName.toLowerCase()).not.toBe('button');
+    fireEvent.click(badge);
+    expect(onRerequest).not.toHaveBeenCalled();
+  });
+
   it('clicking the badge fires onRerequest with the PR + approvers when enableRequestRereview=true', async () => {
     const onRerequest = vi.fn();
     setStore([stalePR()]);

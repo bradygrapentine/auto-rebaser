@@ -327,20 +327,30 @@ async function runPollCycleInner(): Promise<number> {
       const headChanged = cachedSha !== newSha;
       const cachedChangedAt = phaseTwoCarry.lastHeadShaChangedAt;
 
-      // Steady-state: head SHA unchanged AND we already have a verdict (including
-      // the explicit `null` negative cache). Carry both forward, no API call.
-      if (!headChanged && cachedSha != null && cachedStaleApproval !== undefined) {
+      // First observation (no cached SHA): just initialize the carry — do NOT
+      // run the detector. Any pre-existing approvals would be reported stale
+      // against `now` as the push boundary, badging every approved-and-pushed
+      // PR in the user's history. Wait for a real SHA transition to detect.
+      if (cachedSha == null) {
+        staleApprovalPatch = {
+          lastSeenHeadSha: newSha,
+          lastHeadShaChangedAt: Date.now(),
+          staleApproval: null,
+        };
+      } else if (!headChanged && cachedStaleApproval !== undefined) {
+        // Steady-state: head SHA unchanged AND we already have a verdict
+        // (including the explicit `null` negative cache). Carry both forward,
+        // no API call.
         staleApprovalPatch = {
           lastSeenHeadSha: newSha,
           ...(cachedChangedAt != null ? { lastHeadShaChangedAt: cachedChangedAt } : {}),
           staleApproval: cachedStaleApproval,
         };
       } else {
-        // Either head SHA changed since last cycle, or we've never checked.
-        // Stamp the cycle wall-clock as the push moment and run the detector.
-        const lastHeadShaChangedAt = headChanged || cachedChangedAt == null
-          ? Date.now()
-          : cachedChangedAt;
+        // Either head SHA changed since last cycle, or we have a cached SHA
+        // but no verdict yet (rare crash-recovery path). Stamp the cycle
+        // wall-clock as the push moment and run the detector.
+        const lastHeadShaChangedAt = headChanged ? Date.now() : (cachedChangedAt ?? Date.now());
         let staleApproval: StaleApprovalResult | null = null;
         try {
           const reviews = await listReviews(owner, repo, item.number);

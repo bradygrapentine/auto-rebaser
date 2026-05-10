@@ -5,8 +5,8 @@ import {
   clearRerequestStore,
   isThrottled,
   hoursSinceLastRerequest,
-  RERE_REQUEST_THROTTLE_KEY,
-  RERE_REQUEST_THROTTLE_WINDOW_MS,
+  RE_REQUEST_THROTTLE_KEY,
+  RE_REQUEST_THROTTLE_WINDOW_MS,
 } from '../../src/core/rerequest-throttle';
 import { STORAGE_KEYS_V2 } from '../../src/core/storage/multi-account';
 
@@ -56,11 +56,11 @@ describe('isThrottled', () => {
   });
 
   it('returns false at exactly 24 hours', () => {
-    expect(isThrottled({ 1: { at: now - RERE_REQUEST_THROTTLE_WINDOW_MS } }, 1, now)).toBe(false);
+    expect(isThrottled({ 1: { at: now - RE_REQUEST_THROTTLE_WINDOW_MS } }, 1, now)).toBe(false);
   });
 
   it('returns false past 24 hours', () => {
-    expect(isThrottled({ 1: { at: now - RERE_REQUEST_THROTTLE_WINDOW_MS - 1 } }, 1, now)).toBe(false);
+    expect(isThrottled({ 1: { at: now - RE_REQUEST_THROTTLE_WINDOW_MS - 1 } }, 1, now)).toBe(false);
   });
 
   it('throttles per PR id, not across PRs', () => {
@@ -93,7 +93,7 @@ describe('recordRerequest persistence', () => {
     const t0 = 1_700_000_000_000;
     // Pre-seed an old entry directly under the account namespace.
     (local.data[STORAGE_KEYS_V2.accounts] as Record<string, Record<string, unknown>>).gh_octocat
-      .rerequestedPRs = { 1: { at: t0 - RERE_REQUEST_THROTTLE_WINDOW_MS - 1 } };
+      .rerequestedPRs = { 1: { at: t0 - RE_REQUEST_THROTTLE_WINDOW_MS - 1 } };
     await recordRerequest(2, t0);
     const store = await getRerequestStore();
     expect(store).toEqual({ 2: { at: t0 } });
@@ -122,10 +122,10 @@ describe('clearRerequestStore', () => {
 
 describe('exported constants', () => {
   it('storage key matches the AccountState slot name', () => {
-    expect(RERE_REQUEST_THROTTLE_KEY).toBe('rerequestedPRs');
+    expect(RE_REQUEST_THROTTLE_KEY).toBe('rerequestedPRs');
   });
 
   it('window is 24 hours', () => {
-    expect(RERE_REQUEST_THROTTLE_WINDOW_MS).toBe(24 * 60 * 60 * 1000);
+    expect(RE_REQUEST_THROTTLE_WINDOW_MS).toBe(24 * 60 * 60 * 1000);
   });
 });

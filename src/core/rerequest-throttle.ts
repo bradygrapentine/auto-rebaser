@@ -55,5 +55,5 @@ export function hoursSinceLastRerequest(
   return Math.floor((now - entry.at) / (60 * 60 * 1000));
 }
 
-export const RERE_REQUEST_THROTTLE_KEY = STORAGE_KEY;
-export const RERE_REQUEST_THROTTLE_WINDOW_MS = THROTTLE_MS;
+export const RE_REQUEST_THROTTLE_KEY = STORAGE_KEY;
+export const RE_REQUEST_THROTTLE_WINDOW_MS = THROTTLE_MS;

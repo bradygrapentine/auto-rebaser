@@ -16,6 +16,7 @@ import { useGroupedPRs } from '../hooks/useGroupedPRs';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePingedStore } from '../hooks/usePingedStore';
+import { useRerequestStore } from '../hooks/useRerequestStore';
 import { useAccounts } from '../hooks/useAccounts';
 
 interface Props {
@@ -75,6 +76,7 @@ export function PRListView({
   });
 
   const pinged = usePingedStore();
+  const rerequested = useRerequestStore();
 
   // Audit B3 — derive install-request URL from the host config so GHES users
   // get a working link.
@@ -99,12 +101,14 @@ export function PRListView({
     if (!settings.enablePushSinceApproval) return null;
     const extended = pr as PRRecord & PRRecordPhaseTwo;
     if (!extended.staleApproval || extended.staleApproval.approvers.length === 0) return null;
-    return { actionable: settings.enableRequestRereview && !!onRerequest };
+    const throttled = rerequested.isThrottled(pr.id);
+    return { actionable: settings.enableRequestRereview && !!onRerequest && !throttled };
   };
   const handleRerequest = (pr: PRRecord) => {
     if (!onRerequest) return;
     const extended = pr as PRRecord & PRRecordPhaseTwo;
     const approvers = extended.staleApproval?.approvers ?? [];
+    if (approvers.length === 0) return;
     onRerequest(pr, approvers);
   };
 
