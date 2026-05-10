@@ -7,7 +7,7 @@ import { getUserInstallations } from '../github/endpoints/installations';
 import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../core/pr-store';
 import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../core/automations-store';
 import { searchAuthoredPRs, getPR, updateBranch } from '../github/endpoints';
-import { getRepo } from '../github/endpoints/repos';
+import { getRepo, getBranchHeadSHA } from '../github/endpoints/repos';
 import { deleteRef } from '../github/endpoints/git-refs';
 import { enablePullRequestAutoMerge } from '../github/endpoints/auto-merge';
 import { mergePR } from '../github/endpoints/merge-pr';
@@ -127,6 +127,10 @@ async function runPollCycleInner(): Promise<void> {
   // Collect per-PR rebase activity entries for the activity log.
   const rebaseActivityEntries: ActivityEntry[] = [];
   const seenFullNames = new Set<string>();
+  // BEHIND-1: per-cycle cache of base-branch HEAD SHAs keyed by
+  // "owner/repo#branch". Multiple PRs sharing a base branch share one
+  // network call (304 after the first via ETag).
+  const baseHeadSHACache = new Map<string, string | null>();
 
   for (const item of searchResult.items) {
     // Parse repo
@@ -179,9 +183,39 @@ async function runPollCycleInner(): Promise<void> {
     // detail (so the popup can display state) but force the state machine
     // into a no-op.
     const ownerIsSuspended = suspendedOwnerSet.has(owner.toLowerCase());
-    const { action, nextState } = ownerIsSuspended
+    let derived = ownerIsSuspended
       ? { action: 'noop' as const, nextState: previousState }
       : deriveStateFromMergeable(pr.mergeable_state, previousState);
+
+    // BEHIND-1: GitHub returns mergeable_state='blocked' or 'unstable' when
+    // checks/reviews are pending, which masks a separately-true "behind base"
+    // condition (see carelog #417). When the derivation lands us in 'pending',
+    // independently check pr.base.sha against the live base branch HEAD; if
+    // they differ, treat as behind and trigger a rebase.
+    if (
+      !ownerIsSuspended
+      && derived.nextState === 'pending'
+      && pr.base?.ref
+      && pr.base.sha
+    ) {
+      const cacheKey = `${fullName}#${pr.base.ref}`;
+      let baseSHA = baseHeadSHACache.get(cacheKey);
+      if (baseSHA === undefined) {
+        try {
+          baseSHA = await getBranchHeadSHA(owner, repo, pr.base.ref);
+        } catch {
+          // Network/auth error fetching base branch — leave state as pending;
+          // a rebase miss this cycle is preferable to surfacing a noisy error.
+          baseSHA = null;
+        }
+        baseHeadSHACache.set(cacheKey, baseSHA);
+      }
+      if (baseSHA && baseSHA !== pr.base.sha) {
+        derived = { action: 'rebase', nextState: 'behind' };
+      }
+    }
+
+    const { action, nextState } = derived;
 
     let finalState: PRState = nextState;
     let errorMessage: string | undefined;

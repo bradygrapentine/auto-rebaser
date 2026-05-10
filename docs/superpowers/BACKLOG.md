@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 1 |
-| ✅ Shipped | 26 |
+| ✅ Shipped | 27 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -64,6 +64,20 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 - When disabled, behavior matches today (no-op log entry, cleaned up by MERGE-1).
 - Method preference fallback verified against repos that disable squash or rebase.
 - Tests cover: clean-PR with toggle on (merges), clean-PR with toggle off (skips), method fallback on 405, SHA mismatch rejection.
+
+### BEHIND-1 — Detect "behind" independently of GitHub's `mergeable_state`
+**Status:** ✅ Shipped (2026-05-09)
+**Why:** GitHub returns `mergeable_state: 'blocked'` (or `'unstable'`) when checks/reviews are pending — and crucially, that response can mask a separately-true "this PR is behind base" condition. Repos whose branch protection does NOT require "branch up to date" surface this regularly: a PR with checks running on an out-of-date head shows as `pending` to us today, and we never call `update-branch`. Real example: carelog PR #417, checks pending + behind base, never auto-rebased.
+**How:**
+- New `getBranchHeadSHA(owner, repo, branch)` helper in `src/github/endpoints/repos.ts` (or new `branches.ts`) hitting `GET /repos/{o}/{r}/branches/{b}` with ETag caching. One call per unique (repo, base-branch) per poll — PRs sharing a base share the call.
+- Extend `deriveStateFromMergeable` (or fork into a new async helper in poll-cycle) so that when `mergeable_state ∈ {blocked, unstable}` AND `pr.base.sha !== currentBaseSHA`, return `{ action: 'rebase', nextState: 'behind' }` instead of `{ action: 'none', nextState: 'pending' }`.
+- Don't change behavior for `clean`, `dirty`, `draft`, `behind`, `unknown`, `has_hooks`, `current` — they're already correct.
+- Caches base SHAs per cycle to avoid duplicate calls when many PRs share the same base.
+**Done when:**
+- New helper covered by unit tests (200 happy path, 404 missing branch, 304 cached path).
+- State-machine derivation tests cover: `blocked` + behind → rebase; `blocked` + not-behind → pending; `unstable` + behind → rebase; `unstable` + not-behind → pending; `clean` + behind would never happen (skip); `behind` direct → rebase (existing).
+- poll-cycle integration test: a PR with `mergeable_state: blocked` and a stale `base.sha` triggers `update-branch`; same PR with up-to-date `base.sha` does not.
+- No regression in the STATE-1 sticky-Manual fix: PR with `previousState='needs-manual'` + `mergeable_state='blocked'` + up-to-date base still moves to `pending`.
 
 ### MA-1 — Wave A-lite — Multi-account storage refactor (V2 prerequisite)
 **Status:** 🟢 Ready
@@ -175,6 +189,7 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **MERGE-1** Reclassify no-op auto-merge attempts as `skipped` — PR #65
 - **MERGE-2** Fall-through direct merge for clean PRs (`mergeCleanPRsImmediately`) — PRs #65, #66, with UI polish in #67, #68, #69
 - **STATE-1** Map PR badges to GitHub `mergeable_state` truth — PR #73
+- **BEHIND-1** Detect "behind" via base SHA comparison when `mergeable_state` masks it
 
 ---
 
