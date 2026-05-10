@@ -3,6 +3,7 @@ import { useSettings } from '../hooks/useSettings';
 import { AutomationsSettings } from '../components/AutomationsSettings';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useAccounts } from '../hooks/useAccounts';
 import { Select } from '../components/Select';
 import { validateHost } from '../../core/host-config';
 import type { IntervalMinutes } from '../../core/types';
@@ -50,6 +51,8 @@ async function removeHostPermission(host: string): Promise<void> {
 
 export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
   const { settings, saveSettings } = useSettings();
+  const { accounts, activeId } = useAccounts();
+  const activeAccountLogin = accounts.find((a) => a.id === activeId)?.login ?? '';
   const [hostDraft, setHostDraft] = useState<string>(settings.enterpriseHost ?? '');
   const [clientIdDraft, setClientIdDraft] = useState<string>(settings.enterpriseClientId ?? '');
   const [hostError, setHostError] = useState<string | null>(null);
@@ -96,7 +99,8 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
       </header>
 
       <div className="settings">
-        <h2 className="settings__heading">general</h2>
+        <h2 className="settings__heading">global</h2>
+        <p className="settings__section-hint">applies to every signed-in account</p>
         <div className="enterprise-row">
           <span className="settings-row__label">github_poll_interval</span>
           <span className="settings-row__sep" aria-hidden>—</span>
@@ -110,6 +114,16 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
               }))}
             />
           </div>
+        </div>
+
+        <div className="settings-account-divider" data-testid="account-scoped-divider">
+          <h2 className="settings__heading">
+            this account
+            {activeAccountLogin && (
+              <span className="settings__heading-suffix"> ({activeAccountLogin})</span>
+            )}
+          </h2>
+          <p className="settings__section-hint">applies to the active account only</p>
         </div>
 
         {authMethod && (
