@@ -27,15 +27,22 @@ function formatTime(at: number, now: number = Date.now()): string {
   return new Date(at).toLocaleString();
 }
 
-function isToday(at: number, now: number = Date.now()): boolean {
-  const a = new Date(at);
-  const b = new Date(now);
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+function toLocalDateString(at: number): string {
+  const d = new Date(at);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
+
+type SortKey = 'newest' | 'oldest' | 'repo' | 'action';
+
+const SORT_LABELS: Record<SortKey, string> = {
+  newest: 'Newest first',
+  oldest: 'Oldest first',
+  repo: 'Repo (A→Z)',
+  action: 'Action (A→Z)',
+};
 
 function entryDetails(e: ActivityEntry): string {
   const parts: string[] = [];
@@ -55,7 +62,10 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
   });
   const [actionFilter, setActionFilter] = useState<'all' | ActivityAction>('all');
   const [repoFilter, setRepoFilter] = useState<string>('all');
-  const [todayOnly, setTodayOnly] = useState<boolean>(initialFilter?.todayOnly ?? false);
+  const [dateFilter, setDateFilter] = useState<string>(
+    initialFilter?.todayOnly ? toLocalDateString(Date.now()) : '',
+  );
+  const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const repoOptions = useMemo(() => {
@@ -65,18 +75,19 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
   }, [entries]);
 
   const filtered = useMemo(() => {
+    const sorters: Record<SortKey, (a: ActivityEntry, b: ActivityEntry) => number> = {
+      newest: (a, b) => b.at - a.at,
+      oldest: (a, b) => a.at - b.at,
+      repo: (a, b) => a.repo.localeCompare(b.repo) || b.at - a.at,
+      action: (a, b) => a.action.localeCompare(b.action) || b.at - a.at,
+    };
     return entries
       .filter((e) => actionFilter === 'all' || e.action === actionFilter)
       .filter((e) => repoFilter === 'all' || e.repo === repoFilter)
-      .filter((e) => !todayOnly || isToday(e.at))
+      .filter((e) => !dateFilter || toLocalDateString(e.at) === dateFilter)
       .slice()
-      // Sort by timestamp descending (newest first). Previously reversed
-      // the array which assumed append order = chronological — fine in
-      // most cases but ambiguous when multiple entries share the same
-      // millisecond (e.g. several automations completing simultaneously
-      // in one poll cycle).
-      .sort((a, b) => b.at - a.at);
-  }, [entries, actionFilter, repoFilter, todayOnly]);
+      .sort(sorters[sortKey]);
+  }, [entries, actionFilter, repoFilter, dateFilter, sortKey]);
 
   return (
     <div className="popup-root">
@@ -118,14 +129,34 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
               ]}
             />
           </div>
-          <div className="activity-toolbar__today-row">
-            <label className="toggle activity-toolbar__today">
-              <span>today only</span>
+          <div className="activity-toolbar__filters">
+            <Select
+              ariaLabel="Sort by"
+              value={sortKey}
+              onChange={(v) => setSortKey(v as SortKey)}
+              options={Object.entries(SORT_LABELS).map(([value, label]) => ({
+                value, label,
+              }))}
+            />
+            <label className="activity-toolbar__date">
+              <span className="activity-toolbar__date-label">date</span>
               <input
-                type="checkbox"
-                checked={todayOnly}
-                onChange={(e) => setTodayOnly(e.target.checked)}
+                type="date"
+                aria-label="Filter by date"
+                className="input input--small"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
               />
+              {dateFilter && (
+                <button
+                  type="button"
+                  className="btn btn--small"
+                  onClick={() => setDateFilter('')}
+                  aria-label="Clear date filter"
+                >
+                  ×
+                </button>
+              )}
             </label>
           </div>
         </div>

@@ -168,17 +168,51 @@ describe('ActivityLogView', () => {
     expect(screen.getByText(/just now/)).toBeInTheDocument();
   });
 
-  it('today-only checkbox toggles filtering', async () => {
+  it('date input filters entries to that calendar day', async () => {
     const yesterday = Date.now() - 26 * 60 * 60 * 1000;
+    const today = Date.now() - 60_000;
     mountWith([
       e({ at: yesterday, prNumber: 99 }),
-      e({ at: Date.now() - 60_000, prNumber: 100 }),
+      e({ at: today, prNumber: 100 }),
     ]);
     await act(async () => {});
-    const cb = screen.getByLabelText(/today only/i);
-    fireEvent.click(cb);
+    const input = screen.getByLabelText(/filter by date/i) as HTMLInputElement;
+    const todayStr = (() => {
+      const d = new Date(today);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+    fireEvent.change(input, { target: { value: todayStr } });
     const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
     expect(items).toHaveLength(1);
     expect(items[0]).toHaveTextContent('#100');
+  });
+
+  it('sort by oldest reverses default order', async () => {
+    mountWith([
+      e({ at: 1000, prNumber: 1 }),
+      e({ at: 2000, prNumber: 2 }),
+      e({ at: 3000, prNumber: 3 }),
+    ]);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: /sort by/i }));
+    fireEvent.click(screen.getByRole('option', { name: /oldest first/i }));
+    const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('#1');
+    expect(items[2]).toHaveTextContent('#3');
+  });
+
+  it('sort by repo groups entries alphabetically', async () => {
+    mountWith([
+      e({ repo: 'org/b', prNumber: 1, at: 3000 }),
+      e({ repo: 'org/a', prNumber: 2, at: 1000 }),
+      e({ repo: 'org/a', prNumber: 3, at: 2000 }),
+    ]);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: /sort by/i }));
+    fireEvent.click(screen.getByRole('option', { name: /repo/i }));
+    const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('org/a');
+    expect(items[1]).toHaveTextContent('org/a');
+    expect(items[2]).toHaveTextContent('org/b');
   });
 });
