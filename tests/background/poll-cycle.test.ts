@@ -115,13 +115,13 @@ describe('all-clean cycle', () => {
 });
 
 describe('behind PR rebase', () => {
-  it('single behind PR → rebased, state=updated, badge=1', async () => {
+  it('single behind PR → rebased, post-rebase mergeable_state=clean → state=updated, badge=1', async () => {
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSearchResult({ id: 1, number: 1 })
     );
-    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makePR({ id: 1, number: 1, mergeable_state: 'behind' })
-    );
+    (getPR as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'clean' }));
 
     await runPollCycle();
 
@@ -129,6 +129,52 @@ describe('behind PR rebase', () => {
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted[0].state).toBe('updated');
     expect(setBadgeCount).toHaveBeenCalledWith(1);
+  });
+
+  it('rebased + post-rebase mergeable_state=blocked → state=pending (failing required check NOT masked)', async () => {
+    // Regression: rebase used to hard-set finalState='updated' regardless of
+    // the post-rebase mergeable_state, masking failing required checks and
+    // unresolved review threads. After fix, we re-fetch the PR and re-derive.
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'blocked' }));
+
+    await runPollCycle();
+
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('pending');
+  });
+
+  it('rebased + post-rebase mergeable_state=unknown → state=updated (GitHub still computing; transient affirmation)', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'unknown' }));
+
+    await runPollCycle();
+
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('updated');
+  });
+
+  it('rebased + post-rebase re-fetch throws → falls back to transient state=updated', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockRejectedValueOnce(new Error('Network error'));
+
+    await runPollCycle();
+
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('updated');
   });
 });
 
@@ -208,7 +254,11 @@ describe('unknown mergeable_state', () => {
 });
 
 describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
-  it('mergeable_state=blocked + base SHA differs from live → rebases', async () => {
+  it('mergeable_state=blocked + base SHA differs from live → rebases, post-rebase still blocked → state=pending', async () => {
+    // The PR was 'blocked' because of a failing required check AND being
+    // behind base. We rebase (handles the behind part). The failing check
+    // is still there post-rebase → we surface 'pending', not the misleading
+    // 'updated'.
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSearchResult({ id: 1, number: 1 })
     );
@@ -226,7 +276,7 @@ describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
     expect(getBranchHeadSHA).toHaveBeenCalledWith('org', 'repo', 'main');
     expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(upserted[0].state).toBe('updated');
+    expect(upserted[0].state).toBe('pending');
   });
 
   it('mergeable_state=blocked + base SHA matches → stays pending, no rebase', async () => {
@@ -510,8 +560,12 @@ describe('multiple updates badge count', () => {
       makeSearchResult({ id: 1, number: 1 }, { id: 2, number: 2 })
     );
     (getPR as ReturnType<typeof vi.fn>)
+      // PR 1: search-loop fetch (behind) → post-rebase fetch (clean).
       .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
-      .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'behind' }));
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'clean' }))
+      // PR 2: search-loop fetch (behind) → post-rebase fetch (clean).
+      .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'clean' }));
 
     await runPollCycle();
 
@@ -643,6 +697,8 @@ describe('phase-2 automation pass (A3 integration)', () => {
     );
     (getPR as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      // Post-rebase re-fetch for PR 1 (clean).
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'clean' }))
       .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'clean' }));
 
     (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -1058,6 +1114,8 @@ describe('activity log', () => {
     );
     (getPR as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      // Post-rebase re-fetch for PR 1.
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'clean' }))
       .mockResolvedValueOnce(makePR({ id: 2, number: 2, mergeable_state: 'clean' }))
       .mockResolvedValueOnce(makePR({ id: 3, number: 3, mergeable_state: 'clean' }));
 
@@ -1085,9 +1143,11 @@ describe('activity log', () => {
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSearchResult({ id: 1, number: 1, title: 'Rebase Me' })
     );
-    // getPR calls: first for id=1 (search loop), second for id=2 (transition reprocess)
+    // getPR calls: first for id=1 (search loop), second for id=1 (post-rebase re-fetch),
+    // third for id=2 (transition reprocess).
     (getPR as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'behind' }))
+      .mockResolvedValueOnce(makePR({ id: 1, number: 1, mergeable_state: 'clean' }))
       .mockResolvedValueOnce(
         makePR({ id: 2, number: 2, title: 'Delete Branch',
           state: 'closed', merged: true, merged_at: '2024-01-01T00:00:00Z',
