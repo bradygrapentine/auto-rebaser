@@ -65,7 +65,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 - Tests cover: clean-PR with toggle on (merges), clean-PR with toggle off (skips), method fallback on 405, SHA mismatch rejection.
 
 ### MKT-3 — Show HN launch post
-**Status:** 🟢 Ready (blocked on store approvals)
+**Status:** 🟢 Ready (Chrome live; soft-blocked on Firefox AMO approval so the post can link both stores)
 **Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
 **How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
 **Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.

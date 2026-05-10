@@ -1,7 +1,7 @@
 # Auto-Rebaser — Roadmap
 _Last updated: 2026-05-09_
 
-> **Status:** v1.0.2 on `main` (2026-05-09). Phases 1, 2 (minus 2.9), 4, and 5 shipped, plus the v1.0.x clean-PR fall-through merge (MERGE-1, MERGE-2) and the repo-name autocomplete polish. Chrome Web Store + Firefox AMO submissions in flight. Phase 3 deferred.
+> **Status:** v1.0.2 on `main` (2026-05-09). Phases 1, 2 (minus 2.9), 4, and 5 shipped, plus the v1.0.x clean-PR fall-through merge (MERGE-1, MERGE-2) and the repo-name autocomplete polish. **Chrome Web Store: live** (`fcbanfgcfcjmhnoanachedlpbopiodpi`). **Firefox AMO: in review.** Phase 3 deferred.
 
 ## Goal
 
@@ -43,7 +43,7 @@ Standalone Chrome extension, github.com only, single authenticated user. Initial
 | # | Feature | Status |
 |---|---|---|
 | 2.1 | Firefox support (MV3, manifest adjustments) | ✅ shipped (build target lives at `manifest.firefox.json`; `npm run build:firefox`) |
-| 2.2 | Chrome Web Store + Firefox AMO submission | ⚡ in flight (v1.0.2 release zips on `main` 2026-05-09; store uploads pending) |
+| 2.2 | Chrome Web Store + Firefox AMO submission | ✅ Chrome live (`fcbanfgcfcjmhnoanachedlpbopiodpi`); ⚡ Firefox AMO in review |
 | 2.3 | Backend proxy for OAuth token exchange | 🧊 obsoleted by Phase 4 (Device Flow has no client_secret to hide) |
 | 2.4 | Desktop notifications for rebased/conflicted PRs | 🟢 unscoped (deferred from MVP, no v1.x slot yet) |
 | 2.5 | Filter by repo or org | 🟢 unscoped |
