@@ -194,6 +194,9 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(await screen.findByTestId('view-activity'));
     expect(screen.getByTestId('activity-list')).toBeInTheDocument();
+    // Activity log onBack returns to PR list (covers App ActivityLogView onBack handler).
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    await screen.findByTestId('view-activity');
   });
 
   it('successful ping post returns to PR list (covers App onSuccess handler)', async () => {

@@ -64,6 +64,43 @@ describe('AutomationsSettings', () => {
     );
   });
 
+  it.each([
+    ['Auto-rebase behind PRs', 'autoRebaseEnabled', false],
+    ['Merge clean PRs immediately', 'mergeCleanPRsImmediately', true],
+    ['Show stale-PR badge', 'enableStaleBadge', false],
+    ['Enable keyboard shortcuts', 'enableKeyboardShortcuts', false],
+  ])('toggling %s persists', async (labelRe, key, expected) => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      // mergeCleanPRsImmediately checkbox is gated by autoEnableAutoMerge=true.
+      autoEnableAutoMerge: true,
+    });
+    render(<AutomationsSettings />);
+    await flush();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(new RegExp(labelRe)));
+    });
+    expect(saveAutomationSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ [key]: expected }),
+    );
+  });
+
+  it('moving SQUASH down persists with REBASE first', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoEnableAutoMerge: true,
+      mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
+    });
+    render(<AutomationsSettings />);
+    await flush();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Move squash down'));
+    });
+    expect(saveAutomationSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ mergeMethodPreference: ['REBASE', 'SQUASH', 'MERGE'] }),
+    );
+  });
+
   it('merge-method preference controls disabled when 2.7 is off', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
       DEFAULT_AUTOMATION_SETTINGS
@@ -156,8 +193,11 @@ describe('AutomationsSettings', () => {
 
   it.each([
     ['ignored-repos', 'ignored-repos section'],
+    ['auto-rebase', 'auto-rebase section'],
     ['auto-delete', 'auto-delete-branch section'],
     ['auto-resolve', 'auto-resolve-threads section'],
+    ['merge-clean', 'merge-clean-immediately section'],
+    ['stale', 'stale-PR section'],
   ])(
     '%s chevron toggles aria-expanded',
     async (_name, ariaSuffix) => {

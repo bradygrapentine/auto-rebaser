@@ -121,6 +121,16 @@ describe('SettingsView', () => {
     expect(onSignOut).toHaveBeenCalledOnce();
   });
 
+  it('enterprise client_id input is editable when host is set', async () => {
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: 'github.acme.corp' },
+    });
+    const clientIdInput = screen.getByTestId('enterprise-client-id-input') as HTMLInputElement;
+    fireEvent.change(clientIdInput, { target: { value: 'Iv23liABC' } });
+    expect(clientIdInput.value).toBe('Iv23liABC');
+  });
+
   it('enterprise apply with invalid host shows error and does not save', async () => {
     render(<SettingsView onBack={vi.fn()} />);
     fireEvent.change(screen.getByTestId('enterprise-host-input'), {
