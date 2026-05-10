@@ -129,7 +129,7 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
               ]}
             />
           </div>
-          <div className="activity-toolbar__filters">
+          <div className="activity-toolbar__sort-row">
             <Select
               ariaLabel="Sort by"
               value={sortKey}
