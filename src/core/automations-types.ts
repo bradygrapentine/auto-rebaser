@@ -78,6 +78,25 @@ export interface AutomationSettings {
   /** When ON, clicking the badge opens a confirm modal that re-requests review. Default OFF. */
   enableRequestRereview: boolean;
 
+  // ── REVIEWER-AUTOMATIONS — reviewer dashboard tab + opt-in auto-merge ──
+  /**
+   * Master toggle. When true the popup shows a Reviewer tab and the poll cycle
+   * runs an extra search query for `review-requested:@me OR assignee:@me`.
+   * Default false to keep existing users on the authored-only experience.
+   */
+  enableReviewerTab: boolean;
+  /**
+   * Sub-toggle: when true AND `enableReviewerTab` is true AND the PR's repo is
+   * in `autoMergeReviewerOptInRepos`, fire enableAutoMerge once the user is
+   * the last required gate. Default false.
+   */
+  enableReviewerAutoMerge: boolean;
+  /**
+   * Per-repo allowlist for reviewer auto-merge. Empty list disables the
+   * automation even when both toggles are on. Format: "owner/repo".
+   */
+  autoMergeReviewerOptInRepos: string[];
+
   // ── Story 2.4 — Desktop notifications ──
   /** Master gate. Requires the runtime `notifications` permission to actually fire. Default OFF. */
   notificationsEnabled: boolean;
@@ -113,6 +132,9 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   repoFilter: [],
   enablePushSinceApproval: true,
   enableRequestRereview: false,
+  enableReviewerTab: false,
+  enableReviewerAutoMerge: false,
+  autoMergeReviewerOptInRepos: [],
   notificationsEnabled: false,
   notifyOnRebased: false,
   notifyOnConflicted: false,
@@ -190,6 +212,22 @@ export interface PRRecordPhaseTwo {
   lastSeenHeadSha?: string;
   /** Wall-clock (`Date.now()`) at which `lastSeenHeadSha` was first observed to differ from the cached value. Used as `lastPushedAt` by the stale-approval detector. */
   lastHeadShaChangedAt?: number;
+
+  // ── REVIEWER-AUTOMATIONS ──
+  /**
+   * Per-PR cache so the reviewer auto-merge gate doesn't re-fire the
+   * enableAutoMerge mutation every poll cycle. Set when the gate fires;
+   * cleared when the head SHA changes (re-review needed) so a fresh
+   * approval re-arms the gate.
+   */
+  reviewerAutoMergeArmed?: { at: number };
+  /**
+   * The signed-in user's latest decisive review state on a reviewer-tab PR.
+   * Computed in the reviewer phase using the same latest-decisive-per-login
+   * filter as Story 5.2-A's stale-approval detector. Drives the row state
+   * chip on the Reviewer tab.
+   */
+  myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED';
 }
 
 /** threadId → epoch ms when we auto-resolved it. Skip if already in this map. */

@@ -461,6 +461,46 @@ export function AutomationsSettings() {
         )}
       </div>
 
+      {/* REVIEWER-AUTOMATIONS — Reviewer dashboard tab + optional 4-gate
+          auto-merge for PRs the user reviews. Master toggle reveals the
+          dashboard tab; sub-toggle + allowlist enable the auto-merge fire. */}
+      <div className="automation-block" data-testid="reviewer-automations-block">
+        <div className="automation-row automation-row--leaf">
+          <label className="toggle">
+            <span className="toggle__name">Show reviewer dashboard tab</span>
+            <input
+              type="checkbox"
+              checked={settings.enableReviewerTab}
+              onChange={(e) => save({ enableReviewerTab: e.target.checked })}
+              data-testid="reviewer-tab-master"
+            />
+          </label>
+        </div>
+        {settings.enableReviewerTab && (
+          <>
+            <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
+              <span>Auto-enable auto-merge after I approve (when I&apos;m the last required gate)</span>
+              <input
+                type="checkbox"
+                checked={settings.enableReviewerAutoMerge}
+                onChange={(e) => save({ enableReviewerAutoMerge: e.target.checked })}
+                data-testid="enable-reviewer-auto-merge"
+              />
+            </label>
+            {settings.enableReviewerAutoMerge && (
+              <div data-testid="reviewer-allowlist">
+                <RepoOptOutList
+                  label="Allowlist repos"
+                  repos={settings.autoMergeReviewerOptInRepos}
+                  onChange={(next) => save({ autoMergeReviewerOptInRepos: next })}
+                  suggestions={knownRepos}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Story 2.4 — Desktop notifications. Master toggle gates the runtime
           permission request; per-event subtoggles let users opt in to the
           specific events they care about. */}

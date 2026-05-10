@@ -12,6 +12,7 @@ import {
   getInstallRequestUrl,
 } from '../../core/installations-helpers';
 import { usePRStore } from '../hooks/usePRStore';
+import { useReviewerPRStore } from '../hooks/useReviewerPRStore';
 import { useGroupedPRs } from '../hooks/useGroupedPRs';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -40,7 +41,10 @@ export function PRListView({
   user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onRerequest, onOpenActivity, onAddAccount,
 }: Props) {
   const { accounts, activeId, switchTo, signOut, signOutAll } = useAccounts();
-  const store = usePRStore();
+  const authoredStore = usePRStore();
+  const reviewerStore = useReviewerPRStore();
+  const [activeTab, setActiveTab] = useState<'authored' | 'reviewer'>('authored');
+  const store = activeTab === 'reviewer' ? reviewerStore : authoredStore;
   const { prs, lastPollAt, pollInProgress } = store;
 
   // Auto-poll when the popup opens if we don't have fresh data. Fires
@@ -175,8 +179,22 @@ export function PRListView({
       j: () => moveFocus(1),
       k: () => moveFocus(-1),
       Enter: openFocused,
+      // REVIEWER-AUTOMATIONS — 1/2 switch tabs when the reviewer tab is enabled.
+      '1': () => settings.enableReviewerTab && setActiveTab('authored'),
+      '2': () => settings.enableReviewerTab && setActiveTab('reviewer'),
     },
   });
+
+  // REVIEWER-AUTOMATIONS — reviewer-chip computation, only relevant when the
+  // user is looking at the reviewer tab.
+  const reviewerChipFor = (pr: PRRecord) => {
+    if (activeTab !== 'reviewer') return null;
+    const extended = pr as PRRecord & PRRecordPhaseTwo;
+    return {
+      myReviewState: extended.myReviewState ?? 'AWAITING',
+      autoMergeArmed: !!extended.reviewerAutoMergeArmed,
+    };
+  };
 
   return (
     <div className="popup-root">
@@ -209,6 +227,30 @@ export function PRListView({
         }
       />
       <div className="view-body">
+        {settings.enableReviewerTab && (
+          <div className="pr-tabs" data-testid="pr-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              data-testid="pr-tab-authored"
+              aria-selected={activeTab === 'authored'}
+              className={`pr-tabs__tab ${activeTab === 'authored' ? 'pr-tabs__tab--active' : ''}`}
+              onClick={() => setActiveTab('authored')}
+            >
+              Authored ({authoredStore.prs.length})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              data-testid="pr-tab-reviewer"
+              aria-selected={activeTab === 'reviewer'}
+              className={`pr-tabs__tab ${activeTab === 'reviewer' ? 'pr-tabs__tab--active' : ''}`}
+              onClick={() => setActiveTab('reviewer')}
+            >
+              Reviewer ({reviewerStore.prs.length})
+            </button>
+          </div>
+        )}
         {authMethod === 'pat' && (
           <MigrationBanner onSwitchToApp={onSignOut} />
         )}
@@ -252,6 +294,7 @@ export function PRListView({
                     : undefined
                 }
                 installRequestUrl={installRequestUrl}
+                reviewerChipFor={reviewerChipFor}
               />
             );
           })

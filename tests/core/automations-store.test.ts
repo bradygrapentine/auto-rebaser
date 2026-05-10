@@ -13,6 +13,12 @@ import {
 import { AUTOMATION_STORAGE_KEYS } from '../../src/core/automations-constants';
 
 describe('automations-store', () => {
+  it('exposes reviewer-automations defaults: OFF + empty allowlist', () => {
+    expect(DEFAULT_AUTOMATION_SETTINGS.enableReviewerTab).toBe(false);
+    expect(DEFAULT_AUTOMATION_SETTINGS.enableReviewerAutoMerge).toBe(false);
+    expect(DEFAULT_AUTOMATION_SETTINGS.autoMergeReviewerOptInRepos).toEqual([]);
+  });
+
   // ── getAutomationSettings ──────────────────────────────────────────────────
 
   it('returns DEFAULT_AUTOMATION_SETTINGS when nothing stored', async () => {
@@ -109,6 +115,9 @@ describe('automations-store', () => {
       repoFilter: ['org/repo-a'],
       enablePushSinceApproval: true,
       enableRequestRereview: false,
+      enableReviewerTab: false,
+      enableReviewerAutoMerge: false,
+      autoMergeReviewerOptInRepos: [],
       notificationsEnabled: false,
       notifyOnRebased: false,
       notifyOnConflicted: false,

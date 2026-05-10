@@ -40,3 +40,26 @@ export async function stampPollTime(now?: number): Promise<PRStore> {
   await saveStore(next);
   return next;
 }
+
+// REVIEWER-AUTOMATIONS — parallel reviewer-tab store. Same PRStore shape as
+// the authored namespace, separate account-scoped key.
+
+export async function loadReviewerStore(): Promise<PRStore> {
+  const stored = await readAccountKey('reviewerPRs');
+  return stored ?? { ...EMPTY_STORE };
+}
+
+export async function saveReviewerStore(store: PRStore): Promise<void> {
+  await writeAccountKey('reviewerPRs', store);
+}
+
+export async function upsertReviewerPRs(records: PRRecord[]): Promise<PRStore> {
+  const current = await loadReviewerStore();
+  const map = new Map(current.prs.map((pr) => [pr.id, pr]));
+  for (const rec of records) {
+    map.set(rec.id, rec);
+  }
+  const next: PRStore = { prs: Array.from(map.values()), lastPollAt: current.lastPollAt };
+  await saveReviewerStore(next);
+  return next;
+}

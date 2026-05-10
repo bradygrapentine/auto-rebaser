@@ -28,11 +28,20 @@ interface Props {
   onRerequest?: (pr: PRRecord) => void;
   /** Install URL surfaced when the row's error suggests a missing App install. */
   installRequestUrl?: string;
+  /**
+   * REVIEWER-AUTOMATIONS — when present (i.e. row is in the Reviewer tab),
+   * render a chip reflecting the user's review state on this PR + whether the
+   * 4-gate auto-merge has been armed this cycle.
+   */
+  reviewerChip?: {
+    myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED';
+    autoMergeArmed: boolean;
+  };
 }
 
 const APP_NOT_INSTALLED_HINT = 'Auto Rebaser App not installed for this repo';
 
-export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rerequestState, onRerequest, installRequestUrl }: Props) {
+export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rerequestState, onRerequest, installRequestUrl, reviewerChip }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
   const directMergeFailure = extended.lastDirectMergeFailure;
@@ -92,6 +101,25 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
           >
             auto-merge skipped: no allowed method
           </span>
+        )}
+        {reviewerChip && (
+          reviewerChip.autoMergeArmed ? (
+            <span className="pr-row__reviewer-chip pr-row__reviewer-chip--armed" data-testid="reviewer-chip-armed">
+              auto-merge armed
+            </span>
+          ) : reviewerChip.myReviewState === 'APPROVED' ? (
+            <span className="pr-row__reviewer-chip pr-row__reviewer-chip--approved" data-testid="reviewer-chip-approved">
+              i approved
+            </span>
+          ) : reviewerChip.myReviewState === 'CHANGES_REQUESTED' ? (
+            <span className="pr-row__reviewer-chip pr-row__reviewer-chip--changes" data-testid="reviewer-chip-changes">
+              i requested changes
+            </span>
+          ) : (
+            <span className="pr-row__reviewer-chip pr-row__reviewer-chip--awaiting" data-testid="reviewer-chip-awaiting">
+              awaiting review
+            </span>
+          )
         )}
         {directMergeFailure && !noAllowedMethod && (
           <span

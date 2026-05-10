@@ -4,9 +4,25 @@ import { computeIdleDays, resolveThreshold } from '../core/staleness';
 import { getAuth, setInstallations } from '../core/auth-store';
 import { suspendedOwners } from '../core/installations-helpers';
 import { getUserInstallations } from '../github/endpoints/installations';
-import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../core/pr-store';
-import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../core/automations-store';
-import { searchAuthoredPRs, getPR, updateBranch } from '../github/endpoints';
+import {
+  loadStore,
+  saveStore,
+  upsertPRs,
+  pruneStale,
+  stampPollTime,
+  loadReviewerStore,
+  upsertReviewerPRs,
+} from '../core/pr-store';
+import {
+  getAutomationSettings,
+  getResolvedThreads,
+  saveResolvedThreads,
+  saveAutomationSettings,
+} from '../core/automations-store';
+import { searchAuthoredPRs, getPR, updateBranch, getAuthenticatedUser } from '../github/endpoints';
+import { searchReviewerPRs } from '../github/endpoints/reviewer-search';
+import { getPRReviewDecision } from '../github/endpoints/pr-review-decision';
+import { evaluateReviewerAutoMergeGate } from '../core/reviewer-auto-merge-gate';
 import { getRepo, getBranchHeadSHA } from '../github/endpoints/repos';
 import { deleteRef } from '../github/endpoints/git-refs';
 import { enablePullRequestAutoMerge } from '../github/endpoints/auto-merge';
@@ -524,11 +540,184 @@ async function runPollCycleInner(): Promise<number> {
 
   await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries, newlyIdlePRIds);
 
+  // REVIEWER-AUTOMATIONS — reviewer phase. Gated on the master toggle so
+  // existing users stay on the authored-only experience by default.
+  if (staleSettings?.enableReviewerTab) {
+    try {
+      await runReviewerPhase(staleSettings);
+    } catch (err) {
+      console.warn('[poll-cycle] reviewer phase failed:', err);
+    }
+  }
+
   // Step 5: badge — runPollCycle aggregates across accounts and sets the
   // badge once per cycle. For the single-account / fresh-install path,
   // also set the badge here so behavior matches v1.0.x exactly.
   setBadgeCount(updatedCount);
   return updatedCount;
+}
+
+/**
+ * REVIEWER-AUTOMATIONS — reviewer phase. Search for PRs the user is reviewing,
+ * fetch detail + reviews + reviewDecision, run the 4-gate detector, and fire
+ * `enablePullRequestAutoMerge` when all gates pass. Writes the per-PR cache
+ * (including `reviewerAutoMergeArmed` and `lastSeenHeadSha`) so subsequent
+ * cycles don't re-fire and so a new push correctly re-opens the gate.
+ */
+async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
+  let me: { login: string };
+  try {
+    me = await getAuthenticatedUser();
+  } catch (err) {
+    console.warn('[reviewer-phase] could not resolve current user; skipping cycle', err);
+    return;
+  }
+
+  let search;
+  try {
+    search = await searchReviewerPRs();
+  } catch (err) {
+    console.warn('[reviewer-phase] search failed; skipping cycle', err);
+    return;
+  }
+
+  const existing = (await loadReviewerStore()).prs as Array<PRRecord & PRRecordPhaseTwo>;
+  const existingById = new Map(existing.map((p) => [p.id, p]));
+  const processed: Array<PRRecord & PRRecordPhaseTwo> = [];
+
+  for (const item of search.items) {
+    let owner: string, repo: string, fullName: string;
+    try {
+      ({ owner, repo, fullName } = parseRepoUrl(item.repository_url));
+    } catch (err) {
+      console.warn('[reviewer-phase] bad repository_url, skipping:', item.repository_url, err);
+      continue;
+    }
+
+    let pr: PullRequest;
+    try {
+      pr = await getPR(owner, repo, item.number);
+    } catch (err) {
+      console.warn(`[reviewer-phase] getPR ${fullName}#${item.number} failed; skipping`, err);
+      continue;
+    }
+
+    const cached = existingById.get(item.id);
+    const headSha = pr.head?.sha;
+    const headChanged = cached?.lastSeenHeadSha != null && cached.lastSeenHeadSha !== headSha;
+    const carryArmed = !headChanged && cached?.reviewerAutoMergeArmed;
+
+    // Compute my latest decisive review for the chip + gate input.
+    let reviewsForGate: Array<{ login: string; state: 'APPROVED' | 'CHANGES_REQUESTED' | 'DISMISSED' | 'COMMENTED' | 'PENDING'; submittedAt: string }> = [];
+    let myReviewState: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED' = 'AWAITING';
+    try {
+      const reviews = await listReviews(owner, repo, item.number);
+      reviewsForGate = reviews.map((r) => ({
+        login: r.login,
+        state: r.state,
+        submittedAt: new Date(r.submittedAt).toISOString(),
+      }));
+      const myLatest = reviews
+        .filter((r) => r.login === me.login && r.state !== 'COMMENTED' && r.state !== 'PENDING')
+        .sort((a, b) => b.submittedAt - a.submittedAt)[0];
+      if (myLatest?.state === 'APPROVED') myReviewState = 'APPROVED';
+      else if (myLatest?.state === 'CHANGES_REQUESTED') myReviewState = 'CHANGES_REQUESTED';
+    } catch (err) {
+      console.warn(`[reviewer-phase] listReviews ${fullName}#${item.number} failed; proceeding without review data`, err);
+    }
+
+    // Build base PR record (without arm metadata — added below if we fire or carry).
+    const baseRecord: PRRecord & PRRecordPhaseTwo = {
+      id: item.id,
+      number: pr.number,
+      title: pr.title,
+      repo: fullName,
+      url: pr.html_url,
+      state: deriveStateFromMergeable(pr.mergeable_state, 'current', pr.draft === true).nextState,
+      lastUpdated: Date.now(),
+      ...(headSha ? { lastSeenHeadSha: headSha } : {}),
+      myReviewState,
+    };
+
+    // Skip the gate evaluation when arming cache is still valid — covers both
+    // the idempotent "already-armed" path and the SHA-change clear (when
+    // headChanged is true, carryArmed is false and we re-enter the gate).
+    if (carryArmed) {
+      processed.push({ ...baseRecord, reviewerAutoMergeArmed: cached!.reviewerAutoMergeArmed });
+      continue;
+    }
+
+    // reviewDecision: only fetch when we actually intend to evaluate the
+    // last-gate check (i.e. the toggles + allowlist are on). Saves a GraphQL
+    // call per PR when the user is only using the dashboard, not auto-merge.
+    let reviewDecision: 'APPROVED' | 'REVIEW_REQUIRED' | 'CHANGES_REQUESTED' | null = null;
+    if (settings.enableReviewerAutoMerge && settings.autoMergeReviewerOptInRepos.includes(fullName) && pr.node_id) {
+      try {
+        reviewDecision = await getPRReviewDecision(pr.node_id);
+      } catch (err) {
+        console.warn(`[reviewer-phase] getPRReviewDecision ${fullName}#${item.number} failed; treating as REVIEW_REQUIRED`, err);
+      }
+    }
+
+    const gate = evaluateReviewerAutoMergeGate({
+      currentUserLogin: me.login,
+      prRepo: fullName,
+      reviews: reviewsForGate,
+      requestedReviewers: (pr.requested_reviewers ?? []).map((r) => r.login),
+      reviewDecision,
+      enableReviewerTab: settings.enableReviewerTab,
+      enableReviewerAutoMerge: settings.enableReviewerAutoMerge,
+      autoMergeReviewerOptInRepos: settings.autoMergeReviewerOptInRepos,
+      alreadyArmed: false,
+    });
+
+    if (!gate.fire) {
+      processed.push(baseRecord);
+      continue;
+    }
+
+    // All gates passed — fire enableAutoMerge.
+    if (!pr.node_id) {
+      processed.push(baseRecord);
+      continue;
+    }
+    const method = settings.mergeMethodPreference?.[0] ?? 'SQUASH';
+    let armed = false;
+    try {
+      const result = await enablePullRequestAutoMerge(pr.node_id, method);
+      if (result.enabled) {
+        armed = true;
+        await appendActivity([{
+          at: Date.now(),
+          action: 'reviewer_auto_merge_armed',
+          repo: fullName,
+          prNumber: pr.number,
+          prTitle: pr.title,
+          prUrl: pr.html_url,
+          result: 'success',
+          mergeMethod: method,
+        }]);
+      } else if (result.unsupported && result.reason && /not allowed|not enabled|does not support/i.test(result.reason)) {
+        // Repo doesn't allow auto-merge for this user — quietly revoke the
+        // allowlist entry so we don't bang on the mutation each cycle.
+        const next = settings.autoMergeReviewerOptInRepos.filter((r) => r !== fullName);
+        if (next.length !== settings.autoMergeReviewerOptInRepos.length) {
+          await saveAutomationSettings({ ...settings, autoMergeReviewerOptInRepos: next });
+        }
+      }
+      // 'clean status' / 'closed' / 'already merged' — log and skip without
+      // arming, without revoking; the next cycle will retry if state changes.
+    } catch (err) {
+      console.warn(`[reviewer-phase] enableAutoMerge ${fullName}#${pr.number} failed`, err);
+    }
+
+    processed.push({
+      ...baseRecord,
+      ...(armed ? { reviewerAutoMergeArmed: { at: Date.now() } } : {}),
+    });
+  }
+
+  await upsertReviewerPRs(processed);
 }
 
 /**

@@ -424,6 +424,30 @@ code, .mono {
   white-space: nowrap;
 }
 
+/* REVIEWER-AUTOMATIONS — reviewer-tab row chips. */
+.pr-row__reviewer-chip {
+  font-size: 10px;
+  padding: 1px 4px;
+  margin-right: 4px;
+  white-space: nowrap;
+  border: 1px solid var(--term-border);
+}
+.pr-row__reviewer-chip--awaiting { color: #c79a3a; border-color: rgba(199, 154, 58, 0.45); }
+.pr-row__reviewer-chip--approved { color: var(--term-green, #5ec27a); border-color: rgba(94, 194, 122, 0.45); }
+.pr-row__reviewer-chip--changes { color: var(--term-red, #d96565); border-color: rgba(217, 101, 101, 0.45); }
+.pr-row__reviewer-chip--armed { color: var(--term-cyan, #56d4dd); border-color: rgba(86, 212, 221, 0.45); }
+
+.pr-tabs { display: flex; gap: 4px; padding: 4px 8px; border-bottom: 1px solid var(--term-border); }
+.pr-tabs__tab {
+  background: transparent;
+  border: 1px solid var(--term-border);
+  color: var(--term-fg-muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.pr-tabs__tab--active { color: var(--term-cyan); border-color: var(--term-cyan); }
+
 /* Story 5.2-A — push-since-approval re-review badge. */
 .pr-row__rerequest-badge {
   font-size: 10px;

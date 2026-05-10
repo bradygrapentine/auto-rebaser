@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-10 (post-2.4 merge)_
+_Last `/backlog-sync`: 2026-05-10 (post-5.2-A merge)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -13,8 +13,8 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ⏸ Held | 2 |
-| ✅ Shipped | 39 |
+| ⏸ Held | 1 |
+| ✅ Shipped | 40 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -26,14 +26,6 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. Listing edits don't require a version bump or rebuild.
 **How:** Apply the title, short description, long description, tag list, and screenshot captions from `docs/STORE_LISTING_REWRITES.md` to both store dashboards once the current reviews clear.
 **Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
-
-### 5.2-A — Push-since-approval (actionable flavor) — Sprint 2 / v2.1.0
-**Status:** ⏸ Held (decided 2026-05-10: scope confirmed as actionable, not surfacing-only; gated on Sprint 2 trigger — v2.0.0 live in stores ~2 weeks with no critical migration bugs)
-**Why:** GitHub branch protection's "Dismiss stale approvals on new commits" lapses the approval but does **not** re-request review. Authors still go to github.com to click "request review" manually. Removing that step is the whole feature.
-**How:** See `docs/superpowers/plans/2026-05-07-v2-implementation-plan.md` §Sprint 2 — Story 5.2. Detect via `pull_request.commits` head SHA vs most-recent approving review timestamp. Action mirrors 5.1 PingConfirmView: badge → confirm modal → idempotent `POST /repos/:o/:r/pulls/:n/requested_reviewers`. Reuses `pingedPRs`-style throttle for the 24-hour per-PR cap. Permissions: `Pull requests: write` already on the GitHub App.
-**Default:** badge ON; action OFF (matches 5.1 pattern).
-**Effort:** 2 dev days, single track.
-**Done when:** stale-approval badge appears within 1 poll cycle of a push-after-approval scenario; clicking it posts a single re-request and clears the badge until the next push.
 
 ### MKT-3 — Show HN launch post
 **Status:** ⏸ Held (decided 2026-05-09: revisit after V2 ships so the launch leads with multi-account as the headline; Firefox AMO clears in the background in the meantime)
@@ -122,6 +114,9 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **B3** Activity log `this account · all accounts` filter chip (default `this`); merged scope tags non-active rows with `[login]` and adds `accountId?: string` to `ActivityEntry` — PR #96
 - **2.5** Header repo-filter chip — `[ filter (N) ▾ ]` checkbox dropdown narrows popup PR list to chosen subset; persists per-account; display-only (polling unchanged) — PR #98
 - **2.4** Desktop notifications (rebased / conflicted / merged / idle / ping-confirmed) — opt-in master + per-event toggles; runtime `notifications` permission requested on enable; 1-hour throttle per (PR, event) at `accounts.<id>.notif_throttle`; pulled forward from Sprint 2 — PR #99
+
+### V2 Sprint 2 — push-since-approval (2026-05-10)
+- **5.2-A** Push-since-approval actionable badge + idempotent reviewer re-request (`POST /pulls/:n/requested_reviewers`). Detector uses head-SHA-cycle-boundary as push-time (not committer-date); negative-cache `staleApproval: result | null` to skip per-cycle listReviews fan-out; first-observation safety (no detection on uncached PRs); 24h per-PR throttle gates badge actionable→passive. Settings: `enablePushSinceApproval` master (default ON, badge-only) + `enableRequestRereview` (default OFF, opt-in click). 3-stage adversarial Opus review (plan / TDD / code) caught and fixed 2 must-fix bugs pre-merge — PR #102
 
 ---
 

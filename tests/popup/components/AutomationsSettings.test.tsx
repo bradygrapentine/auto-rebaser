@@ -38,9 +38,10 @@ describe('AutomationsSettings', () => {
     // toggle + 2 stale sub-toggles + 1 keyboard-shortcuts toggle + 3 merge-
     // method pref checkboxes + 1 merge-clean-PRs-immediately + 1 desktop-
     // notifications master + 1 push-since-approval master (default ON) +
-    // 1 enable-request-rereview sub (renders because master is ON) = 15.
+    // 1 enable-request-rereview sub (renders because master is ON) +
+    // 1 reviewer-tab master (default OFF, sub-toggle + allowlist hidden) = 16.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(15);
+    expect(checkboxes).toHaveLength(16);
     expect(screen.getByLabelText(/Auto-rebase behind PRs/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();

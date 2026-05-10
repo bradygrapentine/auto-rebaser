@@ -29,11 +29,13 @@ interface Props {
   coverage?: 'active' | 'suspended' | 'not-installed';
   /** Forwarded to PRRow so error rows can offer an "install" link. */
   installRequestUrl?: string;
+  /** REVIEWER-AUTOMATIONS — when provided, each row renders the reviewer chip. */
+  reviewerChipFor?: (pr: PRRecord) => { myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED'; autoMergeArmed: boolean } | null;
 }
 
 export function RepoGroup({
   group, expanded, onToggle, userLogin, focusedPRId,
-  showStaleBadges, pingStateFor, onPing, rerequestStateFor, onRerequest, coverage, installRequestUrl,
+  showStaleBadges, pingStateFor, onPing, rerequestStateFor, onRerequest, coverage, installRequestUrl, reviewerChipFor,
 }: Props) {
   const [owner, ...rest] = group.repo.split('/');
   const displayName =
@@ -88,6 +90,7 @@ export function RepoGroup({
               rerequestState={rerequestStateFor?.(pr) ?? undefined}
               onRerequest={onRerequest}
               installRequestUrl={installRequestUrl}
+              reviewerChip={reviewerChipFor?.(pr) ?? undefined}
             />
           ))}
         </div>
