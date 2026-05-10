@@ -6,6 +6,7 @@ import {
   PING_THROTTLE_KEY,
   type PingedStore,
 } from '../../core/ping-throttle';
+import { STORAGE_KEYS_V2 } from '../../core/storage/multi-account';
 
 interface UsePingedStoreResult {
   /** Latest snapshot of the throttle store. */
@@ -21,17 +22,27 @@ export function usePingedStore(): UsePingedStoreResult {
 
   useEffect(() => {
     let cancelled = false;
-    getPingedStore().then((s) => {
-      if (!cancelled) setStore(s);
-    }).catch(() => {});
+    const refresh = () => {
+      getPingedStore().then((s) => {
+        if (!cancelled) setStore(s);
+      }).catch(() => {});
+    };
+    refresh();
     const onChange = (
       changes: Record<string, chrome.storage.StorageChange>,
       area: chrome.storage.AreaName,
     ) => {
       if (area !== 'local') return;
+      // v1 shape — top-level pingedPRs key.
       const change = changes[PING_THROTTLE_KEY];
-      if (!change) return;
-      setStore((change.newValue as PingedStore) ?? {});
+      if (change) {
+        setStore((change.newValue as PingedStore) ?? {});
+        return;
+      }
+      // v2 shape — pingedPRs nested under accounts.<id>.
+      if (STORAGE_KEYS_V2.accounts in changes || STORAGE_KEYS_V2.activeAccountId in changes) {
+        refresh();
+      }
     };
     chrome.storage.onChanged.addListener(onChange);
     return () => {
