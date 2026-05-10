@@ -31,6 +31,28 @@ describe('deriveStateFromMergeable', () => {
     expect(result).toEqual({ action: 'none', nextState: 'pending' });
   });
 
+  // Draft precedence: pr.draft=true short-circuits to draft regardless of
+  // mergeable_state. GitHub's REST returns 'blocked' / 'unstable' for draft
+  // PRs when required checks are pending; without this short-circuit the
+  // popup would render them as Pending instead of Draft.
+  describe('isDraft short-circuit', () => {
+    it.each<MergeableState>(['clean', 'behind', 'dirty', 'blocked', 'unstable', 'has_hooks', 'unknown'])(
+      'isDraft=true overrides mergeableState=%s → draft',
+      (state) => {
+        expect(deriveStateFromMergeable(state, 'current', true)).toEqual({
+          action: 'none',
+          nextState: 'draft',
+        });
+      },
+    );
+    it('isDraft=false falls through to mergeableState mapping', () => {
+      expect(deriveStateFromMergeable('blocked', 'current', false)).toEqual({
+        action: 'none',
+        nextState: 'pending',
+      });
+    });
+  });
+
   describe('unknown keeps previousState', () => {
     const prevStates: PRState[] = ['current', 'behind', 'conflict', 'error', 'needs-manual', 'updated', 'pending', 'draft'];
     it.each(prevStates)('unknown + previousState=%s → keeps previousState', (prev) => {

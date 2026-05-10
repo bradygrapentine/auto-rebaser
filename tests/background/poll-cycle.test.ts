@@ -305,6 +305,28 @@ describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
     expect(getBranchHeadSHA).toHaveBeenCalledTimes(1);
   });
 
+  // pr.draft=true overrides BEHIND-1 — drafts never auto-rebase.
+  it('draft PR with stale base SHA stays draft, no rebase, no SHA fetch', async () => {
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'blocked',
+        draft: true,
+        base: { ref: 'main', sha: 'old', repo: { full_name: 'org/repo' } },
+      })
+    );
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    expect(getBranchHeadSHA).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('draft');
+  });
+
   // STATE-1 regression: previousState=needs-manual + mergeable_state=blocked +
   // base up-to-date should still move to pending (the sticky-Manual cure).
   it('preserves STATE-1 sticky-Manual fix when base is up-to-date', async () => {

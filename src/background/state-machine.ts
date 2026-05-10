@@ -5,11 +5,24 @@ export interface UpdateBranchAttempt {
   errorMessage?: string;
 }
 
-/** Returns the next PR state given the latest mergeable_state. Does NOT call updateBranch. */
+/**
+ * Returns the next PR state given the latest mergeable_state. Does NOT call
+ * updateBranch.
+ *
+ * Draft handling: when the PR's `draft` flag is true we short-circuit to the
+ * `draft` state regardless of `mergeable_state`. GitHub's REST `mergeable_state`
+ * for a draft PR is often `clean` but can also surface `blocked` / `unstable`
+ * when required checks are pending — without this short-circuit, those PRs
+ * would mis-render as `current` / `pending` instead of `draft`.
+ */
 export function deriveStateFromMergeable(
   mergeableState: MergeableState,
-  previousState: PRState
+  previousState: PRState,
+  isDraft = false,
 ): { action: 'rebase' | 'none'; nextState: PRState } {
+  if (isDraft) {
+    return { action: 'none', nextState: 'draft' };
+  }
   if (mergeableState === 'behind') {
     return { action: 'rebase', nextState: 'behind' };
   }
