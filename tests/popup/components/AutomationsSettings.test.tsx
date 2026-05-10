@@ -36,9 +36,10 @@ describe('AutomationsSettings', () => {
     await flush();
     // 1 auto-rebase + 3 main automation toggles (2.6/2.7/2.8) + 1 stale-badge
     // toggle + 2 stale sub-toggles + 1 keyboard-shortcuts toggle + 3 merge-
-    // method pref checkboxes + 1 merge-clean-PRs-immediately = 12.
+    // method pref checkboxes + 1 merge-clean-PRs-immediately + 1 desktop-
+    // notifications master = 13.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(12);
+    expect(checkboxes).toHaveLength(13);
     expect(screen.getByLabelText(/Auto-rebase behind PRs/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
@@ -354,4 +355,108 @@ describe('AutomationsSettings', () => {
       );
     }
   );
+
+  describe('Story 2.4 — desktop notifications', () => {
+    it('master toggle is unchecked by default and subtoggles are not rendered', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+        DEFAULT_AUTOMATION_SETTINGS,
+      );
+      render(<AutomationsSettings />);
+      await flush();
+      expect(screen.getByTestId('notifications-master')).not.toBeChecked();
+      expect(screen.queryByTestId('notify-rebased')).not.toBeInTheDocument();
+    });
+
+    it('flipping master ON requests permission and only saves on grant', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+        DEFAULT_AUTOMATION_SETTINGS,
+      );
+      (chrome.permissions.request as ReturnType<typeof vi.fn>).mockImplementation(
+        (_req: unknown, cb: (g: boolean) => void) => cb(true),
+      );
+      render(<AutomationsSettings />);
+      await flush();
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('notifications-master'));
+      });
+      expect(chrome.permissions.request).toHaveBeenCalledWith(
+        { permissions: ['notifications'] },
+        expect.any(Function),
+      );
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ notificationsEnabled: true }),
+      );
+    });
+
+    it('does not save when the user denies the permission', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+        DEFAULT_AUTOMATION_SETTINGS,
+      );
+      (chrome.permissions.request as ReturnType<typeof vi.fn>).mockImplementation(
+        (_req: unknown, cb: (g: boolean) => void) => cb(false),
+      );
+      render(<AutomationsSettings />);
+      await flush();
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('notifications-master'));
+      });
+      expect(saveAutomationSettings).not.toHaveBeenCalled();
+    });
+
+    it('subtoggles render when master is on and persist their state', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        notificationsEnabled: true,
+      });
+      render(<AutomationsSettings />);
+      await flush();
+      const rebased = screen.getByTestId('notify-rebased');
+      expect(rebased).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.click(rebased);
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ notifyOnRebased: true }),
+      );
+    });
+
+    it('flipping master OFF saves and removes the runtime permission', async () => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        notificationsEnabled: true,
+      });
+      render(<AutomationsSettings />);
+      await flush();
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('notifications-master'));
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ notificationsEnabled: false }),
+      );
+      expect(chrome.permissions.remove).toHaveBeenCalledWith(
+        { permissions: ['notifications'] },
+        expect.any(Function),
+      );
+    });
+
+    it.each([
+      ['notify-conflicted', 'notifyOnConflicted'],
+      ['notify-merged', 'notifyOnMerged'],
+      ['notify-idle', 'notifyOnIdle'],
+      ['notify-ping-confirmed', 'notifyOnPingConfirmed'],
+    ] as const)('subtoggle %s persists %s', async (testid, field) => {
+      (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        notificationsEnabled: true,
+      });
+      render(<AutomationsSettings />);
+      await flush();
+      await act(async () => {
+        fireEvent.click(screen.getByTestId(testid));
+      });
+      expect(saveAutomationSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ [field]: true }),
+      );
+    });
+  });
 });

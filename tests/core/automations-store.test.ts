@@ -107,6 +107,12 @@ describe('automations-store', () => {
       mergeCleanPRsImmediately: true,
       mergeCleanPRsOptOutRepos: ['org/repo-skip-merge-clean'],
       repoFilter: ['org/repo-a'],
+      notificationsEnabled: false,
+      notifyOnRebased: false,
+      notifyOnConflicted: false,
+      notifyOnMerged: false,
+      notifyOnIdle: false,
+      notifyOnPingConfirmed: false,
     };
     chrome.storage.sync.get = vi
       .fn()

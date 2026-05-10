@@ -20,7 +20,23 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoRebase' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale';
+type SubKey = 'ignored' | 'autoRebase' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale' | 'notifications';
+
+async function requestNotificationsPermission(): Promise<boolean> {
+  if (typeof chrome === 'undefined' || !chrome.permissions?.request) return true;
+  return new Promise<boolean>((resolve) => {
+    chrome.permissions.request({ permissions: ['notifications'] }, (granted) => {
+      resolve(Boolean(granted));
+    });
+  });
+}
+
+async function removeNotificationsPermission(): Promise<void> {
+  if (typeof chrome === 'undefined' || !chrome.permissions?.remove) return;
+  await new Promise<void>((resolve) => {
+    chrome.permissions.remove({ permissions: ['notifications'] }, () => resolve());
+  });
+}
 
 const STALE_THRESHOLDS: StaleThresholdDays[] = [3, 7, 14, 30, 60];
 
@@ -150,6 +166,7 @@ export function AutomationsSettings() {
     autoResolve: true,
     shortcuts: true,
     stale: true,
+    notifications: true,
   });
 
   const toggle = (k: SubKey) =>
@@ -412,6 +429,87 @@ export function AutomationsSettings() {
                 </span>
               </div>
             )}
+          </>
+        )}
+      </div>
+
+      {/* Story 2.4 — Desktop notifications. Master toggle gates the runtime
+          permission request; per-event subtoggles let users opt in to the
+          specific events they care about. */}
+      <div className="automation-block" data-testid="notifications-block">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.notifications}
+            onClick={() => toggle('notifications')}
+            label="desktop-notifications section"
+          />
+          <label className="toggle">
+            <span className="toggle__name">Desktop notifications</span>
+            <input
+              type="checkbox"
+              checked={settings.notificationsEnabled}
+              onChange={async (e) => {
+                const next = e.target.checked;
+                if (next) {
+                  const granted = await requestNotificationsPermission();
+                  if (!granted) return; // user denied — leave toggle off
+                  await save({ notificationsEnabled: true });
+                } else {
+                  await save({ notificationsEnabled: false });
+                  await removeNotificationsPermission();
+                }
+              }}
+              data-testid="notifications-master"
+            />
+          </label>
+        </div>
+        {expanded.notifications && settings.notificationsEnabled && (
+          <>
+            <label className="toggle toggle-sub">
+              <span>Rebased</span>
+              <input
+                type="checkbox"
+                checked={settings.notifyOnRebased}
+                onChange={(e) => save({ notifyOnRebased: e.target.checked })}
+                data-testid="notify-rebased"
+              />
+            </label>
+            <label className="toggle toggle-sub">
+              <span>Conflict on rebase</span>
+              <input
+                type="checkbox"
+                checked={settings.notifyOnConflicted}
+                onChange={(e) => save({ notifyOnConflicted: e.target.checked })}
+                data-testid="notify-conflicted"
+              />
+            </label>
+            <label className="toggle toggle-sub">
+              <span>PR merged</span>
+              <input
+                type="checkbox"
+                checked={settings.notifyOnMerged}
+                onChange={(e) => save({ notifyOnMerged: e.target.checked })}
+                data-testid="notify-merged"
+              />
+            </label>
+            <label className="toggle toggle-sub">
+              <span>PR went idle</span>
+              <input
+                type="checkbox"
+                checked={settings.notifyOnIdle}
+                onChange={(e) => save({ notifyOnIdle: e.target.checked })}
+                data-testid="notify-idle"
+              />
+            </label>
+            <label className="toggle toggle-sub">
+              <span>Reviewer pinged</span>
+              <input
+                type="checkbox"
+                checked={settings.notifyOnPingConfirmed}
+                onChange={(e) => save({ notifyOnPingConfirmed: e.target.checked })}
+                data-testid="notify-ping-confirmed"
+              />
+            </label>
           </>
         )}
       </div>

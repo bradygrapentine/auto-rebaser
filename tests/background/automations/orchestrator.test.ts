@@ -81,6 +81,12 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   mergeCleanPRsOptOutRepos: [],
   pingTemplate: 'nudge {reviewers}',
   repoFilter: [],
+  notificationsEnabled: false,
+  notifyOnRebased: false,
+  notifyOnConflicted: false,
+  notifyOnMerged: false,
+  notifyOnIdle: false,
+  notifyOnPingConfirmed: false,
 };
 
 function makeGithubDeps(): OrchestratorDeps {
