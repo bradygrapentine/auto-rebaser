@@ -190,6 +190,8 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **MERGE-2** Fall-through direct merge for clean PRs (`mergeCleanPRsImmediately`) — PRs #65, #66, with UI polish in #67, #68, #69
 - **STATE-1** Map PR badges to GitHub `mergeable_state` truth — PR #73
 - **BEHIND-1** Detect "behind" via base SHA comparison when `mergeable_state` masks it
+- **DRAFT-1** `pr.draft=true` overrides `mergeable_state` so draft PRs render as Draft regardless of pending checks
+- **REBASE-OPT-OUT** Global `autoRebaseEnabled` toggle + per-repo `autoRebaseOptOutRepos` skip list — useful for testing state transitions without rebase firing, and for users who want manual rebase control on sensitive repos
 
 ---
 

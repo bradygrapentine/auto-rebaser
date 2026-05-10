@@ -305,6 +305,72 @@ describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
     expect(getBranchHeadSHA).toHaveBeenCalledTimes(1);
   });
 
+  // REBASE-OPT-OUT: global toggle off → behind PR stays behind, no updateBranch.
+  it('autoRebaseEnabled=false → behind PR stays behind, no updateBranch', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoRebaseEnabled: false,
+    });
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ id: 1, number: 1, mergeable_state: 'behind' })
+    );
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('behind');
+  });
+
+  // REBASE-OPT-OUT: per-repo skip list → repo stays behind, no updateBranch.
+  it('autoRebaseOptOutRepos containing repo → behind PR stays behind, no updateBranch', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoRebaseOptOutRepos: ['org/repo'],
+    });
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ id: 1, number: 1, mergeable_state: 'behind' })
+    );
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('behind');
+  });
+
+  // REBASE-OPT-OUT also gates BEHIND-1 — even when SHA mismatch is detected,
+  // the rebase is skipped if the repo is opted out.
+  it('autoRebaseOptOutRepos → BEHIND-1 detection lands in behind, no updateBranch', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoRebaseOptOutRepos: ['org/repo'],
+    });
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 1, number: 1 })
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({
+        id: 1, number: 1,
+        mergeable_state: 'blocked',
+        base: { ref: 'main', sha: 'old', repo: { full_name: 'org/repo' } },
+      })
+    );
+    (getBranchHeadSHA as ReturnType<typeof vi.fn>).mockResolvedValue('new');
+
+    await runPollCycle();
+
+    expect(updateBranch).not.toHaveBeenCalled();
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upserted[0].state).toBe('behind');
+  });
+
   // pr.draft=true overrides BEHIND-1 — drafts never auto-rebase.
   it('draft PR with stale base SHA stays draft, no rebase, no SHA fetch', async () => {
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(

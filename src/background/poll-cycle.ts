@@ -220,7 +220,17 @@ async function runPollCycleInner(): Promise<void> {
     let finalState: PRState = nextState;
     let errorMessage: string | undefined;
 
-    if (action === 'rebase') {
+    // REBASE-OPT-OUT: skip the rebase API call when the global toggle is off
+    // OR the repo is in the per-automation skip list. PR remains in 'behind'
+    // state so the popup surfaces it visibly without our extension acting.
+    const rebaseSkipped =
+      action === 'rebase'
+      && (
+        staleSettings?.autoRebaseEnabled === false
+        || (staleSettings?.autoRebaseOptOutRepos ?? []).includes(fullName)
+      );
+
+    if (action === 'rebase' && !rebaseSkipped) {
       try {
         await updateBranch(owner, repo, item.number);
         finalState = 'updated';

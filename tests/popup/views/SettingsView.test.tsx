@@ -14,6 +14,8 @@ vi.mock('../../../src/core/automations-store', () => ({
   // Inline literal — vi.mock factories are hoisted above imports.
   getAutomationSettings: vi.fn().mockResolvedValue({
     ignoredRepos: [],
+    autoRebaseEnabled: true,
+    autoRebaseOptOutRepos: [],
     autoDeleteMergedBranch: true,
     autoDeleteOptOutRepos: [],
     autoEnableAutoMerge: false,
@@ -34,6 +36,8 @@ import { getAutomationSettings } from '../../../src/core/automations-store';
 
 const AUTOMATION_DEFAULTS = {
   ignoredRepos: [] as string[],
+  autoRebaseEnabled: true,
+  autoRebaseOptOutRepos: [] as string[],
   autoDeleteMergedBranch: true,
   autoDeleteOptOutRepos: [] as string[],
   autoEnableAutoMerge: false,
