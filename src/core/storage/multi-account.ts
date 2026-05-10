@@ -48,6 +48,8 @@ export interface AccountState {
   activity: { entries: ActivityEntry[] };
   pingedPRs: PingedStore;
   resolved_threads: ResolvedThreadsStore;
+  /** Story 2.4 — last-fire timestamps for desktop notifications, keyed by `<prNumber>:<event>`. */
+  notif_throttle: Record<string, number>;
 }
 
 export interface GlobalSettings {

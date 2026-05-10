@@ -71,6 +71,15 @@ export interface AutomationSettings {
    * NOT change polling — every signed-in account still polls every repo.
    */
   repoFilter: string[];
+
+  // ── Story 2.4 — Desktop notifications ──
+  /** Master gate. Requires the runtime `notifications` permission to actually fire. Default OFF. */
+  notificationsEnabled: boolean;
+  notifyOnRebased: boolean;
+  notifyOnConflicted: boolean;
+  notifyOnMerged: boolean;
+  notifyOnIdle: boolean;
+  notifyOnPingConfirmed: boolean;
 }
 
 export type StaleThresholdDays = 3 | 7 | 14 | 30 | 60;
@@ -96,6 +105,12 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   enablePingReviewers: false,             // opt-in — never write to PRs without explicit toggle
   pingTemplate: 'Friendly nudge — could you take a look when you have a moment? {reviewers}',
   repoFilter: [],
+  notificationsEnabled: false,
+  notifyOnRebased: false,
+  notifyOnConflicted: false,
+  notifyOnMerged: false,
+  notifyOnIdle: false,
+  notifyOnPingConfirmed: false,
 };
 
 export type PhaseTwoPRState =

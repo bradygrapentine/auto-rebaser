@@ -18,6 +18,7 @@ import { clearBadge, setBadgeCount } from './badge';
 import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './state-machine';
 import { appendActivity } from '../core/activity-log';
 import type { ActivityEntry } from '../core/activity-log-types';
+import { notify, type NotifEvent } from './notifications';
 import { recordKnownRepos } from '../core/known-repos-store';
 import {
   getActiveAccountId,
@@ -425,7 +426,17 @@ async function runPollCycleInner(): Promise<number> {
     const [owner] = pr.repo.split('/');
     return !suspendedOwnerSet.has(owner.toLowerCase());
   });
-  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries);
+  // Story 2.4 — newly-idle PR ids: had no staleness on the previous cycle and
+  // do on this one. Used by the notification dispatch in runAutomationsPass.
+  const newlyIdlePRIds = new Set<number>();
+  for (const next of processedPRs) {
+    const prev = storeMap.get(next.id) as (PRRecord & PRRecordPhaseTwo) | undefined;
+    const prevStale = prev?.staleness;
+    const nextStale = (next as PRRecord & PRRecordPhaseTwo).staleness;
+    if (!prevStale && nextStale) newlyIdlePRIds.add(next.id);
+  }
+
+  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries, newlyIdlePRIds);
 
   // Step 5: badge — runPollCycle aggregates across accounts and sets the
   // badge once per cycle. For the single-account / fresh-install path,
@@ -444,6 +455,7 @@ async function runAutomationsPass(
   prDetails: Map<number, PullRequest>,
   rebasedCount: number,
   rebaseActivityEntries: ActivityEntry[] = [],
+  newlyIdlePRIds: Set<number> = new Set(),
 ): Promise<void> {
   try {
     const settings = await getAutomationSettings();
@@ -644,6 +656,32 @@ async function runAutomationsPass(
 
     // Write all this cycle's entries in one storage call.
     await appendActivity(cycleEntries);
+
+    // Story 2.4 — dispatch desktop notifications for the events the user
+    // opted in to. Best-effort: failures are swallowed inside `notify`.
+    try {
+      for (const e of cycleEntries) {
+        let event: NotifEvent | undefined;
+        if (e.action === 'rebase' && e.result === 'success') event = 'rebased';
+        else if (e.action === 'rebase' && e.result === 'failed') event = 'conflicted';
+        else if (e.action === 'auto_merged_now' && e.result === 'success') event = 'merged';
+        if (!event) continue;
+        await notify(
+          { event, repo: e.repo, prNumber: e.prNumber, prTitle: e.prTitle },
+          settings,
+        );
+      }
+      for (const id of newlyIdlePRIds) {
+        const pr = prMap.get(id);
+        if (!pr) continue;
+        await notify(
+          { event: 'idle', repo: pr.repo, prNumber: pr.number, prTitle: pr.title },
+          settings,
+        );
+      }
+    } catch (err) {
+      console.warn('[poll-cycle] notification dispatch failed:', err);
+    }
   } catch (err) {
     console.error('[poll-cycle] automation pass failed:', err);
     // Swallow — next cycle will retry.

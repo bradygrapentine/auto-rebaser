@@ -5,6 +5,8 @@ import { postIssueComment } from '../../github/endpoints/issues';
 import { recordPing } from '../../core/ping-throttle';
 import { appendActivity } from '../../core/activity-log';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { notify } from '../../background/notifications';
+import { getAutomationSettings } from '../../core/automations-store';
 
 interface Props {
   pr: PRRecord;
@@ -52,6 +54,15 @@ export function PingConfirmView({ pr, template, onCancel, onSuccess }: Props) {
         result: 'success',
         ...(reviewers.length > 0 ? { reviewers } : {}),
       }]);
+      try {
+        const settings = await getAutomationSettings();
+        await notify(
+          { event: 'ping-confirmed', repo: pr.repo, prNumber: pr.number, prTitle: pr.title },
+          settings,
+        );
+      } catch {
+        // Notifications are best-effort.
+      }
       onSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

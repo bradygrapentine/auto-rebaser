@@ -50,6 +50,18 @@ function buildChromeMock() {
       onStartup: { addListener: vi.fn() },
       sendMessage: vi.fn(),
       lastError: undefined,
+      getURL: vi.fn((p: string) => `chrome-extension://test/${p}`),
+    },
+    permissions: {
+      contains: vi.fn((_req: unknown, cb: (granted: boolean) => void) => cb(false)),
+      request: vi.fn((_req: unknown, cb: (granted: boolean) => void) => cb(true)),
+      remove: vi.fn((_req: unknown, cb: () => void) => cb()),
+    },
+    notifications: {
+      create: vi.fn((_idOrOpts: unknown, _optsOrCb: unknown, cb?: () => void) => {
+        if (typeof _optsOrCb === 'function') (_optsOrCb as () => void)();
+        else if (typeof cb === 'function') cb();
+      }),
     },
   };
 }

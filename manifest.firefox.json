@@ -18,6 +18,7 @@
     "https://github.com/*"
   ],
   "optional_permissions": [
+    "notifications",
     "https://*/*"
   ],
   "background": {
