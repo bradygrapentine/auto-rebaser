@@ -100,6 +100,17 @@ describe('recordRerequest persistence', () => {
   });
 });
 
+describe('getRerequestStore', () => {
+  it('returns {} when no active account is set', async () => {
+    delete local.data[STORAGE_KEYS_V2.activeAccountId];
+    expect(await getRerequestStore()).toEqual({});
+  });
+
+  it('returns {} when the account has no rerequestedPRs slot yet', async () => {
+    expect(await getRerequestStore()).toEqual({});
+  });
+});
+
 describe('clearRerequestStore', () => {
   it('removes the rerequestedPRs key from the active account', async () => {
     await recordRerequest(1, Date.now());

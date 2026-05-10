@@ -89,16 +89,17 @@ describe('requestReviewers', () => {
     await expect(requestReviewers('octo', 'repo', 42, ['alice'])).rejects.toThrow('HTTP_403');
   });
 
-  it('rethrows 422s that are NOT the duplicate-reviewer shape (e.g. PR-author-as-reviewer)', async () => {
+  it('rethrows 422s whose errors[] does not include field=reviewers code=invalid', async () => {
+    // Some other 422 shape — e.g. validation on path params.
     const err = Object.assign(new Error('HTTP_422'), {
       status: 422,
       body: {
         errors: [
-          { resource: 'PullRequest', field: 'reviewers', code: 'unprocessable', message: 'Cannot request review from PR author' },
+          { resource: 'PullRequest', field: 'pull_number', code: 'missing_field' },
         ],
       },
     });
     vi.spyOn(http, 'request').mockRejectedValue(err);
-    await expect(requestReviewers('octo', 'repo', 42, ['author'])).rejects.toThrow('HTTP_422');
+    await expect(requestReviewers('octo', 'repo', 42, ['alice'])).rejects.toThrow('HTTP_422');
   });
 });

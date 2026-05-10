@@ -63,17 +63,21 @@ describe('detectStaleApproval', () => {
     expect(out!.lastApprovedAt).toBe(4_000);
   });
 
-  it('returns null when an APPROVED review was later overridden by CHANGES_REQUESTED', () => {
-    // Alice approved at 3000 (before push), then requested changes at 4000.
-    // She is no longer a current approver.
+  it('a reviewer whose latest decisive state is CHANGES_REQUESTED is filtered out, but other current approvers still count', () => {
+    // Alice approved (3000) then later requested changes (4000) — not a current approver.
+    // Bob approved at 2000 — still a current approver.
+    // Push happened at 5000, after both. Detector should return stale=true with only ['bob'].
     const out = detectStaleApproval({
       lastPushedAt: 5_000,
       reviews: [
         r({ login: 'alice', state: 'APPROVED', submittedAt: 3_000 }),
         r({ login: 'alice', state: 'CHANGES_REQUESTED', submittedAt: 4_000 }),
+        r({ login: 'bob', state: 'APPROVED', submittedAt: 2_000 }),
       ],
     });
-    expect(out).toBeNull();
+    expect(out).not.toBeNull();
+    expect(out!.approvers).toEqual(['bob']);
+    expect(out!.lastApprovedAt).toBe(2_000);
   });
 
   it('returns null when an APPROVED review was later DISMISSED (e.g. by branch protection)', () => {

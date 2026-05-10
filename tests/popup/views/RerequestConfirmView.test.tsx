@@ -68,7 +68,7 @@ describe('RerequestConfirmView', () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it('confirm posts the request, records throttle, logs success, calls onSuccess', async () => {
+  it('confirm posts the request, records throttle, logs success, calls onSuccess (in that order)', async () => {
     const onSuccess = vi.fn();
     render(
       <RerequestConfirmView
@@ -93,6 +93,16 @@ describe('RerequestConfirmView', () => {
       }),
     ]);
     expect(onSuccess).toHaveBeenCalled();
+    // Order matters: onSuccess must fire LAST, after the throttle+log writes
+    // are persisted. Otherwise the host re-renders before throttle is recorded
+    // and the user could double-click the badge before the throttle takes effect.
+    const reqOrder = (requestReviewers as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+    const recOrder = (recordRerequest as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+    const logOrder = (appendActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+    const sucOrder = onSuccess.mock.invocationCallOrder[0];
+    expect(reqOrder).toBeLessThan(recOrder);
+    expect(recOrder).toBeLessThan(logOrder);
+    expect(logOrder).toBeLessThan(sucOrder);
   });
 
   it('alreadyRequested response is treated as success', async () => {
