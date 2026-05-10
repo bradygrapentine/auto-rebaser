@@ -15,6 +15,7 @@ import { useGroupedPRs } from '../hooks/useGroupedPRs';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePingedStore } from '../hooks/usePingedStore';
+import { useAccounts } from '../hooks/useAccounts';
 
 interface Props {
   user?: { login: string; avatarUrl: string };
@@ -27,11 +28,14 @@ interface Props {
   onHelp?: () => void;
   onPing?: (pr: PRRecord) => void;
   onOpenActivity?: (todayOnly: boolean) => void;
+  /** Wave B1 — App routes to the add-account sign-in mode. */
+  onAddAccount?: () => void;
 }
 
 export function PRListView({
-  user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onOpenActivity,
+  user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onOpenActivity, onAddAccount,
 }: Props) {
+  const { accounts, activeId, switchTo, signOut, signOutAll } = useAccounts();
   const store = usePRStore();
   const { prs, lastPollAt, pollInProgress } = store;
 
@@ -150,6 +154,20 @@ export function PRListView({
         onSettings={onSettings}
         onPollNow={handlePollNow}
         polling={pollInProgress === true}
+        accounts={accounts}
+        activeId={activeId}
+        onSwitchAccount={switchTo}
+        onAddAccount={onAddAccount}
+        onSignOutAccount={async (id) => {
+          await signOut(id);
+          // If the only account was just removed, useAuth will see signed-out
+          // on next refresh — return to sign-in via the parent.
+          if (accounts.length === 1) onSignOut();
+        }}
+        onSignOutAll={async () => {
+          await signOutAll();
+          onSignOut();
+        }}
       />
       <div className="view-body">
         {authMethod === 'pat' && (

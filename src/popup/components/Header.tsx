@@ -1,3 +1,6 @@
+import { AccountSwitcher } from './AccountSwitcher';
+import type { AccountSummary } from '../../core/storage/account-summary';
+
 interface Props {
   user?: { login: string; avatarUrl: string };
   onSignOut: () => void;
@@ -6,9 +9,32 @@ interface Props {
   onPollNow?: () => void;
   /** When true, the refresh icon spins (poll in progress). */
   polling?: boolean;
+  /** Wave B1 — multi-account switcher props. When `accounts` is non-empty,
+   *  the switcher dropdown replaces the legacy single log-out button. */
+  accounts?: AccountSummary[];
+  activeId?: string | null;
+  onSwitchAccount?: (id: string) => void;
+  onAddAccount?: () => void;
+  onSignOutAccount?: (id: string) => void;
+  onSignOutAll?: () => void;
 }
 
-export function Header({ user, onSignOut, onSettings, onPollNow, polling = false }: Props) {
+export function Header({
+  user,
+  onSignOut,
+  onSettings,
+  onPollNow,
+  polling = false,
+  accounts,
+  activeId,
+  onSwitchAccount,
+  onAddAccount,
+  onSignOutAccount,
+  onSignOutAll,
+}: Props) {
+  const showSwitcher =
+    accounts && accounts.length > 0 && onSwitchAccount && onAddAccount && onSignOutAccount && onSignOutAll;
+
   return (
     <header className="popup-header">
       <span className="popup-header__title">auto-rebaser</span>
@@ -33,10 +59,21 @@ export function Header({ user, onSignOut, onSettings, onPollNow, polling = false
       >
         <span aria-hidden>⚙</span>
       </button>
-      {user && (
-        <button type="button" aria-label="Sign out" onClick={onSignOut} className="btn">
-          log-out
-        </button>
+      {showSwitcher ? (
+        <AccountSwitcher
+          accounts={accounts}
+          activeId={activeId ?? null}
+          onSwitch={onSwitchAccount}
+          onAddAccount={onAddAccount}
+          onSignOut={onSignOutAccount}
+          onSignOutAll={onSignOutAll}
+        />
+      ) : (
+        user && (
+          <button type="button" aria-label="Sign out" onClick={onSignOut} className="btn">
+            log-out
+          </button>
+        )
       )}
     </header>
   );

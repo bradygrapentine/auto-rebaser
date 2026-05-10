@@ -89,6 +89,73 @@ code, .mono {
 .popup-header__user::before { content: "["; color: var(--term-fg-muted); }
 .popup-header__user::after  { content: "]"; color: var(--term-fg-muted); }
 
+/* ─── Account switcher (Wave B1) ──────────────────────────────────────── */
+.account-switcher { position: relative; }
+.account-switcher__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--term-fg-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.account-switcher__pill::before { content: "["; color: var(--term-fg-muted); }
+.account-switcher__pill::after  { content: "]"; color: var(--term-fg-muted); }
+.account-switcher__pill:hover { border-color: var(--term-border-bright); color: var(--term-cyan); }
+.account-switcher__chevron { color: var(--term-fg-muted); font-size: 10px; }
+.account-switcher__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 4px 0;
+  background: var(--term-bg-alt);
+  border: 1px solid var(--term-border-bright);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+}
+.account-switcher__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--term-fg);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+.account-switcher__item:hover { background: var(--term-bg-hover); }
+.account-switcher__item--active { color: var(--term-cyan); }
+.account-switcher__item--add { color: var(--term-green); }
+.account-switcher__item--danger { color: var(--term-red); }
+.account-switcher__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  flex: 0 0 auto;
+}
+.account-switcher__dot--active { background: var(--term-cyan); }
+.account-switcher__dot--suspended { background: var(--term-yellow); }
+.account-switcher__login { flex: 1 1 auto; }
+.account-switcher__host { color: var(--term-fg-muted); font-size: 11px; }
+.account-switcher__hint { color: var(--term-fg-muted); font-size: 10px; margin-left: 4px; }
+.account-switcher__plus { color: var(--term-green); font-weight: 700; }
+.account-switcher__sep { height: 1px; background: var(--term-border); margin: 4px 0; }
+
 /* ─── Buttons (bracketed) ──────────────────────────────────────────────── */
 .btn {
   display: inline-flex;

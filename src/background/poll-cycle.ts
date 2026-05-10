@@ -19,6 +19,11 @@ import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './
 import { appendActivity } from '../core/activity-log';
 import type { ActivityEntry } from '../core/activity-log-types';
 import { recordKnownRepos } from '../core/known-repos-store';
+import {
+  getActiveAccountId,
+  listAccountIds,
+  setActiveAccountId,
+} from '../core/storage/multi-account';
 
 const ABORT_ERRORS = new Set(['AUTH_ERROR', 'NOT_AUTHENTICATED', 'RATE_LIMITED']);
 
@@ -59,17 +64,53 @@ async function setPollInProgress(value: boolean): Promise<void> {
 }
 
 export async function runPollCycle(): Promise<void> {
-  clearBadge();
-  await setPollInProgress(true);
+  // Wave B1 — multi-account loop. Iterates every signed-in account, polling
+  // each in turn, with per-account error isolation so one account's 401 /
+  // rate-limit doesn't take down siblings.
+  //
+  // The active accountId is briefly flipped to each id under the hood (every
+  // store helper resolves via getActiveAccountId). Restored at the end so
+  // the popup keeps focus on whichever account the user was looking at.
+  const ids = await listAccountIds();
 
-  try {
-    return await runPollCycleInner();
-  } finally {
-    await setPollInProgress(false);
+  // Fresh-install / pre-migration path — no accounts namespace yet. Run once
+  // against the v1 fallback (the transition helpers in multi-account.ts do
+  // the right thing).
+  if (ids.length === 0) {
+    clearBadge();
+    await setPollInProgress(true);
+    try {
+      await runPollCycleInner();
+    } finally {
+      await setPollInProgress(false);
+    }
+    return;
   }
+
+  const original = await getActiveAccountId();
+  clearBadge();
+  let totalRebased = 0;
+  for (const id of ids) {
+    try {
+      await setActiveAccountId(id);
+      await setPollInProgress(true);
+      try {
+        const rebasedThisAccount = await runPollCycleInner();
+        totalRebased += rebasedThisAccount;
+      } finally {
+        await setPollInProgress(false);
+      }
+    } catch (err) {
+      console.warn(`[poll-cycle] account ${id} failed:`, err);
+    }
+  }
+  // Aggregate badge across accounts (B1: total rebased this cycle).
+  if (totalRebased > 0) setBadgeCount(totalRebased);
+  // Restore active so the popup re-focuses where the user was looking.
+  if (original) await setActiveAccountId(original);
 }
 
-async function runPollCycleInner(): Promise<void> {
+async function runPollCycleInner(): Promise<number> {
   // Load automation settings first — `ignoredRepos` filters BOTH the rebase
   // loop and the orchestrator pass, so it has to be available before either.
   // Failure to load defaults to "no repos ignored", matching current behavior.
@@ -114,7 +155,7 @@ async function runPollCycleInner(): Promise<void> {
     searchResult = await searchAuthoredPRs();
   } catch (err) {
     // RATE_LIMITED, NOT_AUTHENTICATED, AUTH_ERROR — abort
-    return;
+    return 0;
   }
 
   // Load store once before loop
@@ -158,7 +199,7 @@ async function runPollCycleInner(): Promise<void> {
       prDetails.set(item.id, pr);
     } catch (err) {
       if (isAbortError(err)) {
-        return;
+        return 0;
       }
       const msg = err instanceof Error ? err.message : String(err);
       // Same translation as mapUpdateBranchError: 403/404 on getPR is
@@ -250,7 +291,7 @@ async function runPollCycleInner(): Promise<void> {
           mapped = mapUpdateBranchError(err);
         } catch (rethrown) {
           // AUTH_ERROR or RATE_LIMITED re-thrown — abort cycle
-          return;
+          return 0;
         }
         finalState = mapped.state;
         errorMessage = mapped.errorMessage;
@@ -336,7 +377,7 @@ async function runPollCycleInner(): Promise<void> {
       detail = await getPR(owner, repo, prev.number);
       prDetails.set(prev.id, detail);
     } catch (err) {
-      if (isAbortError(err)) return;
+      if (isAbortError(err)) return 0;
       // Transient (5xx, network) or 404. Either way, preserve the prior
       // record so pruneStale doesn't drop it — Phase-2 work for this PR
       // is incomplete and we want a retry next cycle. Genuinely-deleted
@@ -386,8 +427,11 @@ async function runPollCycleInner(): Promise<void> {
   });
   await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries);
 
-  // Step 5: badge
+  // Step 5: badge — runPollCycle aggregates across accounts and sets the
+  // badge once per cycle. For the single-account / fresh-install path,
+  // also set the badge here so behavior matches v1.0.x exactly.
   setBadgeCount(updatedCount);
+  return updatedCount;
 }
 
 /**

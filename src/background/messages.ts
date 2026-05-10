@@ -3,6 +3,7 @@ import { runPollCycle } from './poll-cycle';
 import { setupAlarm } from './alarm';
 import {
   beginDeviceFlow,
+  beginDeviceFlowAddAccount,
   cancelDeviceFlow,
   getStatus as getDeviceFlowStatus,
   resetStatus as resetDeviceFlowStatus,
@@ -32,6 +33,17 @@ export function handleMessage(
 
   if (msg.type === 'AUTH_BEGIN_DEVICE_FLOW') {
     void beginDeviceFlow().then(
+      (start) => sendResponse({ ok: true, data: start }),
+      (err: unknown) => sendResponse({
+        ok: false,
+        error: err instanceof Error ? err.message : 'DEVICE_FLOW_START_FAILED',
+      }),
+    );
+    return true;
+  }
+
+  if (msg.type === 'AUTH_BEGIN_DEVICE_FLOW_ADD') {
+    void beginDeviceFlowAddAccount().then(
       (start) => sendResponse({ ok: true, data: start }),
       (err: unknown) => sendResponse({
         ok: false,
