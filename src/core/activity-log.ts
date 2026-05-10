@@ -1,12 +1,12 @@
 // Story 5.6 — Activity log helpers.
 // Single write per poll cycle: callers build an ActivityEntry[] then call appendActivity once.
 
-import type { ActivityEntry, ActivityStore } from './activity-log-types';
+import type { ActivityEntry } from './activity-log-types';
 import {
-  ACTIVITY_STORAGE_KEY,
   ACTIVITY_MAX_ENTRIES,
   ACTIVITY_MAX_AGE_MS,
 } from './activity-log-types';
+import { readAccountKey, writeAccountKey } from './storage/multi-account';
 
 /**
  * Trim entries to satisfy both the cap (max N) and the age limit (max age ms).
@@ -38,15 +38,14 @@ export async function appendActivity(newEntries: ActivityEntry[]): Promise<void>
   if (newEntries.length === 0) return;
 
   try {
-    const raw = await chrome.storage.local.get(ACTIVITY_STORAGE_KEY);
-    const store = raw[ACTIVITY_STORAGE_KEY] as ActivityStore | undefined;
+    const store = await readAccountKey('activity');
     const existing: ActivityEntry[] = store?.entries ?? [];
 
     // Append new entries at the end (newer entries come last).
     const merged = [...existing, ...newEntries];
     const trimmed = trimByCapAndAge(merged);
 
-    await chrome.storage.local.set({ [ACTIVITY_STORAGE_KEY]: { entries: trimmed } });
+    await writeAccountKey('activity', { entries: trimmed });
   } catch (err) {
     console.error('[activity] append failed:', err);
   }
@@ -57,7 +56,7 @@ export async function appendActivity(newEntries: ActivityEntry[]): Promise<void>
  * Used by the "Clear log" action in the popup.
  */
 export async function clearActivity(): Promise<void> {
-  await chrome.storage.local.set({ [ACTIVITY_STORAGE_KEY]: { entries: [] } });
+  await writeAccountKey('activity', { entries: [] });
 }
 
 /**
@@ -66,8 +65,7 @@ export async function clearActivity(): Promise<void> {
  */
 export async function loadActivity(): Promise<ActivityEntry[]> {
   try {
-    const raw = await chrome.storage.local.get(ACTIVITY_STORAGE_KEY);
-    const store = raw[ACTIVITY_STORAGE_KEY] as ActivityStore | undefined;
+    const store = await readAccountKey('activity');
     return store?.entries ?? [];
   } catch {
     return [];

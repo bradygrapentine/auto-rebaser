@@ -4,6 +4,7 @@
 import type { AutomationSettings, MergeMethod, ResolvedThreadsStore } from './automations-types';
 import { DEFAULT_AUTOMATION_SETTINGS } from './automations-types';
 import { AUTOMATION_STORAGE_KEYS } from './automations-constants';
+import { readAccountKey, writeAccountKey } from './storage/multi-account';
 
 /**
  * Story 5.4 migration — legacy `autoMergeMethod: MergeMethod` becomes the
@@ -39,10 +40,10 @@ export async function saveAutomationSettings(s: AutomationSettings): Promise<voi
 }
 
 export async function getResolvedThreads(): Promise<ResolvedThreadsStore> {
-  const result = await chrome.storage.local.get(AUTOMATION_STORAGE_KEYS.resolvedThreads);
-  return (result[AUTOMATION_STORAGE_KEYS.resolvedThreads] as ResolvedThreadsStore) ?? {};
+  const stored = await readAccountKey('resolved_threads');
+  return stored ?? {};
 }
 
 export async function saveResolvedThreads(s: ResolvedThreadsStore): Promise<void> {
-  await chrome.storage.local.set({ [AUTOMATION_STORAGE_KEYS.resolvedThreads]: s });
+  await writeAccountKey('resolved_threads', s);
 }

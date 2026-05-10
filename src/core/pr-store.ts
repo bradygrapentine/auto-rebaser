@@ -1,15 +1,15 @@
 import type { PRRecord, PRStore } from './types';
-import { STORAGE_KEYS } from './constants';
+import { readAccountKey, writeAccountKey } from './storage/multi-account';
 
 const EMPTY_STORE: PRStore = { prs: [], lastPollAt: null };
 
 export async function loadStore(): Promise<PRStore> {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.prStore);
-  return (result[STORAGE_KEYS.prStore] as PRStore) ?? { ...EMPTY_STORE };
+  const stored = await readAccountKey('pr_store');
+  return stored ?? { ...EMPTY_STORE };
 }
 
 export async function saveStore(store: PRStore): Promise<void> {
-  await chrome.storage.local.set({ [STORAGE_KEYS.prStore]: store });
+  await writeAccountKey('pr_store', store);
 }
 
 export async function upsertPRs(records: PRRecord[]): Promise<PRStore> {

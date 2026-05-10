@@ -168,10 +168,8 @@ describe('auth-store', () => {
       chrome.storage.local.remove = vi.fn().mockResolvedValue(undefined);
       chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
       await clearAuth();
-      expect(chrome.storage.local.remove).toHaveBeenCalledWith([
-        'pingedPRs',
-        'resolved_threads',
-      ]);
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith('pingedPRs');
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith('resolved_threads');
     });
 
     it('clearToken is an alias for clearAuth', async () => {
