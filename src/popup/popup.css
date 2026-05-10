@@ -743,7 +743,7 @@ code, .mono {
 }
 
 .automation-block {
-  padding: 12px 0;
+  padding: 8px 0;
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
