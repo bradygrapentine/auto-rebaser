@@ -19,6 +19,8 @@ coverage/
 .claude/routing-metrics.jsonl
 worktrees/
 .memsearch/
+test-results/
+playwright-report/
 
 # Store-submission build outputs (regenerable via `npm run build` + zip).
 artifacts/

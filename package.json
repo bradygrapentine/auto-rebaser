@@ -25,13 +25,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e": "npm run build && playwright test",
+    "e2e:headed": "npm run build && playwright test --headed"
   },
   "dependencies": {
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "6.4.6",
     "@testing-library/react": "16.0.0",
     "@types/chrome": "0.0.268",
