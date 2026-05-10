@@ -921,6 +921,11 @@ code, .mono {
   line-height: 16px;
   flex: 0 0 auto;
 }
+.btn--small-active {
+  color: var(--term-cyan);
+  border-color: var(--term-cyan);
+  background: rgba(78, 201, 176, 0.10);
+}
 .activity-confirm {
   margin: 8px 0;
   padding: 8px;

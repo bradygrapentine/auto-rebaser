@@ -195,7 +195,7 @@ describe('ActivityLogView', () => {
     ]);
     await act(async () => {});
     fireEvent.click(screen.getByRole('button', { name: /sort by/i }));
-    fireEvent.click(screen.getByRole('option', { name: /oldest first/i }));
+    fireEvent.click(screen.getByRole('option', { name: /^oldest$/i }));
     const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('#1');
     expect(items[2]).toHaveTextContent('#3');
