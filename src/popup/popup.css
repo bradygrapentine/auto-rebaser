@@ -156,6 +156,61 @@ code, .mono {
 .account-switcher__plus { color: var(--term-green); font-weight: 700; }
 .account-switcher__sep { height: 1px; background: var(--term-border); margin: 4px 0; }
 
+/* ─── Repo filter (Story 2.5) ─────────────────────────────────────────── */
+.repo-filter { position: relative; }
+.repo-filter__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--term-fg-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.repo-filter__pill::before { content: "["; color: var(--term-fg-muted); }
+.repo-filter__pill::after  { content: "]"; color: var(--term-fg-muted); }
+.repo-filter__pill:hover { border-color: var(--term-border-bright); color: var(--term-cyan); }
+.repo-filter__pill--active { color: var(--term-cyan); }
+.repo-filter__chevron { color: var(--term-fg-muted); font-size: 10px; }
+.repo-filter__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 4px 0;
+  background: var(--term-bg-alt);
+  border: 1px solid var(--term-border-bright);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+}
+.repo-filter__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--term-fg);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+.repo-filter__item:hover { background: var(--term-bg-hover); }
+.repo-filter__item--checked { color: var(--term-cyan); }
+.repo-filter__item--clear { color: var(--term-red); }
+.repo-filter__name { flex: 1 1 auto; }
+.repo-filter__sep { height: 1px; background: var(--term-border); margin: 4px 0; }
+
 /* ─── Buttons (bracketed) ──────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
