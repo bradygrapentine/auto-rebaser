@@ -747,6 +747,12 @@ code, .mono {
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
+/* Nested automation-block: top-level siblings get 8px above the dashed
+   line "for free" from the prior block's padding-bottom; nested ones
+   sit flush against their preceding sibling's content edge. Add an
+   explicit 8px margin-top so the gap above and below the dashed
+   border-top match. */
+.automation-block .automation-block { margin-top: 8px; }
 
 /* ─── Chip list ────────────────────────────────────────────────────────── */
 .chip-list-wrap { margin-top: 6px; margin-left: 18px; }
