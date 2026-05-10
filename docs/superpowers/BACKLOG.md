@@ -9,7 +9,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 3 |
+| 🟢 Ready | 4 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
@@ -69,6 +69,46 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
 **How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
 **Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
+
+### STATE-1 — Map PR badges to GitHub's `mergeable_state` truth (kill sticky-Manual bug)
+**Status:** 🟢 Ready
+**Why:** Today, a single transient 422 from `PUT …/update-branch` paints a PR `[Manual]` red, and the badge sticks across the entire CI window because GitHub returns `mergeable_state: 'unknown'` while it recomputes — and our `deriveStateFromMergeable` keeps the previous state when it sees `unknown`. Result: PRs that are actually waiting on CI on a protected branch (the `blocked` mergeable_state) display as `[Manual]`, implying user action is needed when none is.
+
+The popup also collapses several distinct GitHub states (`blocked`, `unstable`, `draft`, `clean`, `has_hooks`) into a single `Current` bucket, losing useful signal users already understand from the GitHub UI.
+
+**Design:**
+- Add two new display states: `pending` (yellow, label `Pending`) and `draft` (muted, label `Draft`).
+- Drop the dead `updating` state from the union (defined but never assigned anywhere in poll-cycle).
+- Update `deriveStateFromMergeable` mapping:
+  - `clean` / `has_hooks` → `current`
+  - `behind` → `behind` (transient — overwritten same poll by `update-branch` outcome)
+  - `dirty` → `conflict`
+  - `blocked` / `unstable` → `pending`
+  - `draft` → `draft`
+  - `unknown` → keep `previousState` (recompute window — unchanged)
+- Action-outcome states are unchanged: `update-branch` 2xx → `updated`, 422 → `needs-manual`, 409 → `conflict`, 403/404/5xx → `error`.
+- The sticky-Manual bug self-resolves: once CI starts, next poll's `mergeable_state` becomes `blocked` → maps to `pending`, overwriting any stale `needs-manual`. No retry counter needed.
+
+**Transitions overview** (for the PR doc / future reference):
+
+| Driver | Transitions caused |
+|---|---|
+| GH (passive) | `current ↔ behind ↔ pending ↔ conflict ↔ draft → merged/closed` based on `mergeable_state`/`merged`/`draft` flags |
+| US — auto-rebase | `behind → updated / needs-manual / conflict / error` |
+| US — MERGE-2 direct merge | `current / pending → merged` (when `mergeCleanPRsImmediately` is on) |
+| US — other automations | None — they set GH-side flags or post comments; resulting state changes flow back through GH on subsequent polls |
+
+**UI:**
+- `StatusBadge` gets two new label entries (`pending: 'Pending'`, `draft: 'Draft'`) and removes the `updating` entry.
+- CSS adds yellow color token for `pending` (matching existing yellow used elsewhere) and a muted/grey token for `draft`.
+
+**Done when:**
+- `PRState` union no longer includes `'updating'`; includes `'pending'` and `'draft'`.
+- `deriveStateFromMergeable` maps per the table above; tests cover all 8 input values (`clean`, `behind`, `dirty`, `blocked`, `unstable`, `has_hooks`, `draft`, `unknown`) including the `unknown → previousState` carry-over.
+- Popup `StatusBadge` renders `Pending` (yellow) and `Draft` (muted) for the new states.
+- A regression test reproduces the sticky-Manual scenario: PR with `previousState='needs-manual'` and `mergeable_state='blocked'` derives `pending`, not `needs-manual`.
+- `useGroupedPRs` ATTENTION_STATES updated (drop `updating`, decide whether `pending`/`draft` should count toward the orange repo-group attention dot — leaning **no** for both, since they're informational).
+- All existing tests pass with the new state union.
 
 ## §2 In progress
 _(none)_
