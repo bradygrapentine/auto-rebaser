@@ -134,11 +134,14 @@ export function PRListView({
   const flatVisiblePRs = useMemo(() => {
     const out: typeof prs = [];
     for (const g of groups) {
-      if (isExpanded(g.repo, g.hasAttention)) out.push(...g.prs);
+      // Reviewer-tab PRs are usually `current` (clean, approved); the
+      // attention-state heuristic would collapse them and hide the dashboard.
+      const defaultExpanded = activeTab === 'reviewer' ? true : g.hasAttention;
+      if (isExpanded(g.repo, defaultExpanded)) out.push(...g.prs);
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups, toggled]);
+  }, [groups, toggled, activeTab]);
 
   const [focusedPRId, setFocusedPRId] = useState<number | null>(null);
   // Reset focus when the visible set changes shape and the focused PR is gone.
@@ -274,7 +277,8 @@ export function PRListView({
           <p className="empty-state">no open prs found</p>
         ) : (
           groups.map((g) => {
-            const expanded = isExpanded(g.repo, g.hasAttention);
+            const defaultExpanded = activeTab === 'reviewer' ? true : g.hasAttention;
+            const expanded = isExpanded(g.repo, defaultExpanded);
             return (
               <RepoGroup
                 key={g.repo}

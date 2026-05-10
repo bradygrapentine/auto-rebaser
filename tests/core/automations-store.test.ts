@@ -155,17 +155,17 @@ describe('automations-store', () => {
     // side effect of save, which made the next read take the v2 branch and
     // return DEFAULTS instead of the v1-fallback write.
     const storage: Record<string, unknown> = {};
-    (chrome.storage.sync.get as ReturnType<typeof vi.fn>) = vi.fn(async (keys: string | string[] | null) => {
-      if (keys === null) return { ...storage };
-      const want = Array.isArray(keys) ? keys : [keys];
+    chrome.storage.sync.get = vi.fn(async (keys: unknown) => {
+      if (keys == null) return { ...storage };
+      const want = Array.isArray(keys) ? (keys as string[]) : [keys as string];
       const out: Record<string, unknown> = {};
       for (const k of want) if (k in storage) out[k] = storage[k];
       return out;
-    });
-    (chrome.storage.sync.set as ReturnType<typeof vi.fn>) = vi.fn(async (patch: Record<string, unknown>) => {
-      Object.assign(storage, patch);
-    });
-    (chrome.storage.local.get as ReturnType<typeof vi.fn>) = vi.fn().mockResolvedValue({}); // no active_account_id
+    }) as typeof chrome.storage.sync.get;
+    chrome.storage.sync.set = vi.fn(async (patch: unknown) => {
+      Object.assign(storage, patch as Record<string, unknown>);
+    }) as typeof chrome.storage.sync.set;
+    chrome.storage.local.get = vi.fn().mockResolvedValue({}); // no active_account_id
 
     const next: AutomationSettings = { ...DEFAULT_AUTOMATION_SETTINGS, autoRebaseEnabled: false };
     await saveAutomationSettings(next);
