@@ -9,11 +9,11 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 5 |
+| 🟢 Ready | 3 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ✅ Shipped | 22 |
+| ✅ Shipped | 24 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -33,7 +33,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Done when:** Topics visible on https://github.com/bradygrapentine/auto-rebaser.
 
 ### MERGE-1 — Reclassify no-op auto-merge attempts in activity log
-**Status:** 🟢 Ready
+**Status:** ✅ Shipped (PR #65)
 **Why:** Two GitHub responses currently log as red `failed` but are not failures: `"Pull request is already merged"` (race — landed before our call) and `"Pull request is in clean status"` (PR already mergeable; GitHub refuses to enable auto-merge because there's nothing to wait on). The red entries make the audit log look alarming when the extension is doing nothing wrong.
 **How:**
 - In the auto-merge adapter, classify these two error strings as no-ops rather than failures.
@@ -42,7 +42,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Done when:** No `auto_merge_enabled · failed` entries appear in the activity log for the two listed reasons; audit log visually distinguishes skip from failure.
 
 ### MERGE-2 — Fall-through direct merge when GitHub rejects auto-merge on clean PRs
-**Status:** 🟢 Ready
+**Status:** ✅ Shipped (PRs #65, #66, follow-up UI in #67–#69)
 **Why:** When a PR is already mergeable (`mergeable_state === 'clean'`), GitHub's `enablePullRequestAutoMerge` mutation refuses with `"Pull request is in clean status"` because there's nothing to wait on. The extension currently logs the rejection and walks away — so PRs that are ready the moment we see them never get merged. The user's "auto-enable auto-merge" intent is to land the PR; the extension fails to do so for clean PRs.
 
 **Design (per brainstorm 2026-05-09 — A1 + B1 + C1 + D1 + E1 + E3):**
@@ -118,6 +118,10 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **5.4** Smart merge-method selection — PR #2
 - **5.5** Keyboard shortcuts — PR #3
 - **5.6** Activity log — PR #1
+
+### v1.0.x follow-ups
+- **MERGE-1** Reclassify no-op auto-merge attempts as `skipped` — PR #65
+- **MERGE-2** Fall-through direct merge for clean PRs (`mergeCleanPRsImmediately`) — PRs #65, #66, with UI polish in #67, #68, #69
 
 ---
 

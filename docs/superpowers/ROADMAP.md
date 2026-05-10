@@ -1,7 +1,7 @@
 # Auto-Rebaser — Roadmap
-_Last updated: 2026-05-07_
+_Last updated: 2026-05-09_
 
-> **Status:** v1.0.1 shipped 2026-05-07. Phases 1, 2 (minus 2.9), 4, and 5 are all on `main`. Chrome Web Store + Firefox AMO submissions in flight. Phase 3 deferred.
+> **Status:** v1.0.2 on `main` (2026-05-09). Phases 1, 2 (minus 2.9), 4, and 5 shipped, plus the v1.0.x clean-PR fall-through merge (MERGE-1, MERGE-2) and the repo-name autocomplete polish. Chrome Web Store + Firefox AMO submissions in flight. Phase 3 deferred.
 
 ## Goal
 
@@ -43,7 +43,7 @@ Standalone Chrome extension, github.com only, single authenticated user. Initial
 | # | Feature | Status |
 |---|---|---|
 | 2.1 | Firefox support (MV3, manifest adjustments) | ✅ shipped (build target lives at `manifest.firefox.json`; `npm run build:firefox`) |
-| 2.2 | Chrome Web Store + Firefox AMO submission | ⚡ in flight (v1.0.1 release zips published 2026-05-07; store uploads pending) |
+| 2.2 | Chrome Web Store + Firefox AMO submission | ⚡ in flight (v1.0.2 release zips on `main` 2026-05-09; store uploads pending) |
 | 2.3 | Backend proxy for OAuth token exchange | 🧊 obsoleted by Phase 4 (Device Flow has no client_secret to hide) |
 | 2.4 | Desktop notifications for rebased/conflicted PRs | 🟢 unscoped (deferred from MVP, no v1.x slot yet) |
 | 2.5 | Filter by repo or org | 🟢 unscoped |
@@ -112,3 +112,13 @@ Spec: [`specs/2026-05-02-phase5-companion-automations-design.md`](specs/2026-05-
 
 - **5.2 push-since-approval** — GitHub branch protection ("Dismiss stale approvals on new commits") covers the gating case when admins opt in. Surfacing-only didn't carry its weight.
 - **5.3 flaky-CI auto-retry** — strong standalone feature but supporting infrastructure (pattern editor, activity log, GitHub App permission bump for Checks: Write + Actions: Write) is sized for a headline release. Revisit if/when flaky-CI becomes an explicit Pro-tier anchor.
+
+---
+
+## v1.0.x follow-ups ✅ shipped (2026-05-09)
+
+| Story | Feature | Notes |
+|---|---|---|
+| MERGE-1 | Reclassify no-op auto-merge attempts | "Pull request is in clean status" / "is already merged" responses log as `skipped` instead of `failed` (PR #65). |
+| MERGE-2 | Fall-through direct merge for clean PRs | New `mergeCleanPRsImmediately` toggle (default OFF). When ON and GitHub rejects auto-merge on a clean PR, extension calls REST `PUT …/merge` with `sha` precondition. Logs as `auto_merged_now`. PRs #65, #66, with UI polish in #67–#69. |
+| AUTOCOMPLETE | Repo-name autocomplete in automation settings | `<datalist>`-backed suggestions sourced from open PRs, filtered to repos not already in the list (PR #64). |

@@ -2,46 +2,54 @@
 
 <img src="icons/logo.svg" alt="auto-rebaser" width="120" align="right" />
 
-Chrome / Firefox extension that auto-rebases your open GitHub PRs and runs a small set of cleanup automations on top. Polls your authored PRs on a configurable interval, then for each one decides what to do — rebase if behind, delete the branch if merged, flip on auto-merge if eligible, resolve obsolete review threads, dismiss stale notifications.
+Chrome / Firefox extension that auto-rebases your open GitHub PRs and runs a small set of cleanup automations on top. Polls your authored PRs on a configurable interval, then for each one decides what to do — rebase if behind, delete the branch if merged, flip on auto-merge (or merge directly when the PR is already clean), resolve obsolete review threads, surface idle PRs.
 
-Local-first, single-user. No backend. Everything runs in the extension service worker against the GitHub API with your GitHub App token (OAuth Device Flow) or Personal Access Token. GitHub Enterprise Server is supported via a per-host setting.
+Local-first, single-user. No backend. Everything runs in the extension service worker against the GitHub API with your GitHub App token (OAuth Device Flow, recommended) or a Personal Access Token. GitHub Enterprise Server is supported via a per-host setting.
 
 ## Install
 
-> _Store links go live when v0.3.0 finishes review. Until then, load unpacked from `dist/` (Chrome) or `dist-firefox/` (Firefox) — see Development below._
+> _Store links go live when the v1.0.2 review clears. Until then, load unpacked from `dist/` (Chrome) or `dist-firefox/` (Firefox) — see Development below._
 
 - Chrome Web Store: _pending review_
 - Firefox Add-ons: _pending review_
 
 ## Features
 
-### Phase 1 — Rebase MVP (shipped)
+### Rebase core (shipped)
 
-- **PAT sign-in** — paste a Personal Access Token; stored in `chrome.storage.sync`
+- **GitHub App sign-in (recommended) or PAT** — App auth uses OAuth Device Flow; tokens kept in `chrome.storage.local`, refresh tokens rotated. PAT remains as a legacy path.
 - **Authored PR discovery** — `GET /search/issues?q=is:pr+is:open+author:@me`, paginated
 - **Auto-rebase** — any PR with `mergeable_state === "behind"` gets `PUT …/update-branch` with `update_method: "rebase"`
 - **Configurable poll interval** — 1m / 2m / 5m / 10m / 15m / 30m / 1h / 2h / 4h
 - **Popup PR list** — repos collapse into groups; status badges; "Poll now" button; spinner while polling
 - **Badge count** — extension icon shows how many PRs got rebased in the last cycle
 - **ETag caching** — `If-None-Match` everywhere; 304s cost zero rate-limit
-- **Graceful errors** — auth errors prompt re-paste; rate limits skip the cycle silently; per-PR errors don't block the rest
+- **Graceful errors** — auth errors prompt re-authentication; rate limits skip the cycle silently; per-PR errors don't block the rest
+- **GitHub Enterprise Server** — optional `enterpriseHost` setting points all OAuth + REST + GraphQL traffic at a self-hosted instance.
 
-### Phase 2 — Automations (shipped)
+### Automations (shipped)
 
-All automations apply only to PRs you authored. Each one has its own kill-switch and its own per-repo skip list.
+All automations apply only to PRs you authored. Each one has its own kill-switch and its own per-repo skip list. The global "Ignored repos" list removes repos from both the popup and every automation.
 
 - **Auto-delete merged branches** (default ON) — when an authored PR merges and the repo doesn't already auto-delete head branches, the extension deletes the head ref. Forks are never touched.
-- **Auto-enable auto-merge** (default OFF) — flips on the GitHub auto-merge toggle so the PR lands as soon as required checks/reviews pass. Configurable merge method (squash / merge / rebase). 422s mark the PR `automerge-unsupported` and stop retrying.
+- **Auto-enable auto-merge** (default OFF) — flips on the GitHub auto-merge toggle so the PR lands as soon as required checks/reviews pass. Smart merge-method selection: configure an ordered preference list (squash / rebase / merge) and the extension picks the first method the repo allows.
+- **Merge clean PRs immediately** (default OFF, sub-toggle of auto-enable auto-merge) — when GitHub refuses to enable auto-merge because the PR is already clean (nothing to wait on), the extension falls through to a direct REST merge with a `sha` precondition. Logged as `auto_merged_now` in the activity log.
 - **Auto-resolve obsolete review threads** (default OFF) — resolves review threads whose anchor line no longer exists (`isOutdated && line === null`). Threads still anchored to a line are never auto-resolved; manually-unresolved threads aren't re-resolved.
-- **Auto-dismiss stale PR notifications** (default OFF) — marks notification threads read once their PR is closed/merged. Optional sub-toggle to also unsubscribe. Requires the GitHub `notifications` PAT scope; the popup surfaces a "Grant notifications access" CTA when missing.
+- **Stale-PR badge + ping reviewers** (default OFF) — surfaces idle days on your own PRs; one-click reviewer ping with a confirmation dialog and a configurable comment template. 24h per-PR throttle.
+
+### Quality-of-life (shipped)
+
+- **Activity log** — every write action (rebases, branch deletes, auto-merge enables, direct merges, thread resolves, reviewer pings) is recorded with timestamp, repo, PR, result, and details. 200-entry / 30-day cap. Filterable by action and repo.
+- **Keyboard shortcuts** (default ON) — `r` poll now, `s` settings, `?` help, `j` / `k` navigate, `Enter` open, `Esc` back.
+- **Repo-name autocomplete** — every "Skip repos" / "Ignored repos" input is backed by a `<datalist>` of repos sourced from your current open PRs.
 
 ### Settings
 
 - **Globally ignored repos** — repos in this list are invisible to the popup *and* untouched by every automation. Adding a repo here removes its PRs from the popup display immediately, no poll required.
 - **Per-automation skip-repos** — narrower opt-out: a repo here is excluded from one automation but still polled and shown.
-- **`github_poll_interval`** — the alarm cadence; covers PRs, notifications, threads, and any future GitHub-side checks.
+- **`github_poll_interval`** — the alarm cadence.
 
-The popup footer summarises the last cycle: `rebased N · branches deleted N · auto-merge enabled N · threads resolved N · notifications dismissed N · errors N`. Zero-count items are hidden.
+The popup footer summarises the last cycle: `rebased N · branches deleted N · auto-merge enabled N · merged N · threads resolved N · errors N`. Zero-count items are hidden.
 
 ## Architecture
 
@@ -61,7 +69,7 @@ The popup uses a terminal-inspired theme — JetBrains Mono, Tokyo Night palette
 ```sh
 npm install
 npm run dev            # vite build --watch
-npm test               # vitest run (~634 tests)
+npm test               # vitest run (~637 tests)
 npm run typecheck
 npm run build          # chrome
 npm run build:firefox  # firefox (writes to dist-firefox/)
