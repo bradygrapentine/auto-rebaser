@@ -21,6 +21,10 @@ interface Props {
   pingStateFor?: (pr: PRRecord) => { canPing: boolean; pingedHoursAgo: number | null } | null;
   /** Story 5.1 — invoked when the user clicks the ping link. */
   onPing?: (pr: PRRecord) => void;
+  /** Story 5.2-A — when provided, PRs with `staleApproval` get a `! re-review` badge. */
+  rerequestStateFor?: (pr: PRRecord) => { actionable: boolean } | null;
+  /** Story 5.2-A — invoked when the user clicks the actionable re-review badge. */
+  onRerequest?: (pr: PRRecord) => void;
   /** Story 4.5 — installation coverage for this repo (App auth only). */
   coverage?: 'active' | 'suspended' | 'not-installed';
   /** Forwarded to PRRow so error rows can offer an "install" link. */
@@ -29,7 +33,7 @@ interface Props {
 
 export function RepoGroup({
   group, expanded, onToggle, userLogin, focusedPRId,
-  showStaleBadges, pingStateFor, onPing, coverage, installRequestUrl,
+  showStaleBadges, pingStateFor, onPing, rerequestStateFor, onRerequest, coverage, installRequestUrl,
 }: Props) {
   const [owner, ...rest] = group.repo.split('/');
   const displayName =
@@ -81,6 +85,8 @@ export function RepoGroup({
               showStaleBadge={showStaleBadges}
               pingState={pingStateFor?.(pr) ?? undefined}
               onPing={onPing}
+              rerequestState={rerequestStateFor?.(pr) ?? undefined}
+              onRerequest={onRerequest}
               installRequestUrl={installRequestUrl}
             />
           ))}

@@ -433,6 +433,34 @@ export function AutomationsSettings() {
         )}
       </div>
 
+      {/* Story 5.2-A — Push-since-approval. Surface a `! re-review` chip when the
+          latest push post-dates every current approval. Sub-toggle promotes the
+          chip from passive label to clickable action that re-requests review. */}
+      <div className="automation-block" data-testid="push-since-approval-block">
+        <div className="automation-row automation-row--leaf">
+          <label className="toggle">
+            <span className="toggle__name">Show push-since-approval badge</span>
+            <input
+              type="checkbox"
+              checked={settings.enablePushSinceApproval}
+              onChange={(e) => save({ enablePushSinceApproval: e.target.checked })}
+              data-testid="push-since-approval-master"
+            />
+          </label>
+        </div>
+        {settings.enablePushSinceApproval && (
+          <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
+            <span>Allow click to re-request review</span>
+            <input
+              type="checkbox"
+              checked={settings.enableRequestRereview}
+              onChange={(e) => save({ enableRequestRereview: e.target.checked })}
+              data-testid="enable-request-rereview"
+            />
+          </label>
+        )}
+      </div>
+
       {/* Story 2.4 — Desktop notifications. Master toggle gates the runtime
           permission request; per-event subtoggles let users opt in to the
           specific events they care about. */}

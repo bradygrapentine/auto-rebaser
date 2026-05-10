@@ -424,6 +424,26 @@ code, .mono {
   white-space: nowrap;
 }
 
+/* Story 5.2-A — push-since-approval re-review badge. */
+.pr-row__rerequest-badge {
+  font-size: 10px;
+  color: var(--term-red);
+  background: transparent;
+  border: 1px solid rgba(255, 100, 100, 0.45);
+  padding: 1px 4px;
+  margin-right: 4px;
+  white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+}
+.pr-row__rerequest-badge:hover:not(:disabled) {
+  border-color: var(--term-red);
+}
+.pr-row__rerequest-badge--passive {
+  cursor: default;
+  opacity: 0.75;
+}
+
 .pr-row__ping {
   background: transparent;
   border: 1px solid var(--term-border);

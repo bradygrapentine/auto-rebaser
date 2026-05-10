@@ -19,6 +19,8 @@ import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './
 import { appendActivity } from '../core/activity-log';
 import type { ActivityEntry } from '../core/activity-log-types';
 import { notify, type NotifEvent } from './notifications';
+import { listReviews } from '../github/endpoints/reviews';
+import { detectStaleApproval, type StaleApprovalResult } from '../core/stale-approval';
 import { recordKnownRepos } from '../core/known-repos-store';
 import {
   getActiveAccountId,
@@ -316,6 +318,52 @@ async function runPollCycleInner(): Promise<number> {
     const { state: _s, lastUpdated: _u, errorMessage: _e, id: _i, number: _n,
             title: _t, repo: _r, url: _ur, ...phaseTwoCarry } = carriedPhaseTwo;
 
+    // ── Story 5.2-A — stale-approval detection ──
+    let staleApprovalPatch: Partial<PRRecord & PRRecordPhaseTwo> = {};
+    if (staleSettings?.enablePushSinceApproval && pr.head?.sha) {
+      const newSha = pr.head.sha;
+      const cachedSha = phaseTwoCarry.lastSeenHeadSha;
+      const cachedStaleApproval = phaseTwoCarry.staleApproval;
+      const headChanged = cachedSha !== newSha;
+      const cachedChangedAt = phaseTwoCarry.lastHeadShaChangedAt;
+
+      // Steady-state: head SHA unchanged AND we already have a verdict (including
+      // the explicit `null` negative cache). Carry both forward, no API call.
+      if (!headChanged && cachedSha != null && cachedStaleApproval !== undefined) {
+        staleApprovalPatch = {
+          lastSeenHeadSha: newSha,
+          ...(cachedChangedAt != null ? { lastHeadShaChangedAt: cachedChangedAt } : {}),
+          staleApproval: cachedStaleApproval,
+        };
+      } else {
+        // Either head SHA changed since last cycle, or we've never checked.
+        // Stamp the cycle wall-clock as the push moment and run the detector.
+        const lastHeadShaChangedAt = headChanged || cachedChangedAt == null
+          ? Date.now()
+          : cachedChangedAt;
+        let staleApproval: StaleApprovalResult | null = null;
+        try {
+          const reviews = await listReviews(owner, repo, item.number);
+          staleApproval = detectStaleApproval({
+            lastPushedAt: lastHeadShaChangedAt,
+            reviews,
+          });
+        } catch (err) {
+          console.warn('[auto-rebaser] listReviews failed:', err);
+          // On error, don't poison the cache — leave staleApproval undefined so
+          // we retry next cycle.
+        }
+        staleApprovalPatch = {
+          lastSeenHeadSha: newSha,
+          lastHeadShaChangedAt,
+          staleApproval,
+        };
+      }
+    } else if (!staleSettings?.enablePushSinceApproval) {
+      // Toggle OFF — preserve any existing fields verbatim (don't clear; user
+      // may toggle back on and we want the cached verdict to still be there).
+    }
+
     processedPRs.push({
       ...phaseTwoCarry,
       id: item.id,
@@ -336,6 +384,7 @@ async function runPollCycleInner(): Promise<number> {
       ...(pr.requested_reviewers !== undefined
         ? { requestedReviewers: pr.requested_reviewers.map((r) => r.login) }
         : {}),
+      ...staleApprovalPatch,
       ...(errorMessage !== undefined ? { errorMessage } : {}),
     } as PRRecord);
   }

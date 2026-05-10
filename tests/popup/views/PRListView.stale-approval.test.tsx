@@ -90,16 +90,16 @@ describe('PRListView — stale-approval badge', () => {
     expect(badge.tagName.toLowerCase()).not.toBe('button');
   });
 
-  it('clicking the badge opens the rerequest confirm view when enableRequestRereview=true', async () => {
+  it('clicking the badge fires onRerequest with the PR + approvers when enableRequestRereview=true', async () => {
+    const onRerequest = vi.fn();
     setStore([stalePR()]);
     setSettings({ enablePushSinceApproval: true, enableRequestRereview: true });
-    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} onRerequest={onRerequest} />);
     await act(async () => {});
-    const badge = screen.getByTestId('rerequest-badge');
-    fireEvent.click(badge);
-    // Modal renders with the approver list from staleApproval.approvers.
-    expect(screen.getByTestId('rerequest-confirm-body')).toBeInTheDocument();
-    expect(screen.getByTestId('rerequest-confirm-body')).toHaveTextContent('@alice');
-    expect(screen.getByTestId('rerequest-confirm-body')).toHaveTextContent('@bob');
+    fireEvent.click(screen.getByTestId('rerequest-badge'));
+    expect(onRerequest).toHaveBeenCalledTimes(1);
+    const [calledPr, calledApprovers] = onRerequest.mock.calls[0];
+    expect(calledPr.id).toBe(1);
+    expect(calledApprovers).toEqual(['alice', 'bob']);
   });
 });

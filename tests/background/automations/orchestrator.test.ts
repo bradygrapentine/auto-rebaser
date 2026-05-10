@@ -81,6 +81,8 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   mergeCleanPRsOptOutRepos: [],
   pingTemplate: 'nudge {reviewers}',
   repoFilter: [],
+  enablePushSinceApproval: false,
+  enableRequestRereview: false,
   notificationsEnabled: false,
   notifyOnRebased: false,
   notifyOnConflicted: false,

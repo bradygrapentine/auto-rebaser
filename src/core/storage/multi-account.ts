@@ -50,6 +50,8 @@ export interface AccountState {
   resolved_threads: ResolvedThreadsStore;
   /** Story 2.4 — last-fire timestamps for desktop notifications, keyed by `<prNumber>:<event>`. */
   notif_throttle: Record<string, number>;
+  /** Story 5.2-A — per-PR throttle of the re-request-review action. Mirrors `pingedPRs`. */
+  rerequestedPRs: Record<number, { at: number }>;
 }
 
 export interface GlobalSettings {

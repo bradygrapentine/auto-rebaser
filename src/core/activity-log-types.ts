@@ -7,7 +7,8 @@ export type ActivityAction =
   | 'auto_merge_enabled'
   | 'auto_merged_now'
   | 'thread_resolved'
-  | 'reviewer_pinged';
+  | 'reviewer_pinged'
+  | 'rerequest_review';
 
 export type ActivityResult = 'success' | 'failed' | 'skipped';
 

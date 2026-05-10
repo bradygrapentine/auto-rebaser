@@ -17,17 +17,30 @@ interface Props {
   pingState?: { canPing: boolean; pingedHoursAgo: number | null };
   /** Story 5.1 — invoked when the user clicks the ping link. */
   onPing?: (pr: PRRecord) => void;
+  /**
+   * Story 5.2-A — when present, the row shows a `! re-review` badge keyed off
+   * the PR's `staleApproval`. `actionable` controls whether the badge is a
+   * clickable button (true) or a passive label (false). The PRListView decides
+   * both based on the `enablePushSinceApproval` / `enableRequestRereview` toggles.
+   */
+  rerequestState?: { actionable: boolean };
+  /** Story 5.2-A — invoked when the user clicks the actionable badge. */
+  onRerequest?: (pr: PRRecord) => void;
   /** Install URL surfaced when the row's error suggests a missing App install. */
   installRequestUrl?: string;
 }
 
 const APP_NOT_INSTALLED_HINT = 'Auto Rebaser App not installed for this repo';
 
-export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installRequestUrl }: Props) {
+export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rerequestState, onRerequest, installRequestUrl }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
   const directMergeFailure = extended.lastDirectMergeFailure;
   const staleness = extended.staleness;
+  const showRerequestBadge =
+    rerequestState != null
+    && extended.staleApproval != null
+    && extended.staleApproval.approvers.length > 0;
   const idleLabel = staleness && showStaleBadge ? formatIdleDays(staleness.idleDays) : null;
   const showError = pr.state === 'error' && pr.errorMessage;
   const isAppNotInstalled = pr.errorMessage === APP_NOT_INSTALLED_HINT;
@@ -90,6 +103,24 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, installR
           </span>
         )}
       </a>
+      {showRerequestBadge && rerequestState!.actionable && onRerequest ? (
+        <button
+          type="button"
+          className="pr-row__rerequest-badge"
+          data-testid="rerequest-badge"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRerequest(pr);
+          }}
+        >
+          ! re-review
+        </button>
+      ) : showRerequestBadge ? (
+        <span className="pr-row__rerequest-badge pr-row__rerequest-badge--passive" data-testid="rerequest-badge">
+          ! re-review
+        </span>
+      ) : null}
       {pingState && onPing && (pingState.canPing || pingState.pingedHoursAgo != null) && (
         <button
           type="button"

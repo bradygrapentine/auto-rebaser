@@ -28,13 +28,15 @@ interface Props {
   onSignOut: () => void;
   onHelp?: () => void;
   onPing?: (pr: PRRecord) => void;
+  /** Story 5.2-A — invoked when a PR's `! re-review` badge is clicked. */
+  onRerequest?: (pr: PRRecord, approvers: string[]) => void;
   onOpenActivity?: (todayOnly: boolean) => void;
   /** Wave B1 — App routes to the add-account sign-in mode. */
   onAddAccount?: () => void;
 }
 
 export function PRListView({
-  user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onOpenActivity, onAddAccount,
+  user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onRerequest, onOpenActivity, onAddAccount,
 }: Props) {
   const { accounts, activeId, switchTo, signOut, signOutAll } = useAccounts();
   const store = usePRStore();
@@ -91,6 +93,19 @@ export function PRListView({
     const hours = pinged.hoursSince(pr.id);
     const throttled = pinged.isThrottled(pr.id);
     return { canPing: !throttled, pingedHoursAgo: hours };
+  };
+
+  const rerequestStateFor = (pr: PRRecord) => {
+    if (!settings.enablePushSinceApproval) return null;
+    const extended = pr as PRRecord & PRRecordPhaseTwo;
+    if (!extended.staleApproval || extended.staleApproval.approvers.length === 0) return null;
+    return { actionable: settings.enableRequestRereview && !!onRerequest };
+  };
+  const handleRerequest = (pr: PRRecord) => {
+    if (!onRerequest) return;
+    const extended = pr as PRRecord & PRRecordPhaseTwo;
+    const approvers = extended.staleApproval?.approvers ?? [];
+    onRerequest(pr, approvers);
   };
 
   // Lifted expansion state — repos the user has toggled away from their
@@ -225,6 +240,8 @@ export function PRListView({
                 showStaleBadges={settings.enableStaleBadge}
                 pingStateFor={pingStateFor}
                 onPing={onPing}
+                rerequestStateFor={rerequestStateFor}
+                onRerequest={handleRerequest}
                 coverage={
                   authMethod === 'github_app'
                     ? coverageFor(g.repo, installations)

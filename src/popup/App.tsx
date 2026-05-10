@@ -7,15 +7,17 @@ import { SettingsView } from './views/SettingsView';
 import { ActivityLogView } from './views/ActivityLogView';
 import { HelpView } from './views/HelpView';
 import { PingConfirmView } from './views/PingConfirmView';
+import { RerequestConfirmView } from './views/RerequestConfirmView';
 import type { PRRecord } from '../core/types';
 
-type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'add-account';
+type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'rerequest-confirm' | 'add-account';
 
 export function App() {
   const auth = useAuth();
   const [view, setView] = useState<View>('list');
   const [activityFilter, setActivityFilter] = useState<{ todayOnly?: boolean }>({});
   const [pingTarget, setPingTarget] = useState<PRRecord | null>(null);
+  const [rerequestTarget, setRerequestTarget] = useState<{ pr: PRRecord; approvers: string[] } | null>(null);
   const { settings: automation } = useAutomationSettings();
 
   if (auth.status === 'loading') {
@@ -75,6 +77,25 @@ export function App() {
           />
         </div>
       );
+    case 'rerequest-confirm':
+      if (!rerequestTarget) {
+        setView('list');
+        return null;
+      }
+      return (
+        <RerequestConfirmView
+          pr={rerequestTarget.pr}
+          approvers={rerequestTarget.approvers}
+          onCancel={() => {
+            setRerequestTarget(null);
+            setView('list');
+          }}
+          onSuccess={() => {
+            setRerequestTarget(null);
+            setView('list');
+          }}
+        />
+      );
     case 'ping-confirm':
       if (!pingTarget) {
         setView('list');
@@ -106,6 +127,10 @@ export function App() {
           onPing={(pr) => {
             setPingTarget(pr);
             setView('ping-confirm');
+          }}
+          onRerequest={(pr, approvers) => {
+            setRerequestTarget({ pr, approvers });
+            setView('rerequest-confirm');
           }}
           onOpenActivity={(todayOnly) => {
             setActivityFilter({ todayOnly });

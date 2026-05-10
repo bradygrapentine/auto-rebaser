@@ -85,6 +85,7 @@ export async function clearAuth(): Promise<void> {
   // Audit cleanup — drop per-account state that would otherwise leak across
   // sign-ins on a shared device.
   await removeAccountKey('pingedPRs');
+  await removeAccountKey('rerequestedPRs');
   await removeAccountKey('resolved_threads');
 }
 
