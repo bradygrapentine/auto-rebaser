@@ -149,7 +149,7 @@ Cut **v2.0.0**. See `docs/runbooks/v2-release.md`. Submit to Chrome + Firefox st
 
 **Trigger:** v2.0.0 has been live in stores for ~2 weeks with no critical migration bugs reported.
 
-> ⚠ **Conflict to resolve before starting 5.2.** BACKLOG.md §🧊 lists 5.2 as **dropped** (rationale: GitHub branch protection's "Dismiss stale approvals on new commits" covers gating; the originally-scoped surfacing-only flavor wasn't worth maintaining). The version below describes an **actionable** flavor (badge → re-request reviewer). Decide whether the actionable form is still in scope before scheduling.
+> **5.2 scope decision (2026-05-10):** The §🧊 drop applied to the **surfacing-only** flavor (badge with no action), which branch-protection's "Dismiss stale approvals on new commits" already covers. The **actionable** flavor below is a different feature: branch protection dismisses approvals but does **not** auto-re-request review, so the author still has to nag manually. Sprint 2 ships the actionable form. Implementation reuses the 5.1 PingConfirmView pattern almost 1:1, so the 2-day estimate stands.
 
 ### Story 2.4 — Desktop notifications _(shipped early in Sprint 1 — PR #99, 2026-05-10)_
 
