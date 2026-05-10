@@ -10,6 +10,16 @@ export interface AutomationSettings {
    */
   ignoredRepos: string[];
 
+  /**
+   * REBASE-OPT-OUT — global kill-switch for the auto-rebase action. Default ON
+   * (the core feature). Turning OFF leaves PRs in `behind` state visibly so
+   * users can rebase manually, useful for testing state transitions or for
+   * sensitive repos where the user wants to control the timing.
+   */
+  autoRebaseEnabled: boolean;
+  /** Per-automation skip list. Repos here are NOT auto-rebased; PRs in those repos sit in `behind` state until manually rebased. */
+  autoRebaseOptOutRepos: string[];
+
   autoDeleteMergedBranch: boolean;
   /** Per-automation skip list. Repos here are NOT branch-deleted on merge. */
   autoDeleteOptOutRepos: string[];
@@ -57,6 +67,8 @@ export type StaleThresholdDays = 3 | 7 | 14 | 30 | 60;
 
 export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   ignoredRepos: [],
+  autoRebaseEnabled: true,                // ON — core feature
+  autoRebaseOptOutRepos: [],
   autoDeleteMergedBranch: true,           // safe default per backlog 2.6
   autoDeleteOptOutRepos: [],
   autoEnableAutoMerge: false,             // opt-in per backlog 2.7

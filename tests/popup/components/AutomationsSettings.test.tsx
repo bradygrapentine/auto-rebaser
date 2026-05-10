@@ -34,12 +34,12 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 3 main automation toggles + 1 stale-badge toggle + 2 stale sub-toggles
-    // (counts-as-attention, allow-ping) + 1 keyboard-shortcuts toggle +
-    // 3 merge-method preference checkboxes (one per method, in the expanded
-    // auto-merge section) + 1 merge-clean-PRs-immediately sub-toggle.
+    // 1 auto-rebase + 3 main automation toggles (2.6/2.7/2.8) + 1 stale-badge
+    // toggle + 2 stale sub-toggles + 1 keyboard-shortcuts toggle + 3 merge-
+    // method pref checkboxes + 1 merge-clean-PRs-immediately = 12.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(11);
+    expect(checkboxes).toHaveLength(12);
+    expect(screen.getByLabelText(/Auto-rebase behind PRs/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
     expect(screen.getByLabelText(/Merge clean PRs immediately/)).not.toBeChecked();
@@ -150,8 +150,8 @@ describe('AutomationsSettings', () => {
     render(<AutomationsSettings />);
     await flush();
     const lists = screen.getAllByTestId('repo-opt-out-list');
-    // 1 global ignored-repos + 3 per-automation skip-repos (auto-delete, auto-merge, auto-resolve)
-    expect(lists).toHaveLength(4);
+    // 1 global ignored-repos + 4 per-automation skip-repos (rebase, delete, merge, resolve)
+    expect(lists).toHaveLength(5);
   });
 
   it.each([
@@ -186,8 +186,8 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 4 lists visible by default (sections expanded).
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
+    // 5 lists visible by default (ignored + rebase + delete + merge + resolve).
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
 
     // Collapse the auto-merge section — its skip-repos list and merge_method
     // sub-row should disappear.
@@ -195,14 +195,14 @@ describe('AutomationsSettings', () => {
     await act(async () => {
       fireEvent.click(chevron);
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(3);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
     expect(screen.queryByTestId('merge-method-preference')).not.toBeInTheDocument();
 
     // Clicking again re-expands.
     await act(async () => {
       fireEvent.click(screen.getByLabelText(/Expand auto-merge section/));
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
     expect(screen.getByTestId('merge-method-preference')).toBeInTheDocument();
   });
 
@@ -289,9 +289,10 @@ describe('AutomationsSettings', () => {
   });
 
   it.each([
-    [0, 'autoDeleteOptOutRepos'],
-    [1, 'autoMergeOptOutRepos'],
-    [2, 'autoResolveOptOutRepos'],
+    [0, 'autoRebaseOptOutRepos'],
+    [1, 'autoDeleteOptOutRepos'],
+    [2, 'autoMergeOptOutRepos'],
+    [3, 'autoResolveOptOutRepos'],
   ] as const)(
     'per-automation skip-repos list #%i persists to %s',
     async (index, field) => {
@@ -300,9 +301,9 @@ describe('AutomationsSettings', () => {
       );
       render(<AutomationsSettings />);
       await flush();
-      // 3 per-automation skip-repos lists, in order: 2.6, 2.7, 2.8.
+      // 4 per-automation skip-repos lists, in order: rebase, delete, merge, resolve.
       const inputs = screen.getAllByLabelText('Skip repos input');
-      expect(inputs).toHaveLength(3);
+      expect(inputs).toHaveLength(4);
       await act(async () => {
         fireEvent.change(inputs[index], { target: { value: 'octo/skip' } });
         fireEvent.keyDown(inputs[index], { key: 'Enter' });

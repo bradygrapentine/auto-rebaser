@@ -20,7 +20,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale';
+type SubKey = 'ignored' | 'autoRebase' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale';
 
 const STALE_THRESHOLDS: StaleThresholdDays[] = [3, 7, 14, 30, 60];
 
@@ -143,6 +143,7 @@ export function AutomationsSettings() {
   const knownRepos = useKnownRepos();
   const [expanded, setExpanded] = useState<Record<SubKey, boolean>>({
     ignored: true,
+    autoRebase: true,
     autoDelete: true,
     autoMerge: true,
     mergeClean: true,
@@ -193,6 +194,34 @@ export function AutomationsSettings() {
             label="Ignored repos"
             repos={settings.ignoredRepos}
             onChange={(ignoredRepos) => save({ ignoredRepos })}
+            suggestions={knownRepos}
+          />
+        )}
+      </div>
+
+      {/* REBASE-OPT-OUT — auto-rebase is the core feature; toggle is mostly
+          for testing or for repos where the user wants manual control. */}
+      <div className="automation-block">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.autoRebase}
+            onClick={() => toggle('autoRebase')}
+            label="auto-rebase section"
+          />
+          <label className="toggle">
+            <span className="toggle__name">Auto-rebase behind PRs</span>
+            <input
+              type="checkbox"
+              checked={settings.autoRebaseEnabled}
+              onChange={(e) => save({ autoRebaseEnabled: e.target.checked })}
+            />
+          </label>
+        </div>
+        {expanded.autoRebase && (
+          <RepoOptOutList
+            label="Skip repos"
+            repos={settings.autoRebaseOptOutRepos}
+            onChange={(autoRebaseOptOutRepos) => save({ autoRebaseOptOutRepos })}
             suggestions={knownRepos}
           />
         )}
