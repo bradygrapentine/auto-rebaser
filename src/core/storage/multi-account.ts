@@ -52,6 +52,8 @@ export interface AccountState {
   notif_throttle: Record<string, number>;
   /** Story 5.2-A — per-PR throttle of the re-request-review action. Mirrors `pingedPRs`. */
   rerequestedPRs: Record<number, { at: number }>;
+  /** REVIEWER-AUTOMATIONS — parallel store to `pr_store` for PRs the user is reviewing. */
+  reviewerPRs: PRStore;
 }
 
 export interface GlobalSettings {
