@@ -277,8 +277,35 @@ async function runPollCycleInner(): Promise<number> {
     if (action === 'rebase' && !rebaseSkipped) {
       try {
         await updateBranch(owner, repo, item.number);
-        finalState = 'updated';
         updatedCount++;
+        // Re-fetch the PR so the post-rebase mergeable_state can override the
+        // transient 'updated' label when there's still a real blocker (failing
+        // required check, unresolved review threads → 'blocked'/'unstable').
+        // Without this, the popup shows '[updated]' on a PR that GitHub
+        // refuses to merge, hiding the blocker for one poll cycle. If the
+        // re-fetch returns 'unknown' (GitHub still computing post-rebase) or
+        // throws, keep 'updated' as a best-effort affirmation.
+        let postRebaseState: PRState = 'updated';
+        try {
+          const postRebasePr = await getPR(owner, repo, item.number);
+          if (postRebasePr.mergeable_state !== 'unknown') {
+            const reDerived = deriveStateFromMergeable(
+              postRebasePr.mergeable_state,
+              'updated',
+              postRebasePr.draft === true,
+            );
+            // Only keep the 'updated' affirmation when the PR is actually
+            // mergeable now (clean → reDerived='current'). Any other state
+            // (blocked/unstable/dirty/draft) wins so the user sees the real
+            // status instead of a misleading "I just helped you" label.
+            if (reDerived.nextState !== 'current') {
+              postRebaseState = reDerived.nextState;
+            }
+          }
+        } catch {
+          // Re-fetch failed (rate limit, network) — fall back to transient 'updated'.
+        }
+        finalState = postRebaseState;
         rebaseActivityEntries.push({
           at: Date.now(),
           action: 'rebase',
