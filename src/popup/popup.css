@@ -743,17 +743,17 @@ code, .mono {
 }
 
 .automation-block {
-  padding: 16px 0;
+  /* Body inherits line-height: 1.55, so titles below a dashed line
+     carry ~3-4px of half-leading above their visible glyph. Trim
+     padding-top by 4px relative to padding-bottom so the visible
+     glyph-to-line gap above and below is the same. */
+  padding: 12px 0 16px 0;
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
-/* Inline dashed divider used inside an expanded automation-block
-   (e.g. between "Preference order" and "Merge clean PRs immediately"
-   inside the auto-merge section). Same above/below rhythm as the
-   section-level dashed lines. */
 .automation-divider {
   margin-top: 16px;
-  padding-top: 16px;
+  padding-top: 12px;
   padding-left: 16px;
   border-top: 1px dashed var(--term-border);
 }
