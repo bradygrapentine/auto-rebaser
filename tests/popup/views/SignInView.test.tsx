@@ -106,6 +106,59 @@ describe('SignInView', () => {
     });
   });
 
+  it('copy button copies the user code via execCommand and shows "copied" feedback', async () => {
+    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      data: {
+        userCode: 'ABCD-1234', verificationUri: 'https://github.com/login/device',
+        deviceCode: 'D', intervalMs: 5000, expiresAt: Date.now() + 900_000,
+      },
+    });
+    (document as Document & { execCommand?: () => boolean }).execCommand = () => true;
+    const execSpy = vi.spyOn(document, 'execCommand').mockReturnValue(true);
+
+    render(<SignInView onSubmit={vi.fn()} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('signin-github-app'));
+    });
+    await screen.findByTestId('device-code');
+    const copyBtn = screen.getByRole('button', { name: /^copy$/i });
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+    expect(execSpy).toHaveBeenCalledWith('copy');
+    expect(screen.getByRole('button', { name: /copied/i })).toBeInTheDocument();
+    execSpy.mockRestore();
+  });
+
+  it('copy button falls back to navigator.clipboard when execCommand fails', async () => {
+    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      data: {
+        userCode: 'ABCD-1234', verificationUri: 'https://github.com/login/device',
+        deviceCode: 'D', intervalMs: 5000, expiresAt: Date.now() + 900_000,
+      },
+    });
+    (document as Document & { execCommand?: () => boolean }).execCommand = () => false;
+    const execSpy = vi.spyOn(document, 'execCommand').mockReturnValue(false);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+
+    render(<SignInView onSubmit={vi.fn()} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('signin-github-app'));
+    });
+    await screen.findByTestId('device-code');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^copy$/i }));
+    });
+    expect(writeText).toHaveBeenCalledWith('ABCD-1234');
+    execSpy.mockRestore();
+  });
+
   it('cancel from device-flow view sends cancel message and returns to choice', async () => {
     (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,

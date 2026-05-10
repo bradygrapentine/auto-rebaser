@@ -5,6 +5,7 @@ import {
   setToken,
   setAuthGitHubApp,
   setAuthPAT,
+  setInstallations,
   clearAuth,
   clearToken,
   AUTH_KEY,
@@ -178,6 +179,51 @@ describe('auth-store', () => {
       chrome.storage.sync.remove = vi.fn().mockResolvedValue(undefined);
       await clearToken();
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(AUTH_KEY);
+    });
+  });
+
+  describe('setInstallations', () => {
+    it('updates only the installations list on a github_app auth', async () => {
+      const existing: AuthGitHubApp = {
+        method: 'github_app',
+        accessToken: 'a', refreshToken: 'r',
+        accessTokenExpiresAt: 999, refreshTokenExpiresAt: 9999,
+        installations: [
+          { id: 1, account: { login: 'octo', type: 'User' }, repository_selection: 'all', target_type: 'User' },
+        ],
+      };
+      chrome.storage.local.get = vi.fn().mockResolvedValue({ [AUTH_KEY]: existing });
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+
+      await setInstallations([
+        { id: 2, account: { login: 'acme', type: 'Organization' }, repository_selection: 'selected', target_type: 'Organization' },
+      ]);
+
+      const call = (chrome.storage.local.set as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const stored = call[AUTH_KEY] as AuthGitHubApp;
+      expect(stored.method).toBe('github_app');
+      expect(stored.accessToken).toBe('a');
+      expect(stored.installations).toHaveLength(1);
+      expect(stored.installations?.[0].id).toBe(2);
+      expect(stored.installations?.[0].account.login).toBe('acme');
+    });
+
+    it('is a no-op when the user is signed out', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({});
+      chrome.storage.sync.get = vi.fn().mockResolvedValue({});
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      await setInstallations([]);
+      expect(chrome.storage.local.set).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when the user is signed in via PAT', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({
+        [AUTH_KEY]: { method: 'pat', token: 'ghp_xxx' },
+      });
+      chrome.storage.sync.get = vi.fn().mockResolvedValue({});
+      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      await setInstallations([]);
+      expect(chrome.storage.local.set).not.toHaveBeenCalled();
     });
   });
 });

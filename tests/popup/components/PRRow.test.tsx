@@ -98,6 +98,74 @@ describe('PRRow', () => {
     expect(link).toBeDisabled();
   });
 
+  it('renders error hint inline when state=error and errorMessage is set', () => {
+    const errPR: PRRecord = { ...basePR, state: 'error', errorMessage: 'HTTP 500: Server Error' };
+    render(<PRRow pr={errPR} />);
+    expect(screen.getByTestId('pr-error-hint')).toHaveTextContent('HTTP 500: Server Error');
+  });
+
+  it('does not render error hint when state is not error', () => {
+    render(<PRRow pr={{ ...basePR, errorMessage: 'whatever' }} />);
+    expect(screen.queryByTestId('pr-error-hint')).not.toBeInTheDocument();
+  });
+
+  it('renders inline install link for App-not-installed errors when installRequestUrl provided', () => {
+    const errPR: PRRecord = {
+      ...basePR,
+      state: 'error',
+      errorMessage: 'Auto Rebaser App not installed for this repo',
+    };
+    render(<PRRow pr={errPR} installRequestUrl="https://github.com/apps/foo/installations/new" />);
+    const fix = screen.getByText('install');
+    expect(fix).toHaveAttribute('href', 'https://github.com/apps/foo/installations/new');
+    expect(fix).toHaveAttribute('target', '_blank');
+  });
+
+  it('does not render install link without installRequestUrl', () => {
+    const errPR: PRRecord = {
+      ...basePR,
+      state: 'error',
+      errorMessage: 'Auto Rebaser App not installed for this repo',
+    };
+    render(<PRRow pr={errPR} />);
+    expect(screen.queryByText('install')).not.toBeInTheDocument();
+  });
+
+  it('install link click does not propagate to row', () => {
+    const errPR: PRRecord = {
+      ...basePR,
+      state: 'error',
+      errorMessage: 'Auto Rebaser App not installed for this repo',
+    };
+    render(<PRRow pr={errPR} installRequestUrl="https://x.test" />);
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    const stopProp = vi.spyOn(ev, 'stopPropagation');
+    screen.getByText('install').dispatchEvent(ev);
+    expect(stopProp).toHaveBeenCalled();
+  });
+
+  it('renders direct-merge-failure badge with method + error in title', () => {
+    const failedPR = {
+      ...basePR,
+      lastDirectMergeFailure: { sha: 'abc', method: 'SQUASH' as const, error: 'SHA_MISMATCH' },
+    };
+    render(<PRRow pr={failedPR as PRRecord} />);
+    const badge = screen.getByTestId('direct-merge-failure-badge');
+    expect(badge).toHaveTextContent('merge failed: SHA_MISMATCH');
+    expect(badge).toHaveAttribute('title', 'Direct merge (squash) failed: SHA_MISMATCH');
+  });
+
+  it('does not render direct-merge-failure badge when no-allowed-method skip is set', () => {
+    const both = {
+      ...basePR,
+      autoMergeSkipReason: 'no-allowed-method' as const,
+      lastDirectMergeFailure: { sha: 'abc', method: 'SQUASH' as const, error: 'whatever' },
+    };
+    render(<PRRow pr={both as PRRecord} />);
+    expect(screen.queryByTestId('direct-merge-failure-badge')).not.toBeInTheDocument();
+    expect(screen.getByTestId('auto-merge-skip-badge')).toBeInTheDocument();
+  });
+
   it('does not render ping link when no pingState provided', () => {
     render(<PRRow pr={basePR} />);
     expect(screen.queryByTestId('ping-link')).not.toBeInTheDocument();
