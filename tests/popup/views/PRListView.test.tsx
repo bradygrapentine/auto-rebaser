@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PRListView } from '../../../src/popup/views/PRListView';
 import type { PRRecord, PRStore } from '../../../src/core/types';
@@ -150,6 +150,23 @@ describe('PRListView', () => {
     expect(onHelp).toHaveBeenCalledTimes(1);
   });
 
+  it('pressing Enter opens the focused PR in a new tab', async () => {
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [pr2], lastPollAt: null });
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    await new Promise((r) => setTimeout(r, 0));
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(chrome.tabs.create).toHaveBeenCalledWith({ url: pr2.url });
+  });
+
+  it('pressing Enter with no focused PR is a no-op', async () => {
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    await new Promise((r) => setTimeout(r, 0));
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+  });
+
   it('pressing r sends POLL_NOW', async () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
@@ -179,5 +196,67 @@ describe('PRListView', () => {
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
     const btn = screen.getByRole('button', { name: /polling/i });
     expect(btn).toBeDisabled();
+  });
+
+  describe('migration banner + empty-installations CTA', () => {
+    it('renders MigrationBanner when authMethod=pat', async () => {
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+      // MigrationBanner reads dismissed-state from sync; default to undismissed.
+      (chrome.storage.sync.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      render(
+        <PRListView
+          authMethod="pat"
+          onSettings={vi.fn()}
+          onSignOut={vi.fn()}
+        />,
+      );
+      // Banner initial render returns null while it awaits storage; flush.
+      await act(async () => {});
+      expect(screen.getByTestId('migration-banner')).toBeInTheDocument();
+    });
+
+    it('does not render MigrationBanner when authMethod=github_app', () => {
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+      render(
+        <PRListView
+          authMethod="github_app"
+          installations={[]}
+          onSettings={vi.fn()}
+          onSignOut={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId('migration-banner')).not.toBeInTheDocument();
+    });
+
+    it('renders empty-installations CTA when authMethod=github_app and no installations', () => {
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+      render(
+        <PRListView
+          authMethod="github_app"
+          installations={[]}
+          onSettings={vi.fn()}
+          onSignOut={vi.fn()}
+        />,
+      );
+      const cta = screen.getByTestId('empty-installations');
+      expect(cta).toHaveTextContent(/isn't installed on any account/i);
+      const link = screen.getByText(/install or request/i);
+      expect(link).toHaveAttribute('target', '_blank');
+    });
+
+    it('does not render empty-installations CTA when installations are present', () => {
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+      render(
+        <PRListView
+          authMethod="github_app"
+          installations={[
+            { id: 1, account: { login: 'octo', type: 'User' }, repository_selection: 'all', target_type: 'User' },
+          ]}
+          onSettings={vi.fn()}
+          onSignOut={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId('empty-installations')).not.toBeInTheDocument();
+    });
   });
 });

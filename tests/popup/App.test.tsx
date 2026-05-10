@@ -305,4 +305,28 @@ describe('App', () => {
     });
     expect(mockSignOut).toHaveBeenCalledOnce();
   });
+
+  // Covers the App.tsx async () => { await auth.signOut(); setView('list') }
+  // wrapper passed to SettingsView. After signing out from Settings, the user
+  // should end up back at the PR list (or sign-in screen if signOut flips
+  // status), exercising both await + setView.
+  it('signing out from SettingsView routes back to list and calls signOut once', async () => {
+    const mockSignOut = vi.fn().mockResolvedValue(undefined);
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      method: 'github_app',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: mockSignOut,
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('switch-method'));
+    });
+    expect(mockSignOut).toHaveBeenCalledOnce();
+    // After setView('list'), PRListView empty state shows again.
+    expect(screen.getByText(/no open prs found/i)).toBeInTheDocument();
+  });
 });

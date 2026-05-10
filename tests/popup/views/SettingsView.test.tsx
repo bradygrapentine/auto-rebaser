@@ -167,6 +167,46 @@ describe('SettingsView', () => {
     expect(mockSaveSettings).not.toHaveBeenCalled();
   });
 
+  it('enterprise apply still saves when chrome.permissions.request is unavailable (Firefox / test edge)', async () => {
+    (globalThis as { chrome: typeof chrome }).chrome = {
+      ...chrome,
+      permissions: undefined,
+    } as unknown as typeof chrome;
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: 'github.acme.corp' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('enterprise-apply'));
+    });
+    // requestHostPermission returns true when chrome.permissions is missing,
+    // so the save still goes through.
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ enterpriseHost: 'github.acme.corp' }),
+    );
+  });
+
+  it('clearing enterprise host is a no-op for permissions when chrome.permissions.remove is unavailable', async () => {
+    (globalThis as { chrome: typeof chrome }).chrome = {
+      ...chrome,
+      permissions: undefined,
+    } as unknown as typeof chrome;
+    (useSettings as ReturnType<typeof vi.fn>).mockReturnValue({
+      settings: { intervalMinutes: 5, enterpriseHost: 'github.acme.corp' },
+      saveSettings: mockSaveSettings,
+    });
+    render(<SettingsView onBack={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('enterprise-host-input'), {
+      target: { value: '' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('enterprise-apply'));
+    });
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ enterpriseHost: undefined, enterpriseClientId: undefined }),
+    );
+  });
+
   it('enterprise apply with empty host clears the setting and removes the permission', async () => {
     const removeMock = vi.fn((_perms, cb: () => void) => cb());
     (globalThis as { chrome: typeof chrome }).chrome = {
