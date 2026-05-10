@@ -78,6 +78,7 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   staleCountsAsAttention: false,
   enablePingReviewers: false,
   mergeCleanPRsImmediately: false,
+  mergeCleanPRsOptOutRepos: [],
   pingTemplate: 'nudge {reviewers}',
 };
 

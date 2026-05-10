@@ -150,8 +150,8 @@ describe('AutomationsSettings', () => {
     render(<AutomationsSettings />);
     await flush();
     const lists = screen.getAllByTestId('repo-opt-out-list');
-    // 1 global ignored-repos + 4 per-automation skip-repos (rebase, delete, merge, resolve)
-    expect(lists).toHaveLength(5);
+    // 1 global ignored-repos + 5 per-automation skip-repos (rebase, delete, merge, merge-clean, resolve)
+    expect(lists).toHaveLength(6);
   });
 
   it.each([
@@ -186,8 +186,8 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 5 lists visible by default (ignored + rebase + delete + merge + resolve).
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
+    // 6 lists visible by default (ignored + rebase + delete + merge + merge-clean + resolve).
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(6);
 
     // Collapse the auto-merge section — its skip-repos list and merge_method
     // sub-row should disappear.
@@ -195,14 +195,14 @@ describe('AutomationsSettings', () => {
     await act(async () => {
       fireEvent.click(chevron);
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(4);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
     expect(screen.queryByTestId('merge-method-preference')).not.toBeInTheDocument();
 
     // Clicking again re-expands.
     await act(async () => {
       fireEvent.click(screen.getByLabelText(/Expand auto-merge section/));
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(6);
     expect(screen.getByTestId('merge-method-preference')).toBeInTheDocument();
   });
 
@@ -292,7 +292,8 @@ describe('AutomationsSettings', () => {
     [0, 'autoRebaseOptOutRepos'],
     [1, 'autoDeleteOptOutRepos'],
     [2, 'autoMergeOptOutRepos'],
-    [3, 'autoResolveOptOutRepos'],
+    [3, 'mergeCleanPRsOptOutRepos'],
+    [4, 'autoResolveOptOutRepos'],
   ] as const)(
     'per-automation skip-repos list #%i persists to %s',
     async (index, field) => {
@@ -301,9 +302,9 @@ describe('AutomationsSettings', () => {
       );
       render(<AutomationsSettings />);
       await flush();
-      // 4 per-automation skip-repos lists, in order: rebase, delete, merge, resolve.
+      // 5 per-automation skip-repos lists, in order: rebase, delete, merge, merge-clean, resolve.
       const inputs = screen.getAllByLabelText('Skip repos input');
-      expect(inputs).toHaveLength(4);
+      expect(inputs).toHaveLength(5);
       await act(async () => {
         fireEvent.change(inputs[index], { target: { value: 'octo/skip' } });
         fireEvent.keyDown(inputs[index], { key: 'Enter' });
