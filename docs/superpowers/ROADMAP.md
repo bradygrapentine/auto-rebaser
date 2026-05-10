@@ -122,3 +122,12 @@ Spec: [`specs/2026-05-02-phase5-companion-automations-design.md`](specs/2026-05-
 | MERGE-1 | Reclassify no-op auto-merge attempts | "Pull request is in clean status" / "is already merged" responses log as `skipped` instead of `failed` (PR #65). |
 | MERGE-2 | Fall-through direct merge for clean PRs | New `mergeCleanPRsImmediately` toggle (default OFF). When ON and GitHub rejects auto-merge on a clean PR, extension calls REST `PUT …/merge` with `sha` precondition. Logs as `auto_merged_now`. PRs #65, #66, with UI polish in #67–#69. |
 | AUTOCOMPLETE | Repo-name autocomplete in automation settings | `<datalist>`-backed suggestions sourced from open PRs, filtered to repos not already in the list (PR #64). |
+
+---
+
+## Post-V2 candidates (not yet scoped)
+
+| Story | Feature | Notes |
+|---|---|---|
+| REVIEWER-AUTOMATIONS | Act on PRs you don't author | Today every automation acts only on `author:@me`. Surfacing PRs where the user is `review-requested` / `assignee` / `involves` and acting on them (auto-merge once approved, auto-rebase someone else's branch, etc.) is a fundamentally different consent model and permission surface. Needs a brainstorm pass before scoping. Post-V2. See BACKLOG §5. |
+| GITLAB-PROVIDER | GitLab MR support (`ProviderAdapter` interface) | v3.0.0 territory; deferred until GitLab demand is real and the multi-account facade has bedded in. Triggers will likely be enterprise customer asks. |
