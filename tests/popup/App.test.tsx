@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitForElementToBeRemoved } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from '../../src/popup/App';
 
@@ -18,6 +18,21 @@ vi.mock('../../src/core/ping-throttle', async (importOriginal) => {
 vi.mock('../../src/popup/hooks/usePRStore', () => ({
   usePRStore: vi.fn(),
 }));
+
+vi.mock('../../src/github/endpoints/reviews', () => ({
+  listReviews: vi.fn().mockResolvedValue([]),
+  requestReviewers: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+vi.mock('../../src/core/rerequest-throttle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/core/rerequest-throttle')>();
+  return { ...actual, recordRerequest: vi.fn().mockResolvedValue(undefined) };
+});
+
+vi.mock('../../src/core/activity-log', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/core/activity-log')>();
+  return { ...actual, appendActivity: vi.fn().mockResolvedValue(undefined) };
+});
 
 vi.mock('../../src/popup/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -282,6 +297,78 @@ describe('App', () => {
     expect(screen.queryByTestId('ping-confirm-body')).not.toBeInTheDocument();
     // Back on the PR list — the Poll-now header button only renders there.
     expect(screen.getByRole('button', { name: /poll now/i })).toBeInTheDocument();
+  });
+
+  it('opens RerequestConfirmView from the stale-approval badge and returns on cancel', async () => {
+    const staleApprovalPR = {
+      id: 8,
+      number: 8,
+      title: 'Stale-approved',
+      repo: 'org/repo',
+      url: 'https://github.com/org/repo/pull/8',
+      state: 'behind' as const, // 'behind' state auto-expands the repo group so the row is visible
+      lastUpdated: 0,
+      staleApproval: { lastApprovedAt: 1, lastPushedAt: 2, approvers: ['alice'] },
+    };
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+      prs: [staleApprovalPR],
+      lastPollAt: null,
+    });
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...AUTOMATION_DEFAULTS,
+      enablePushSinceApproval: true,
+      enableRequestRereview: true,
+    });
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    await act(async () => {});
+    fireEvent.click(await screen.findByTestId('rerequest-badge'));
+    expect(screen.getByTestId('rerequest-confirm-body')).toHaveTextContent('@alice');
+    fireEvent.click(screen.getAllByText(/cancel/i)[0]);
+    expect(screen.queryByTestId('rerequest-confirm-body')).not.toBeInTheDocument();
+  });
+
+  it('closes the rerequest confirm modal after a successful re-request', async () => {
+    const staleApprovalPR = {
+      id: 9,
+      number: 9,
+      title: 'Stale-approved success path',
+      repo: 'org/repo',
+      url: 'https://github.com/org/repo/pull/9',
+      state: 'behind' as const,
+      lastUpdated: 0,
+      staleApproval: { lastApprovedAt: 1, lastPushedAt: 2, approvers: ['alice'] },
+    };
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+      prs: [staleApprovalPR],
+      lastPollAt: null,
+    });
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...AUTOMATION_DEFAULTS,
+      enablePushSinceApproval: true,
+      enableRequestRereview: true,
+    });
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    render(<App />);
+    await act(async () => {});
+    fireEvent.click(await screen.findByTestId('rerequest-badge'));
+    expect(screen.getByTestId('rerequest-confirm-body')).toBeInTheDocument();
+    const { requestReviewers } = await import('../../src/github/endpoints/reviews');
+    (requestReviewers as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    fireEvent.click(screen.getByTestId('rerequest-confirm-post'));
+    await waitForElementToBeRemoved(() => screen.queryByTestId('rerequest-confirm-body'));
   });
 
   it('navigates back from HelpView to PRListView', () => {

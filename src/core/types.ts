@@ -130,6 +130,8 @@ export interface PullRequest {
   auto_merge?: { enabled?: boolean } | null;
   head?: {
     ref?: string;
+    /** Story 5.2-A — head SHA. We compare across cycles to detect a push. */
+    sha?: string;
     repo?: { full_name?: string } | null;
   };
 }

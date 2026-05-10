@@ -72,6 +72,12 @@ export interface AutomationSettings {
    */
   repoFilter: string[];
 
+  // ── Story 5.2-A — Push-since-approval ──
+  /** Show a `! re-review` badge when the latest push post-dates every current approval. Default ON. */
+  enablePushSinceApproval: boolean;
+  /** When ON, clicking the badge opens a confirm modal that re-requests review. Default OFF. */
+  enableRequestRereview: boolean;
+
   // ── Story 2.4 — Desktop notifications ──
   /** Master gate. Requires the runtime `notifications` permission to actually fire. Default OFF. */
   notificationsEnabled: boolean;
@@ -105,6 +111,8 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   enablePingReviewers: false,             // opt-in — never write to PRs without explicit toggle
   pingTemplate: 'Friendly nudge — could you take a look when you have a moment? {reviewers}',
   repoFilter: [],
+  enablePushSinceApproval: true,
+  enableRequestRereview: false,
   notificationsEnabled: false,
   notifyOnRebased: false,
   notifyOnConflicted: false,
@@ -168,6 +176,20 @@ export interface PRRecordPhaseTwo {
 
   /** Reviewers requested on the PR — needed for the ping confirmation view. */
   requestedReviewers?: string[];
+
+  /**
+   * Story 5.2-A — stale-approval state. `null` is the negative cache: detector
+   * ran and found no stale-approval condition. Populated object describes the
+   * current approvers and the cycle wall-clock at which the head SHA was last
+   * observed to change. `undefined` means the detector hasn't run yet (e.g.
+   * when `enablePushSinceApproval=false` or for newly-discovered PRs before
+   * the first review fetch).
+   */
+  staleApproval?: { lastApprovedAt: number; lastPushedAt: number; approvers: string[] } | null;
+  /** Last `head.sha` we saw for this PR. Compared across cycles to detect a push. */
+  lastSeenHeadSha?: string;
+  /** Wall-clock (`Date.now()`) at which `lastSeenHeadSha` was first observed to differ from the cached value. Used as `lastPushedAt` by the stale-approval detector. */
+  lastHeadShaChangedAt?: number;
 }
 
 /** threadId → epoch ms when we auto-resolved it. Skip if already in this map. */

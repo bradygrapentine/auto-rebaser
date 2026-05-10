@@ -21,6 +21,7 @@ const ACTION_LABELS: Record<ActivityAction | 'all', string> = {
   auto_merged_now: 'auto_merged_now',
   thread_resolved: 'thread_resolved',
   reviewer_pinged: 'reviewer_pinged',
+  rerequest_review: 'rerequest_review',
 };
 
 function formatTime(at: number, now: number = Date.now()): string {

@@ -107,6 +107,8 @@ describe('automations-store', () => {
       mergeCleanPRsImmediately: true,
       mergeCleanPRsOptOutRepos: ['org/repo-skip-merge-clean'],
       repoFilter: ['org/repo-a'],
+      enablePushSinceApproval: true,
+      enableRequestRereview: false,
       notificationsEnabled: false,
       notifyOnRebased: false,
       notifyOnConflicted: false,
