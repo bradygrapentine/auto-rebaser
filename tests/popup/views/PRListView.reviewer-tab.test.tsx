@@ -81,6 +81,20 @@ describe('PRListView — reviewer tab', () => {
     expect(screen.getByText('REVIEWER-PR')).toBeInTheDocument();
   });
 
+  it('auto-expands reviewer-tab repo groups even when all PRs are state=current', async () => {
+    // Reviewer-tab PRs are usually `current` (clean, approved, waiting for
+    // other gates) — outside ATTENTION_STATES. Collapsing them by default
+    // defeats the dashboard purpose. The reviewer tab must always render rows
+    // expanded.
+    setSettings({ enableReviewerTab: true });
+    setStores([], [pr({ id: 99, number: 99, repo: 'org/x', title: 'CLEAN-PR', state: 'current' })]);
+    render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+    await act(async () => {});
+    fireEvent.click(screen.getByTestId('pr-tab-reviewer'));
+    await act(async () => {});
+    expect(screen.getByText('CLEAN-PR')).toBeInTheDocument();
+  });
+
   it('renders reviewer chips for each myReviewState value when on the Reviewer tab', async () => {
     setSettings({ enableReviewerTab: true });
     setStores([], [

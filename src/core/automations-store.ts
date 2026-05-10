@@ -96,7 +96,18 @@ export async function getAutomationSettings(): Promise<AutomationSettings> {
 }
 
 export async function saveAutomationSettings(s: AutomationSettings): Promise<void> {
-  // Split into global + per-account writes.
+  const id = await getActiveAccountId();
+  if (!id) {
+    // Pre-migration / no-active-account path — write the v1 single-key blob
+    // and DO NOT touch global_settings. Writing the global half would make
+    // the next getAutomationSettings take the v2 branch (because
+    // global_settings is now defined) and return DEFAULTS — perAccount is
+    // empty, so the v1 write below would be silently dropped on read.
+    await chrome.storage.sync.set({ [AUTOMATION_STORAGE_KEYS.settings]: s });
+    return;
+  }
+
+  // v2 path: split into global + per-account writes.
   await setGlobalSetting('ignoredRepos', s.ignoredRepos);
   await setGlobalSetting('enableKeyboardShortcuts', s.enableKeyboardShortcuts);
 
@@ -106,15 +117,7 @@ export async function saveAutomationSettings(s: AutomationSettings): Promise<voi
       (perAccount as Record<string, unknown>)[k] = v;
     }
   }
-
-  const id = await getActiveAccountId();
-  if (id) {
-    await writePerAccountSettings(perAccount);
-  } else {
-    // Pre-migration / tests with no active account: fall back to v1 single-key write
-    // so existing flows keep working until migration runs.
-    await chrome.storage.sync.set({ [AUTOMATION_STORAGE_KEYS.settings]: s });
-  }
+  await writePerAccountSettings(perAccount);
 }
 
 export async function getResolvedThreads(): Promise<ResolvedThreadsStore> {

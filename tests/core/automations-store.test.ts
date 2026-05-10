@@ -140,14 +140,37 @@ describe('automations-store', () => {
     chrome.storage.sync.set = vi.fn().mockResolvedValue(undefined);
     const settings: AutomationSettings = { ...DEFAULT_AUTOMATION_SETTINGS, autoEnableAutoMerge: true };
     await saveAutomationSettings(settings);
-    // Global half always written.
-    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-      expect.objectContaining({ global_settings: expect.any(Object) }),
-    );
-    // No active account → falls back to v1 single-key write.
+    // No active account → v1 single-key write ONLY. global_settings must NOT
+    // be touched — writing it makes the next read take the v2 branch and
+    // return DEFAULTS because perAccount is empty.
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1);
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({
       [AUTOMATION_STORAGE_KEYS.settings]: settings,
     });
+  });
+
+  it('round-trips autoRebaseEnabled=false through storage when no active account is set', async () => {
+    // Reproduces the bug surfaced by the settings-persistence E2E: pre-migration
+    // / no-active-account path used to leak `global_settings.ignoredRepos` as a
+    // side effect of save, which made the next read take the v2 branch and
+    // return DEFAULTS instead of the v1-fallback write.
+    const storage: Record<string, unknown> = {};
+    chrome.storage.sync.get = vi.fn(async (keys: unknown) => {
+      if (keys == null) return { ...storage };
+      const want = Array.isArray(keys) ? (keys as string[]) : [keys as string];
+      const out: Record<string, unknown> = {};
+      for (const k of want) if (k in storage) out[k] = storage[k];
+      return out;
+    }) as typeof chrome.storage.sync.get;
+    chrome.storage.sync.set = vi.fn(async (patch: unknown) => {
+      Object.assign(storage, patch as Record<string, unknown>);
+    }) as typeof chrome.storage.sync.set;
+    chrome.storage.local.get = vi.fn().mockResolvedValue({}); // no active_account_id
+
+    const next: AutomationSettings = { ...DEFAULT_AUTOMATION_SETTINGS, autoRebaseEnabled: false };
+    await saveAutomationSettings(next);
+    const round = await getAutomationSettings();
+    expect(round.autoRebaseEnabled).toBe(false);
   });
 
   // ── getResolvedThreads ─────────────────────────────────────────────────────

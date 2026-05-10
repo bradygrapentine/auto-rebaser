@@ -293,4 +293,73 @@ describe('poll-cycle — reviewer phase', () => {
     // saveAutomationSettings should NOT have been called on the happy path
     expect(saveAutomationSettings).not.toHaveBeenCalled();
   });
+
+  it('on enableAutoMerge "not allowed" failure: revokes repo from allowlist via saveAutomationSettings', async () => {
+    withSettings({
+      enableReviewerTab: true,
+      enableReviewerAutoMerge: true,
+      autoMergeReviewerOptInRepos: ['org/api'],
+    });
+    (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-CUR' }));
+    (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { login: 'alice', state: 'APPROVED', submittedAt: Date.now() - 60_000 },
+    ]);
+    (getPRReviewDecision as ReturnType<typeof vi.fn>).mockResolvedValue('APPROVED');
+    (enablePullRequestAutoMerge as ReturnType<typeof vi.fn>).mockResolvedValue({
+      enabled: false,
+      unsupported: true,
+      reason: 'Pull request auto-merge is not allowed for this repository',
+    });
+
+    await runPollCycle();
+
+    expect(saveAutomationSettings).toHaveBeenCalledTimes(1);
+    const persisted = (saveAutomationSettings as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(persisted.autoMergeReviewerOptInRepos).toEqual([]);
+    // No arm cached — the next cycle will see the empty allowlist and skip.
+    expect(upsertReviewerPRs).toHaveBeenCalledTimes(1);
+    const upserted = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0][0];
+    expect(upserted.reviewerAutoMergeArmed).toBeUndefined();
+  });
+
+  it('on listReviews error: phase proceeds with empty review data; gate does not fire', async () => {
+    withSettings({
+      enableReviewerTab: true,
+      enableReviewerAutoMerge: true,
+      autoMergeReviewerOptInRepos: ['org/api'],
+    });
+    (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-CUR' }));
+    (listReviews as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('network'));
+    (getPRReviewDecision as ReturnType<typeof vi.fn>).mockResolvedValue('APPROVED');
+
+    await runPollCycle();
+
+    expect(enablePullRequestAutoMerge).not.toHaveBeenCalled();
+    // Guard: the row MUST have been upserted, otherwise the next assertion
+    // would throw a TypeError on undefined and mask a real crash as a test
+    // error instead of a clean failure.
+    expect(upsertReviewerPRs).toHaveBeenCalledTimes(1);
+    const upserted = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0][0];
+    expect(upserted.myReviewState).toBe('AWAITING');
+  });
+
+  it('on getPRReviewDecision error: gate treats decision as null and does not fire', async () => {
+    withSettings({
+      enableReviewerTab: true,
+      enableReviewerAutoMerge: true,
+      autoMergeReviewerOptInRepos: ['org/api'],
+    });
+    (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-CUR' }));
+    (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { login: 'alice', state: 'APPROVED', submittedAt: Date.now() - 60_000 },
+    ]);
+    (getPRReviewDecision as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('graphql failure'));
+
+    await runPollCycle();
+
+    expect(enablePullRequestAutoMerge).not.toHaveBeenCalled();
+  });
 });
