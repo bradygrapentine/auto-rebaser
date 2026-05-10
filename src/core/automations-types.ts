@@ -40,6 +40,8 @@ export interface AutomationSettings {
    * gate against the surprise-merge case for brand-new clean PRs.
    */
   mergeCleanPRsImmediately: boolean;
+  /** Per-automation skip list for the merge-clean-immediately fall-through. Repos here participate in auto-merge enable but are NOT direct-merged on the clean fall-through. */
+  mergeCleanPRsOptOutRepos: string[];
 
   autoResolveOutdatedThreads: boolean;
   /** Per-automation skip list. Repos here do NOT get outdated review threads resolved. */
@@ -75,6 +77,7 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   mergeMethodPreference: ['SQUASH', 'REBASE', 'MERGE'],
   autoMergeOptOutRepos: [],
   mergeCleanPRsImmediately: false,         // opt-in — guards against surprise-merge of brand-new clean PRs
+  mergeCleanPRsOptOutRepos: [],
   autoResolveOutdatedThreads: false,      // opt-in per backlog 2.8
   autoResolveOptOutRepos: [],
   enableKeyboardShortcuts: true,

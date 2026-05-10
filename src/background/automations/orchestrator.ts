@@ -182,9 +182,11 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
           const reason = result.unsupportedReasons[prId] ?? '';
           if (/clean status/i.test(reason)) cleanIds.add(prId);
         }
+        const mergeCleanSkipSet = new Set(settings.mergeCleanPRsOptOutRepos ?? []);
         const consumedSkipIds = new Set<number>();
         for (const eligible of eligiblePRs) {
           if (!cleanIds.has(eligible.id)) continue;
+          if (mergeCleanSkipSet.has(eligible.repo)) continue;
           const detail = prDetails.get(eligible.id);
           const headSha = detail?.head?.sha;
           if (!headSha) continue;
