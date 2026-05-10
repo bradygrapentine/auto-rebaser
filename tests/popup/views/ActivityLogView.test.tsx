@@ -187,6 +187,26 @@ describe('ActivityLogView', () => {
     expect(items[0]).toHaveTextContent('#100');
   });
 
+  it('today button toggles the date filter to today and back to empty', async () => {
+    const today = Date.now() - 60_000;
+    const yesterday = Date.now() - 26 * 60 * 60 * 1000;
+    mountWith([
+      e({ at: today, prNumber: 100 }),
+      e({ at: yesterday, prNumber: 99 }),
+    ]);
+    await act(async () => {});
+    const todayBtn = screen.getByRole('button', { name: /set date to today/i });
+    fireEvent.click(todayBtn);
+    let items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent('#100');
+    // Clicking again clears.
+    const clearBtn = screen.getByRole('button', { name: /clear date filter/i });
+    fireEvent.click(clearBtn);
+    items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+  });
+
   it('sort by oldest reverses default order', async () => {
     mountWith([
       e({ at: 1000, prNumber: 1 }),
@@ -195,7 +215,7 @@ describe('ActivityLogView', () => {
     ]);
     await act(async () => {});
     fireEvent.click(screen.getByRole('button', { name: /sort by/i }));
-    fireEvent.click(screen.getByRole('option', { name: /oldest first/i }));
+    fireEvent.click(screen.getByRole('option', { name: /^oldest$/i }));
     const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('#1');
     expect(items[2]).toHaveTextContent('#3');

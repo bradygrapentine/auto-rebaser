@@ -893,12 +893,20 @@ code, .mono {
   justify-content: space-between;
   gap: 8px;
 }
+.activity-toolbar__sort-row {
+  display: grid;
+  /* Sort dropdown narrow, date filter takes the rest. */
+  grid-template-columns: minmax(0, 110px) 1fr;
+  gap: 6px;
+  align-items: center;
+}
+.activity-toolbar__sort-row .select { width: 100%; }
 .activity-toolbar__date {
   display: inline-flex;
   align-items: center;
   font-size: 12px;
   color: var(--term-fg-dim);
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   min-width: 0;
 }
@@ -908,9 +916,15 @@ code, .mono {
   min-width: 0;
 }
 .btn--small {
-  padding: 0 6px;
-  font-size: 12px;
-  line-height: 18px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 16px;
+  flex: 0 0 auto;
+}
+.btn--small-active {
+  color: var(--term-cyan);
+  border-color: var(--term-cyan);
+  background: rgba(78, 201, 176, 0.10);
 }
 .activity-confirm {
   margin: 8px 0;

@@ -35,13 +35,12 @@ function toLocalDateString(at: number): string {
   return `${y}-${m}-${day}`;
 }
 
-type SortKey = 'newest' | 'oldest' | 'repo' | 'action';
+type SortKey = 'newest' | 'oldest' | 'repo';
 
 const SORT_LABELS: Record<SortKey, string> = {
-  newest: 'Newest first',
-  oldest: 'Oldest first',
+  newest: 'Newest',
+  oldest: 'Oldest',
   repo: 'Repo (A→Z)',
-  action: 'Action (A→Z)',
 };
 
 function entryDetails(e: ActivityEntry): string {
@@ -79,7 +78,6 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
       newest: (a, b) => b.at - a.at,
       oldest: (a, b) => a.at - b.at,
       repo: (a, b) => a.repo.localeCompare(b.repo) || b.at - a.at,
-      action: (a, b) => a.action.localeCompare(b.action) || b.at - a.at,
     };
     return entries
       .filter((e) => actionFilter === 'all' || e.action === actionFilter)
@@ -129,7 +127,7 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
               ]}
             />
           </div>
-          <div className="activity-toolbar__filters">
+          <div className="activity-toolbar__sort-row">
             <Select
               ariaLabel="Sort by"
               value={sortKey}
@@ -147,16 +145,21 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
               />
-              {dateFilter && (
-                <button
-                  type="button"
-                  className="btn btn--small"
-                  onClick={() => setDateFilter('')}
-                  aria-label="Clear date filter"
-                >
-                  ×
-                </button>
-              )}
+              {(() => {
+                const todayStr = toLocalDateString(Date.now());
+                const isToday = dateFilter === todayStr;
+                return (
+                  <button
+                    type="button"
+                    className={`btn btn--small${isToday ? ' btn--small-active' : ''}`}
+                    onClick={() => setDateFilter(isToday ? '' : todayStr)}
+                    aria-label={isToday ? 'Clear date filter' : 'Set date to today'}
+                    aria-pressed={isToday}
+                  >
+                    today
+                  </button>
+                );
+              })()}
             </label>
           </div>
         </div>
