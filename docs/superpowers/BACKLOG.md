@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-09_
+_Last `/backlog-sync`: 2026-05-10_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 1 |
-| ✅ Shipped | 27 |
+| ✅ Shipped | 33 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -26,58 +26,6 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. Listing edits don't require a version bump or rebuild.
 **How:** Apply the title, short description, long description, tag list, and screenshot captions from `docs/STORE_LISTING_REWRITES.md` to both store dashboards once the current reviews clear.
 **Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
-
-### MKT-2 — Add GitHub repo topics
-**Status:** ✅ Shipped (2026-05-09, set via `gh api repos/.../topics` — `auto-merge`, `chrome-extension`, `developer-tools`, `firefox-extension`, `github-extension`, `pull-request`, `rebase`)
-**Why:** Free SEO via GitHub's topic index — repos with relevant topics surface in topic-scoped searches and the "Explore" graph.
-**How:** On the repo page → "About" → gear icon → add: `chrome-extension`, `firefox-extension`, `github-extension`, `pull-request`, `rebase`, `auto-merge`, `developer-tools`.
-**Done when:** Topics visible on https://github.com/bradygrapentine/auto-rebaser.
-
-### MERGE-1 — Reclassify no-op auto-merge attempts in activity log
-**Status:** ✅ Shipped (PR #65)
-**Why:** Two GitHub responses currently log as red `failed` but are not failures: `"Pull request is already merged"` (race — landed before our call) and `"Pull request is in clean status"` (PR already mergeable; GitHub refuses to enable auto-merge because there's nothing to wait on). The red entries make the audit log look alarming when the extension is doing nothing wrong.
-**How:**
-- In the auto-merge adapter, classify these two error strings as no-ops rather than failures.
-- Either downgrade them to `result: 'skipped'` with a `reason` field, or suppress entirely once MERGE-2 ships (since MERGE-2 will replace the "in clean status" case with an actual merge).
-- Update the activity log UI to render `skipped` entries in a neutral color, distinct from the red `failed` treatment.
-**Done when:** No `auto_merge_enabled · failed` entries appear in the activity log for the two listed reasons; audit log visually distinguishes skip from failure.
-
-### MERGE-2 — Fall-through direct merge when GitHub rejects auto-merge on clean PRs
-**Status:** ✅ Shipped (PRs #65, #66, follow-up UI in #67–#69)
-**Why:** When a PR is already mergeable (`mergeable_state === 'clean'`), GitHub's `enablePullRequestAutoMerge` mutation refuses with `"Pull request is in clean status"` because there's nothing to wait on. The extension currently logs the rejection and walks away — so PRs that are ready the moment we see them never get merged. The user's "auto-enable auto-merge" intent is to land the PR; the extension fails to do so for clean PRs.
-
-**Design (per brainstorm 2026-05-09 — A1 + B1 + C1 + D1 + E1 + E3):**
-- **A1 (consent gate):** Add a new sub-toggle under the auto-merge block: `Merge clean PRs immediately` (default OFF). Only when ON does the fall-through fire. Preserves explicit opt-in; no surprise merges for users who only ticked "auto-enable auto-merge."
-- **B1 (race protection):** REST `PUT /repos/{o}/{r}/pulls/{n}/merge` call passes `sha` precondition from PR detail. New commit between detection and merge → GitHub returns `409 head-sha-mismatch`, we log and move on.
-- **C1 (branch-protection edges):** Trust GitHub server-side rejection. No pre-flight check; if a custom required status appears in the gap, the merge call fails cleanly and is logged.
-- **D1 (method preference):** Try `mergeMethodPreference` order. On `405 Method Not Allowed`, fall through to the next method. Same fallback pattern auto-merge already uses.
-- **E1 (audit clarity):** New activity log action `auto_merged_now`, distinct from `auto_merge_enabled`. Filterable.
-- **E3 (suppress upstream):** When the fall-through merge succeeds, suppress the upstream `auto_merge_enabled · "in clean status"` log entry (it's not user-actionable and clutters the audit).
-
-**Per-repo opt-out:** reuses the existing auto-merge skip list — no new toggle.
-
-**Cold-start / cons remaining:** none material with A1 in place. Brand-new clean PRs only direct-merge if the user explicitly opted into "merge clean PRs immediately."
-
-**Done when:**
-- New setting `mergeCleanPRsImmediately: boolean` exists in automation settings (default false), surfaced in the popup auto-merge section.
-- When enabled and a clean PR triggers the rejection, extension calls REST merge with SHA precondition and logs `auto_merged_now`.
-- When disabled, behavior matches today (no-op log entry, cleaned up by MERGE-1).
-- Method preference fallback verified against repos that disable squash or rebase.
-- Tests cover: clean-PR with toggle on (merges), clean-PR with toggle off (skips), method fallback on 405, SHA mismatch rejection.
-
-### BEHIND-1 — Detect "behind" independently of GitHub's `mergeable_state`
-**Status:** ✅ Shipped (2026-05-09)
-**Why:** GitHub returns `mergeable_state: 'blocked'` (or `'unstable'`) when checks/reviews are pending — and crucially, that response can mask a separately-true "this PR is behind base" condition. Repos whose branch protection does NOT require "branch up to date" surface this regularly: a PR with checks running on an out-of-date head shows as `pending` to us today, and we never call `update-branch`. Real example: carelog PR #417, checks pending + behind base, never auto-rebased.
-**How:**
-- New `getBranchHeadSHA(owner, repo, branch)` helper in `src/github/endpoints/repos.ts` (or new `branches.ts`) hitting `GET /repos/{o}/{r}/branches/{b}` with ETag caching. One call per unique (repo, base-branch) per poll — PRs sharing a base share the call.
-- Extend `deriveStateFromMergeable` (or fork into a new async helper in poll-cycle) so that when `mergeable_state ∈ {blocked, unstable}` AND `pr.base.sha !== currentBaseSHA`, return `{ action: 'rebase', nextState: 'behind' }` instead of `{ action: 'none', nextState: 'pending' }`.
-- Don't change behavior for `clean`, `dirty`, `draft`, `behind`, `unknown`, `has_hooks`, `current` — they're already correct.
-- Caches base SHAs per cycle to avoid duplicate calls when many PRs share the same base.
-**Done when:**
-- New helper covered by unit tests (200 happy path, 404 missing branch, 304 cached path).
-- State-machine derivation tests cover: `blocked` + behind → rebase; `blocked` + not-behind → pending; `unstable` + behind → rebase; `unstable` + not-behind → pending; `clean` + behind would never happen (skip); `behind` direct → rebase (existing).
-- poll-cycle integration test: a PR with `mergeable_state: blocked` and a stale `base.sha` triggers `update-branch`; same PR with up-to-date `base.sha` does not.
-- No regression in the STATE-1 sticky-Manual fix: PR with `previousState='needs-manual'` + `mergeable_state='blocked'` + up-to-date base still moves to `pending`.
 
 ### MA-1 — Wave A-lite — Multi-account storage refactor (V2 prerequisite)
 **Status:** 🟢 Ready
@@ -95,46 +43,6 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
 **How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
 **Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
-
-### STATE-1 — Map PR badges to GitHub's `mergeable_state` truth (kill sticky-Manual bug)
-**Status:** ✅ Shipped (PR #73)
-**Why:** Today, a single transient 422 from `PUT …/update-branch` paints a PR `[Manual]` red, and the badge sticks across the entire CI window because GitHub returns `mergeable_state: 'unknown'` while it recomputes — and our `deriveStateFromMergeable` keeps the previous state when it sees `unknown`. Result: PRs that are actually waiting on CI on a protected branch (the `blocked` mergeable_state) display as `[Manual]`, implying user action is needed when none is.
-
-The popup also collapses several distinct GitHub states (`blocked`, `unstable`, `draft`, `clean`, `has_hooks`) into a single `Current` bucket, losing useful signal users already understand from the GitHub UI.
-
-**Design:**
-- Add two new display states: `pending` (yellow, label `Pending`) and `draft` (muted, label `Draft`).
-- Drop the dead `updating` state from the union (defined but never assigned anywhere in poll-cycle).
-- Update `deriveStateFromMergeable` mapping:
-  - `clean` / `has_hooks` → `current`
-  - `behind` → `behind` (transient — overwritten same poll by `update-branch` outcome)
-  - `dirty` → `conflict`
-  - `blocked` / `unstable` → `pending`
-  - `draft` → `draft`
-  - `unknown` → keep `previousState` (recompute window — unchanged)
-- Action-outcome states are unchanged: `update-branch` 2xx → `updated`, 422 → `needs-manual`, 409 → `conflict`, 403/404/5xx → `error`.
-- The sticky-Manual bug self-resolves: once CI starts, next poll's `mergeable_state` becomes `blocked` → maps to `pending`, overwriting any stale `needs-manual`. No retry counter needed.
-
-**Transitions overview** (for the PR doc / future reference):
-
-| Driver | Transitions caused |
-|---|---|
-| GH (passive) | `current ↔ behind ↔ pending ↔ conflict ↔ draft → merged/closed` based on `mergeable_state`/`merged`/`draft` flags |
-| US — auto-rebase | `behind → updated / needs-manual / conflict / error` |
-| US — MERGE-2 direct merge | `current / pending → merged` (when `mergeCleanPRsImmediately` is on) |
-| US — other automations | None — they set GH-side flags or post comments; resulting state changes flow back through GH on subsequent polls |
-
-**UI:**
-- `StatusBadge` gets two new label entries (`pending: 'Pending'`, `draft: 'Draft'`) and removes the `updating` entry.
-- CSS adds yellow color token for `pending` (matching existing yellow used elsewhere) and a muted/grey token for `draft`.
-
-**Done when:**
-- `PRState` union no longer includes `'updating'`; includes `'pending'` and `'draft'`.
-- `deriveStateFromMergeable` maps per the table above; tests cover all 8 input values (`clean`, `behind`, `dirty`, `blocked`, `unstable`, `has_hooks`, `draft`, `unknown`) including the `unknown → previousState` carry-over.
-- Popup `StatusBadge` renders `Pending` (yellow) and `Draft` (muted) for the new states.
-- A regression test reproduces the sticky-Manual scenario: PR with `previousState='needs-manual'` and `mergeable_state='blocked'` derives `pending`, not `needs-manual`.
-- `useGroupedPRs` ATTENTION_STATES updated (drop `updating`, decide whether `pending`/`draft` should count toward the orange repo-group attention dot — leaning **no** for both, since they're informational).
-- All existing tests pass with the new state union.
 
 ## §2 In progress
 _(none)_
@@ -189,9 +97,14 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **MERGE-1** Reclassify no-op auto-merge attempts as `skipped` — PR #65
 - **MERGE-2** Fall-through direct merge for clean PRs (`mergeCleanPRsImmediately`) — PRs #65, #66, with UI polish in #67, #68, #69
 - **STATE-1** Map PR badges to GitHub `mergeable_state` truth — PR #73
-- **BEHIND-1** Detect "behind" via base SHA comparison when `mergeable_state` masks it
-- **DRAFT-1** `pr.draft=true` overrides `mergeable_state` so draft PRs render as Draft regardless of pending checks
-- **REBASE-OPT-OUT** Global `autoRebaseEnabled` toggle + per-repo `autoRebaseOptOutRepos` skip list — useful for testing state transitions without rebase firing, and for users who want manual rebase control on sensitive repos
+- **BEHIND-1** Detect "behind" via base SHA comparison when `mergeable_state` masks it — PR #78
+- **DRAFT-1** `pr.draft=true` overrides `mergeable_state` so draft PRs render as Draft regardless of pending checks — PR #79
+- **REBASE-OPT-OUT** Global `autoRebaseEnabled` toggle + per-repo `autoRebaseOptOutRepos` skip list — PR #80
+- **MERGE-CLEAN-SKIP** Separate per-repo skip list for the merge-clean-immediately fall-through, surfaced as its own settings section — PRs #81, #82
+- **MKT-2** GitHub repo topics added (auto-merge, chrome-extension, developer-tools, firefox-extension, github-extension, pull-request, rebase) — 2026-05-09
+- **DOCS-RUNBOOK-STATE** State-machine validation runbook (`docs/runbooks/state-machine-validation.md`) covering STATE-1 / BEHIND-1 / DRAFT-1 / REBASE-OPT-OUT / MERGE-CLEAN-SKIP — PR #83
+- **UI-SETTINGS-SPACING** Equalize heading→content spacing across all settings sections (drop 4px first-of-type pad on automation-block) — PR #84
+- **ACTIVITY-FILTERS** Replace today-only checkbox with date input + `today` toggle button; add Newest / Oldest / Repo sort dropdown — PR #85
 
 ---
 
