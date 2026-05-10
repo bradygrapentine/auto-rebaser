@@ -3,7 +3,8 @@ import type { PRState } from '../../core/types';
 const LABELS: Record<PRState, string> = {
   current:        'Current',
   behind:         'Behind',
-  updating:       'Updating…',
+  pending:        'Pending',
+  draft:          'Draft',
   updated:        'Updated',
   conflict:       'Conflict',
   'needs-manual': 'Manual',

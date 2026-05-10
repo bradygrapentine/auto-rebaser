@@ -11,10 +11,10 @@ describe('deriveStateFromMergeable', () => {
     ['behind',             'current',      { action: 'rebase', nextState: 'behind' }],
     ['dirty',              'current',      { action: 'none',   nextState: 'conflict' }],
     ['clean',              'current',      { action: 'none',   nextState: 'current' }],
-    ['blocked',            'current',      { action: 'none',   nextState: 'current' }],
-    ['draft',              'current',      { action: 'none',   nextState: 'current' }],
+    ['blocked',            'current',      { action: 'none',   nextState: 'pending' }],
+    ['unstable',           'current',      { action: 'none',   nextState: 'pending' }],
+    ['draft',              'current',      { action: 'none',   nextState: 'draft' }],
     ['has_hooks',          'current',      { action: 'none',   nextState: 'current' }],
-    ['unstable',           'current',      { action: 'none',   nextState: 'current' }],
     ['something_unexpected','current',     { action: 'none',   nextState: 'current' }],
   ];
 
@@ -22,8 +22,17 @@ describe('deriveStateFromMergeable', () => {
     expect(deriveStateFromMergeable(mergeableState, prevState)).toEqual(expected);
   });
 
+  // Sticky-Manual regression: when the previous poll left a PR in needs-manual
+  // and CI then starts on a protected branch, GitHub's mergeable_state becomes
+  // 'blocked'. Pre-STATE-1 we kept the stale needs-manual; now we must move
+  // to pending so the badge reflects current truth.
+  it('mergeableState=blocked + previousState=needs-manual → pending (kills sticky-Manual)', () => {
+    const result = deriveStateFromMergeable('blocked', 'needs-manual');
+    expect(result).toEqual({ action: 'none', nextState: 'pending' });
+  });
+
   describe('unknown keeps previousState', () => {
-    const prevStates: PRState[] = ['current', 'behind', 'conflict', 'error', 'needs-manual', 'updated', 'updating'];
+    const prevStates: PRState[] = ['current', 'behind', 'conflict', 'error', 'needs-manual', 'updated', 'pending', 'draft'];
     it.each(prevStates)('unknown + previousState=%s → keeps previousState', (prev) => {
       const result = deriveStateFromMergeable('unknown', prev);
       expect(result.action).toBe('none');

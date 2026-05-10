@@ -3,7 +3,8 @@
 export type PRState =
   | 'current'
   | 'behind'
-  | 'updating'
+  | 'pending'
+  | 'draft'
   | 'updated'
   | 'conflict'
   | 'needs-manual'
