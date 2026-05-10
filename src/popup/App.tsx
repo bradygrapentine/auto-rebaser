@@ -9,7 +9,7 @@ import { HelpView } from './views/HelpView';
 import { PingConfirmView } from './views/PingConfirmView';
 import type { PRRecord } from '../core/types';
 
-type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm';
+type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'add-account';
 
 export function App() {
   const auth = useAuth();
@@ -60,6 +60,21 @@ export function App() {
       );
     case 'help':
       return <HelpView onBack={() => setView('list')} />;
+    case 'add-account':
+      return (
+        <div className="popup-root">
+          <SignInView
+            addingAccount
+            onSubmit={auth.signInWithPAT}
+            onDeviceFlowSuccess={() => {
+              auth.refresh();
+              setView('list');
+            }}
+            onCancel={() => setView('list')}
+            error={auth.error}
+          />
+        </div>
+      );
     case 'ping-confirm':
       if (!pingTarget) {
         setView('list');
@@ -96,6 +111,7 @@ export function App() {
             setActivityFilter({ todayOnly });
             setView('activity-log');
           }}
+          onAddAccount={() => setView('add-account')}
         />
       );
   }

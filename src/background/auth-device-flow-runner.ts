@@ -16,6 +16,13 @@ import {
 } from '../core/auth-device-flow';
 import { setAuthGitHubApp, setInstallations } from '../core/auth-store';
 import { getUserInstallations } from '../github/endpoints/installations';
+import {
+  buildAccountId,
+  setAccountState,
+  setActiveAccountId,
+} from '../core/storage/multi-account';
+import { getSettings } from '../core/settings-store';
+import { getApiBase } from '../core/host-config';
 
 export type DeviceFlowStatus =
   | { state: 'idle' }
@@ -29,9 +36,13 @@ interface RunnerState {
   status: DeviceFlowStatus;
   abort?: AbortController;
   lastTokenSet?: TokenSet;
+  /** Wave B1 — when true, success writes to a NEW accountId derived from
+   *  the token's /user, then flips active to it. When false, the legacy
+   *  single-account path runs (writes via setAuthGitHubApp). */
+  addingAccount: boolean;
 }
 
-const state: RunnerState = { status: { state: 'idle' } };
+const state: RunnerState = { status: { state: 'idle' }, addingAccount: false };
 
 /**
  * Start a fresh flow. If one is already pending, returns its current
@@ -50,9 +61,48 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
   void pollDeviceFlow(start, { signal: abort.signal })
     .then(async (tokenSet) => {
       state.lastTokenSet = tokenSet;
+
+      if (state.addingAccount) {
+        // Add-account path — derive the new accountId from /user using
+        // THIS tokenSet specifically (don't go through ensureFreshToken,
+        // which would route to the currently active account's auth).
+        try {
+          const apiBase = await getApiBase();
+          const userRes = await fetch(`${apiBase}/user`, {
+            headers: {
+              Authorization: `Bearer ${tokenSet.accessToken}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+            },
+          });
+          if (!userRes.ok) throw new Error(`/user returned ${userRes.status}`);
+          const me = (await userRes.json()) as { login: string };
+          const settings = await getSettings();
+          const newId = buildAccountId(me.login, settings.enterpriseHost);
+          await setAccountState(newId, 'auth', { method: 'github_app', ...tokenSet });
+          // Best-effort installations fetch under the new active.
+          await setActiveAccountId(newId);
+          try {
+            const installations = await getUserInstallations();
+            await setInstallations(installations);
+          } catch (err) {
+            console.warn('[device-flow] could not fetch installations:', err);
+          }
+          state.status = { state: 'success', userLogin: me.login };
+        } catch (err) {
+          state.status = {
+            state: 'error',
+            message: err instanceof Error ? err.message : 'add-account failed',
+          };
+        } finally {
+          state.addingAccount = false;
+        }
+        return;
+      }
+
+      // Legacy single-account path — writes to the currently active account
+      // via setAuthGitHubApp (post-MA-1 the active id is set by migration).
       await setAuthGitHubApp(tokenSet);
-      // Best-effort: fetch installations so the popup can show coverage.
-      // Failure here doesn't block sign-in; user just sees an empty list.
       try {
         const installations = await getUserInstallations();
         await setInstallations(installations);
@@ -89,6 +139,14 @@ export function getStatus(): DeviceFlowStatus {
 export function resetStatus(): void {
   state.status = { state: 'idle' };
   state.abort = undefined;
+  state.addingAccount = false;
+}
+
+/** Wave B1 — start a device flow whose success writes to a new accountId
+ *  instead of overwriting the active account's auth. */
+export async function beginDeviceFlowAddAccount(): Promise<DeviceFlowStart> {
+  state.addingAccount = true;
+  return beginDeviceFlow();
 }
 
 // Test-only — clears module-level state between test cases.
@@ -96,4 +154,5 @@ export function _resetForTests(): void {
   state.status = { state: 'idle' };
   state.abort = undefined;
   state.lastTokenSet = undefined;
+  state.addingAccount = false;
 }

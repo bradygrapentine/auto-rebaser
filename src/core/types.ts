@@ -146,6 +146,8 @@ export type RuntimeMessage =
   | { type: 'SET_INTERVAL'; intervalMinutes: IntervalMinutes }
   // Story 4.2 — Device Flow
   | { type: 'AUTH_BEGIN_DEVICE_FLOW' }
+  // Wave B1 — add-account variant; success writes under a new accountId.
+  | { type: 'AUTH_BEGIN_DEVICE_FLOW_ADD' }
   | { type: 'AUTH_DEVICE_FLOW_STATUS' }
   | { type: 'AUTH_CANCEL_DEVICE_FLOW' }
   | { type: 'AUTH_RESET_DEVICE_FLOW' };

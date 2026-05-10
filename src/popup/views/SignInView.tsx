@@ -10,11 +10,17 @@ interface Props {
   onDeviceFlowSuccess?: () => void;
   busy?: boolean;
   error?: string;
+  /** Wave B1 — when true, the device flow lands the new auth under a
+   *  separate accountId without disturbing the currently-active account. */
+  addingAccount?: boolean;
+  /** Wave B1 — back button that returns to the PR list (only shown when
+   *  `addingAccount` is true; for first sign-in there is no list to return to). */
+  onCancel?: () => void;
 }
 
 type LocalView = 'choice' | 'pat' | 'device';
 
-export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error }: Props) {
+export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error, addingAccount = false, onCancel }: Props) {
   const [view, setView] = useState<LocalView>('choice');
   const [pat, setPat] = useState('');
   const [deviceStart, setDeviceStart] = useState<DeviceFlowStart | null>(null);
@@ -59,7 +65,7 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
     setView('device');
     try {
       const res = (await chrome.runtime.sendMessage({
-        type: 'AUTH_BEGIN_DEVICE_FLOW',
+        type: addingAccount ? 'AUTH_BEGIN_DEVICE_FLOW_ADD' : 'AUTH_BEGIN_DEVICE_FLOW',
       })) as RuntimeResponse;
       if (!res.ok) throw new Error(res.error ?? 'failed to start device flow');
       const start = res.data as DeviceFlowStart;
@@ -239,7 +245,11 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
   return (
     <div className="signin">
       <h1 className="signin__title">auto-rebaser --auth</h1>
-      <p className="signin__lede">Keep your GitHub PRs up to date automatically</p>
+      <p className="signin__lede">
+        {addingAccount
+          ? 'Sign in with a different GitHub account'
+          : 'Keep your GitHub PRs up to date automatically'}
+      </p>
 
       <button
         type="button"
@@ -259,6 +269,18 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error 
       >
         use a personal access token (legacy)
       </button>
+
+      {addingAccount && onCancel && (
+        <button
+          type="button"
+          className="btn btn--block"
+          onClick={onCancel}
+          style={{ marginTop: 8 }}
+          data-testid="signin-cancel"
+        >
+          cancel
+        </button>
+      )}
     </div>
   );
 }
