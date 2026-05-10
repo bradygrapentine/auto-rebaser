@@ -743,17 +743,17 @@ code, .mono {
 }
 
 .automation-block {
-  padding: 12px 0;
+  padding: 16px 0;
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
 /* Inline dashed divider used inside an expanded automation-block
    (e.g. between "Preference order" and "Merge clean PRs immediately"
-   inside the auto-merge section). Same 12px-above + 12px-below
-   visual rhythm as the section-level dashed lines. */
+   inside the auto-merge section). Same above/below rhythm as the
+   section-level dashed lines. */
 .automation-divider {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   padding-left: 16px;
   border-top: 1px dashed var(--term-border);
 }
