@@ -757,7 +757,6 @@ code, .mono {
 .automation-divider {
   margin-top: 17px;
   padding-top: 14px;
-  padding-left: 16px;
   border-top: 1px dashed var(--term-border);
   line-height: 1.2;
 }
