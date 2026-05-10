@@ -56,6 +56,18 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
+### REVIEWER-AUTOMATIONS — Act on PRs you don't author
+**Status:** 💭 Idea (needs brainstorm before scoping)
+**Why:** Every automation today acts only on `author:@me` PRs. Users on review-heavy teams want some of these — particularly auto-merge once their approval is the last gate, and auto-rebase of branches they're collaborating on — to fire on PRs where they're a reviewer / assignee / collaborator instead of the author.
+**Why not in V2:** Different discovery query (`review-requested:@me` / `assignee:@me` / `involves:@me`), different consent model (auto-rebasing someone else's PR is intrusive in a way auto-acting on your own isn't), different permission surface (Contents: write on the head repo via the GitHub App), and different UX for opt-in (per-PR? per-org? per-repo?). Worth its own scoping pass.
+**Sketch of safe vs unsafe automations on others' PRs:**
+- Auto-merge — mostly safe; GitHub's native auto-merge requires merge permission and the user already has it.
+- Auto-rebase — needs Contents: write + non-author force-push permission; org-level branch protection often forbids.
+- Branch-delete — not the user's branch to delete.
+- Auto-resolve outdated threads — not the user's threads to resolve.
+- Ping reviewers — N/A; user IS the reviewer.
+**Done when:** scope brainstorm produces a v2 story with explicit consent model + permission flow + per-PR opt-in UX. Closest dropped cousin: 5.2 push-since-approval (surfacing-only, dropped because branch-protection covers it).
+
 ---
 
 ## §7 Shipped log
