@@ -182,4 +182,78 @@ describe('SignInView', () => {
     // Back on the choice view
     expect(screen.getByTestId('signin-github-app')).toBeInTheDocument();
   });
+
+  describe('device-flow polling tick', () => {
+    function startDeviceFlow() {
+      (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        data: {
+          userCode: 'X', verificationUri: 'https://github.com/login/device',
+          deviceCode: 'D', intervalMs: 100, expiresAt: Date.now() + 900_000,
+        },
+      });
+    }
+
+    it('polling success calls onDeviceFlowSuccess and resets the runner', async () => {
+      vi.useFakeTimers();
+      try {
+        const onDeviceFlowSuccess = vi.fn();
+        startDeviceFlow();
+        (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+          ok: true,
+          data: { state: 'success' },
+        });
+        render(<SignInView onSubmit={vi.fn()} onDeviceFlowSuccess={onDeviceFlowSuccess} />);
+        await act(async () => {
+          fireEvent.click(screen.getByTestId('signin-github-app'));
+        });
+        await act(async () => { await vi.advanceTimersByTimeAsync(2100); });
+        expect(onDeviceFlowSuccess).toHaveBeenCalled();
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'AUTH_RESET_DEVICE_FLOW' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it.each([
+      ['expired', /code expired/i],
+      ['cancelled', /cancelled/i],
+    ])('polling state=%s surfaces an error', async (state, errorRe) => {
+      vi.useFakeTimers();
+      try {
+        startDeviceFlow();
+        (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+          ok: true,
+          data: { state },
+        });
+        render(<SignInView onSubmit={vi.fn()} />);
+        await act(async () => {
+          fireEvent.click(screen.getByTestId('signin-github-app'));
+        });
+        await act(async () => { await vi.advanceTimersByTimeAsync(2100); });
+        expect(screen.getByTestId('device-flow-error')).toHaveTextContent(errorRe);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('polling state=error surfaces the runner-supplied message', async () => {
+      vi.useFakeTimers();
+      try {
+        startDeviceFlow();
+        (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+          ok: true,
+          data: { state: 'error', message: 'github said no' },
+        });
+        render(<SignInView onSubmit={vi.fn()} />);
+        await act(async () => {
+          fireEvent.click(screen.getByTestId('signin-github-app'));
+        });
+        await act(async () => { await vi.advanceTimersByTimeAsync(2100); });
+        expect(screen.getByTestId('device-flow-error')).toHaveTextContent('github said no');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });
