@@ -743,19 +743,23 @@ code, .mono {
 }
 
 .automation-block {
-  /* Body inherits line-height: 1.55, so titles below a dashed line
-     carry ~3-4px of half-leading above their visible glyph. Trim
-     padding-top by 4px relative to padding-bottom so the visible
-     glyph-to-line gap above and below is the same. */
-  padding: 12px 0 16px 0;
+  padding: 14px 0;
   border-top: 1px dashed var(--term-border);
+  /* Tighten line-height inside automation sections so the visible
+     glyph fills its line-box. Body's 1.55 default leaves 3-4px of
+     half-leading above and below text glyphs, which makes the
+     visible bottom-content-to-dashed-line gap vary by content type
+     (text rows have invisible bottom space, buttons end at their
+     border). Normalize so padding controls the visible gap. */
+  line-height: 1.2;
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
 .automation-divider {
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
   padding-left: 16px;
   border-top: 1px dashed var(--term-border);
+  line-height: 1.2;
 }
 
 /* ─── Chip list ────────────────────────────────────────────────────────── */
