@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-10 (post-B3 merge)_
+_Last `/backlog-sync`: 2026-05-10 (post-2.4 merge)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 1 |
-| ✅ Shipped | 37 |
+| ✅ Shipped | 39 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -107,11 +107,13 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **UI-SETTINGS-SPACING** Equalize heading→content spacing across all settings sections (drop 4px first-of-type pad on automation-block) — PR #84
 - **ACTIVITY-FILTERS** Replace today-only checkbox with date input + `today` toggle button; add Newest / Oldest / Repo sort dropdown — PR #85
 
-### V2 Sprint 1 — multi-account foundation (2026-05-10)
+### V2 Sprint 1 — multi-account + repo filter + desktop notifications (2026-05-10)
 - **MA-1** Multi-account storage facade + v1→v2 migration (per-account namespaces, `_migration_backup_v1` escape hatch, sync-quota split, etags dropped) — PR #91
 - **B1** Account-switcher header + add-account device-flow + multi-account poll loop with per-account error boundary and aggregated badge — PR #94
 - **B2** Settings split into `global` (cross-account: poll interval, ignored repos, keyboard shortcuts, GHES host) vs `this account (<login>)` (everything else) with active-login suffix — PR #95
 - **B3** Activity log `this account · all accounts` filter chip (default `this`); merged scope tags non-active rows with `[login]` and adds `accountId?: string` to `ActivityEntry` — PR #96
+- **2.5** Header repo-filter chip — `[ filter (N) ▾ ]` checkbox dropdown narrows popup PR list to chosen subset; persists per-account; display-only (polling unchanged) — PR #98
+- **2.4** Desktop notifications (rebased / conflicted / merged / idle / ping-confirmed) — opt-in master + per-event toggles; runtime `notifications` permission requested on enable; 1-hour throttle per (PR, event) at `accounts.<id>.notif_throttle`; pulled forward from Sprint 2 — PR #99
 
 ---
 

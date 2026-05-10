@@ -25,8 +25,8 @@ Plus four runbook corrections (PKCE redirect language, scope encoding, version r
 | Track | Scope | Effort | Calendar |
 |---|---|---|---|
 | **MP-1 immediate** (parallel to V2) | GitHub Marketplace listing against current v1.0.2 | 2 dev days + 5–10 biz day review | starts now |
-| **Sprint 1 — v2.0.0** | A-lite + 3.2 multi-account (GitHub-only) + 2.5 filter + tactical fixes | 8–11 dev days | after Sprint 1 PRs land + store reviews |
-| **Sprint 2 — v2.1.0** | 2.4 desktop notifications + 5.2 push-since-approval (GitHub-only, actionable) | 4 dev days | follows v2.0.0 stability period (~2 wks) |
+| **Sprint 1 — v2.0.0** | A-lite + 3.2 multi-account (GitHub-only) + 2.5 filter + 2.4 desktop notifications (pulled forward from Sprint 2) + tactical fixes | 8–11 dev days | after Sprint 1 PRs land + store reviews |
+| **Sprint 2 — v2.1.0** | 5.2 push-since-approval (GitHub-only, actionable) | 2 dev days | follows v2.0.0 stability period (~2 wks) |
 | **v3.0.0 — future** | Full `ProviderAdapter` + GitLab provider + cross-provider 5.2 | 10–14 dev days | gated on v2 demand signal |
 
 Total V2 work: **~14 dev days** (down from 22–28). Each sprint is independently shippable. v3 decision deferred until v2 is in users' hands.
@@ -124,13 +124,20 @@ Filter chip in the popup header (multi-select). Persists per-account. Filters di
 
 ### Sprint 1 acceptance
 
-- [ ] Sign in to two GitHub accounts; both poll independently; combined badge count.
-- [ ] Switch active account; popup reflects only that account's PRs.
-- [ ] Filter to 2 repos out of 30 PRs; clearing filter restores all.
-- [ ] Migration smoke-tested with v1.0.2 fixture (full key set, including `resolved_threads` + `etags`).
-- [ ] All v1 tests still pass + new tests cover account-switcher + filter.
-- [ ] Coverage flat or up.
-- [ ] Bundle delta < 5%.
+_Status as of 2026-05-10 (post-2.4 #99 merge):_
+
+- [x] Sign in to two GitHub accounts; both poll independently; combined badge count. — _code path shipped (poll-cycle iterates `listAccountIds()`); manual smoke pending._
+- [x] Switch active account; popup reflects only that account's PRs. — _shipped via B1 #94._
+- [x] Filter to 2 repos out of 30 PRs; clearing filter restores all. — _shipped via 2.5 #98._
+- [x] Migration smoke-tested with v1.0.2 fixture (full key set, including `resolved_threads` + `etags`). — _unit-tested in `tests/core/storage/migration.test.ts`; manual real-fixture smoke still pending pre-release._
+- [x] All v1 tests still pass + new tests cover account-switcher + filter. — _814 tests passing as of #99._
+- [x] Coverage flat or up. — _95.61 / 90.04 / 95.61 / 95.61, all over the 95/88/95/95 thresholds._
+- [x] Bundle delta < 5%. — _popup 190.7 kB (pre-B1) → 195.2 kB (post-2.4) ≈ +2.4 %._
+
+Plus pulled-forward from Sprint 2:
+- [x] Desktop notification fires on a sandbox PR rebase; throttled on the second event within 1 hr. — _shipped via 2.4 #99 (`notifications.ts` + dispatch in `poll-cycle` + `PingConfirmView`); manual smoke pending pre-release._
+
+Remaining before cutting v2.0.0: manual two-account smoke pass, listing rewrites (MKT-1), version bump per `docs/runbooks/v2-release.md`.
 
 ### Sprint 1 release
 
@@ -142,7 +149,9 @@ Cut **v2.0.0**. See `docs/runbooks/v2-release.md`. Submit to Chrome + Firefox st
 
 **Trigger:** v2.0.0 has been live in stores for ~2 weeks with no critical migration bugs reported.
 
-### Story 2.4 — Desktop notifications
+> ⚠ **Conflict to resolve before starting 5.2.** BACKLOG.md §🧊 lists 5.2 as **dropped** (rationale: GitHub branch protection's "Dismiss stale approvals on new commits" covers gating; the originally-scoped surfacing-only flavor wasn't worth maintaining). The version below describes an **actionable** flavor (badge → re-request reviewer). Decide whether the actionable form is still in scope before scheduling.
+
+### Story 2.4 — Desktop notifications _(shipped early in Sprint 1 — PR #99, 2026-05-10)_
 
 Per-event opt-in toggles for: rebased, conflicted, merged-and-deleted, idle, ping-confirmed.
 

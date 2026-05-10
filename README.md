@@ -4,7 +4,7 @@
 
 Chrome / Firefox extension that auto-rebases your open GitHub PRs and runs a small set of cleanup automations on top. Polls your authored PRs on a configurable interval, then for each one decides what to do — rebase if behind, delete the branch if merged, flip on auto-merge (or merge directly when the PR is already clean), resolve obsolete review threads, surface idle PRs.
 
-Local-first, single-user. No backend. Everything runs in the extension service worker against the GitHub API with your GitHub App token (OAuth Device Flow, recommended) or a Personal Access Token. GitHub Enterprise Server is supported via a per-host setting.
+Local-first. No backend. Everything runs in the extension service worker against the GitHub API with your GitHub App token (OAuth Device Flow, recommended) or a Personal Access Token. **Multi-account** on the same install is supported on v2 — sign in with multiple GitHub accounts and switch from the popup header. GitHub Enterprise Server is supported via a per-host setting.
 
 ## Install
 
@@ -37,9 +37,18 @@ All automations apply only to PRs you authored. Each one has its own kill-switch
 
 ### Quality-of-life (shipped)
 
-- **Activity log** — every write action (rebases, branch deletes, auto-merge enables, direct merges, thread resolves, reviewer pings) is recorded with timestamp, repo, PR, result, and details. 200-entry / 30-day cap. Filterable by action and repo.
+- **Activity log** — every write action (rebases, branch deletes, auto-merge enables, direct merges, thread resolves, reviewer pings) is recorded with timestamp, repo, PR, result, and details. 200-entry / 30-day cap. Filter by action / repo / date / account; sort newest-first, oldest-first, or by repo.
 - **Keyboard shortcuts** (default ON) — `r` poll now, `s` settings, `?` help, `j` / `k` navigate, `Enter` open, `Esc` back.
 - **Repo-name autocomplete** — every "Skip repos" / "Ignored repos" input is backed by a `<datalist>` of repos sourced from your current open PRs.
+
+### Multi-account (v2 — shipped)
+
+- **Account switcher** — popup header dropdown lists every signed-in account; click to switch active. Supports `+ Add account`, `Sign out <login>`, and `Sign out all`.
+- **Multi-account polling** — every signed-in account polls independently on each cycle; the toolbar badge shows the combined rebased-this-cycle count across accounts.
+- **Settings split** — global cross-account settings (poll interval, ignored repos, keyboard shortcuts, GHES host) sit above an explicit `this account (<login>)` divider that scopes everything else (the per-automation toggles + skip lists).
+- **Activity log account filter** — when more than one account is signed in, a `this account · all accounts` chip appears; `all` interleaves activity newest-first and tags non-active rows with `[login]`.
+- **Repo-filter chip** — header `[ filter (N) ▾ ]` dropdown narrows the popup PR list to a chosen subset of repos. Multi-select, persists per-account, polling is unchanged.
+- **Desktop notifications** (default OFF, opt-in) — toggle ON in settings to fire a system notification when a PR is rebased / hits a conflict / merges / goes idle / reviewer-ping confirms. 1-hour throttle per (PR, event); permission is requested on first toggle and removed on toggle-off.
 
 ### Settings
 
@@ -67,7 +76,7 @@ The popup uses a terminal-inspired theme — JetBrains Mono, Tokyo Night palette
 ```sh
 npm install
 npm run dev            # vite build --watch
-npm test               # vitest run (~637 tests)
+npm test               # vitest run (~810 tests)
 npm run typecheck
 npm run build          # chrome
 npm run build:firefox  # firefox (writes to dist-firefox/)

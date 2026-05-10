@@ -2,17 +2,19 @@
 
 _Companion to: `docs/superpowers/plans/2026-05-07-v2-implementation-plan.md`_
 
-When all 5 V2 waves (A–E) are merged and the feature surface is stable, this runbook drives the release.
+When the V2 feature surface is stable (MA-1 storage refactor, B1/B2/B3 multi-account UX, Story 2.5 repo filter, Story 2.4 desktop notifications), this runbook drives the release.
 
 ## Pre-release gates (all must pass)
 
-- [ ] Wave A–D PRs all merged to main, CI green
-- [ ] Storage migration tested with a v1.0.2 fixture install (no data loss; backup created)
+- [ ] All Sprint 1 PRs merged to main, CI green: MA-1 (#91), B1 (#94), B2 (#95), B3 (#96), 2.5 (#98), 2.4 (#99)
+- [ ] Storage migration tested with a v1.0.2 fixture install (no data loss; `_migration_backup_v1` created)
 - [ ] GitHub live-tested end-to-end on at least two sandbox accounts (work + personal shape)
 - [ ] Multi-account smoke: two GitHub accounts in the same install; switching reflects in popup, badge, settings, and activity
-- [ ] All 590+ tests passing; coverage flat or up
-- [ ] `docs/STORE_LISTING.md` rewritten for v2 features (multi-account dropdown, filter chip)
-- [ ] New screenshots captured: multi-account dropdown, filter chip applied, settings split (global vs per-account)
+- [ ] Desktop-notification smoke (Chrome): toggle ON → grant permission → trigger a rebase → see system notification; toggle OFF removes permission
+- [ ] Repo-filter smoke: filter to 2 repos out of 30 PRs; clearing filter restores all
+- [ ] All 810+ tests passing; coverage flat or up (current: 95.61 / 90.04 / 95.61 / 95.61 vs 95/88/95/95 thresholds)
+- [ ] `docs/STORE_LISTING.md` rewritten for v2 features (multi-account switcher, settings split, account+repo filter chips, opt-in desktop notifications)
+- [ ] New screenshots captured: account switcher dropdown, settings split (global vs `this account (login)`), repo-filter chip, activity-log account chip, desktop-notifications settings block
 
 ## Step 1 — Bump version
 
@@ -42,7 +44,7 @@ Verify the source zip builds cleanly in a temp dir before continuing — same ch
 ```bash
 git checkout -b release/v2.0.0
 git add package.json manifest.json manifest.firefox.json
-git commit -m "chore(release): v2.0.0 — multi-account + GitLab support"
+git commit -m "chore(release): v2.0.0 — multi-account + repo filter + desktop notifications"
 git push -u origin release/v2.0.0
 gh pr create --title "chore(release): v2.0.0" --body "<changelog excerpt>"
 gh pr merge --auto --squash
@@ -54,7 +56,7 @@ Wait for merge.
 
 ```bash
 git checkout main && git pull origin main
-git tag -a v2.0.0 -m "v2.0.0 — multi-account on GitHub + filter by repo/org"
+git tag -a v2.0.0 -m "v2.0.0 — multi-account on GitHub + repo filter + desktop notifications"
 git push origin v2.0.0
 gh release create v2.0.0 --title "v2.0.0" \
   --notes "$(cat docs/release-notes/v2.0.0.md)" \
@@ -66,7 +68,7 @@ gh release create v2.0.0 --title "v2.0.0" \
 Each store treats v2.0.0 as a new version submission:
 
 - **Chrome Web Store** — dev console → existing item → upload new package → re-fill changelog → submit. Review usually <24h.
-- **Firefox AMO** — submit new version → upload `auto-rebaser-firefox.zip` + `auto-rebaser-source.zip` → reviewer notes mention multi-account + GitLab → submit. Review 1–7 days.
+- **Firefox AMO** — submit new version → upload `auto-rebaser-firefox.zip` + `auto-rebaser-source.zip` → reviewer notes mention multi-account + the new opt-in `notifications` permission → submit. Review 1–7 days.
 
 Source zip rebuilds change because of the multi-account storage refactor; flag in reviewer notes:
 > v2.0.0 introduces multi-account support on GitHub. No new third-party services; the extension still only contacts api.github.com / github.com (or the user's GHES host). Storage is migrated from a single-account shape to a per-account shape on first install — see `docs/runbooks/multi-account-migration.md` for the procedure and rollback path.
@@ -93,4 +95,4 @@ If a critical V2 bug surfaces in the wild:
 
 ## Open items for the maintainer
 
-- Decide: is v2.0.0 the right bump, or does it warrant v3? Storage migration + multi-provider are arguably v3-worthy. SemVer says "any breaking change" → major bump; v2 is fine.
+- Decide: is v2.0.0 the right bump? Storage migration is the only breaking-shape change; multi-provider (GitLab) is deferred to v3. SemVer says "any breaking change" → major bump; v2 is fine.
