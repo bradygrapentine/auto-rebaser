@@ -2,14 +2,16 @@
 // the user successfully posts a ping comment. Lives in `chrome.storage.local`
 // so it doesn't sync across devices.
 
+import { readAccountKey, writeAccountKey, removeAccountKey } from './storage/multi-account';
+
 const STORAGE_KEY = 'pingedPRs';
 const PING_THROTTLE_MS = 24 * 60 * 60 * 1000;
 
 export type PingedStore = Record<number, { at: number }>;
 
 export async function getPingedStore(): Promise<PingedStore> {
-  const result = await chrome.storage.local.get(STORAGE_KEY);
-  return (result[STORAGE_KEY] as PingedStore) ?? {};
+  const stored = await readAccountKey('pingedPRs');
+  return stored ?? {};
 }
 
 /**
@@ -30,12 +32,12 @@ function prune(store: PingedStore, now: number): PingedStore {
 export async function recordPing(prId: number, now: number = Date.now()): Promise<void> {
   const store = prune(await getPingedStore(), now);
   store[prId] = { at: now };
-  await chrome.storage.local.set({ [STORAGE_KEY]: store });
+  await writeAccountKey('pingedPRs', store);
 }
 
 /** Sign-out cleanup — drops the throttle map entirely. */
 export async function clearPingedStore(): Promise<void> {
-  await chrome.storage.local.remove(STORAGE_KEY);
+  await removeAccountKey('pingedPRs');
 }
 
 export function isThrottled(

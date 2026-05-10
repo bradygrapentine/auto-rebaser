@@ -10,6 +10,7 @@
 import { STORAGE_KEYS } from './constants';
 import type { TokenSet } from './auth-device-flow';
 import type { Installation } from '../github/endpoints/installations';
+import { readAccountKey, writeAccountKey, removeAccountKey } from './storage/multi-account';
 
 export const AUTH_KEY = 'auth';
 
@@ -31,8 +32,7 @@ export interface AuthPAT {
 export type Auth = AuthGitHubApp | AuthPAT;
 
 export async function getAuth(): Promise<Auth | null> {
-  const local = await chrome.storage.local.get(AUTH_KEY);
-  const stored = local[AUTH_KEY] as Auth | undefined;
+  const stored = await readAccountKey('auth');
   if (stored) return stored;
 
   // Migration from legacy sync.github_token (PAT only — pre-4.3 builds didn't
@@ -41,7 +41,7 @@ export async function getAuth(): Promise<Auth | null> {
   const legacy = sync[STORAGE_KEYS.token] as string | undefined;
   if (legacy) {
     const auth: AuthPAT = { method: 'pat', token: legacy };
-    await chrome.storage.local.set({ [AUTH_KEY]: auth });
+    await writeAccountKey('auth', auth);
     await chrome.storage.sync.remove(STORAGE_KEYS.token);
     return auth;
   }
@@ -58,7 +58,7 @@ export async function setAuthGitHubApp(tokenSet: TokenSet): Promise<void> {
     ...tokenSet,
     ...(installations ? { installations } : {}),
   };
-  await chrome.storage.local.set({ [AUTH_KEY]: auth });
+  await writeAccountKey('auth', auth);
 }
 
 /**
@@ -69,25 +69,23 @@ export async function setInstallations(installations: Installation[]): Promise<v
   const prev = await getAuth();
   if (!prev || prev.method !== 'github_app') return;
   const next: AuthGitHubApp = { ...prev, installations };
-  await chrome.storage.local.set({ [AUTH_KEY]: next });
+  await writeAccountKey('auth', next);
 }
 
 export async function setAuthPAT(token: string): Promise<void> {
   const auth: AuthPAT = { method: 'pat', token };
-  await chrome.storage.local.set({ [AUTH_KEY]: auth });
+  await writeAccountKey('auth', auth);
 }
 
 export async function clearAuth(): Promise<void> {
-  await chrome.storage.local.remove(AUTH_KEY);
+  await removeAccountKey('auth');
   // Belt-and-suspenders: also drop the legacy sync key in case migration
   // hasn't run yet on this device.
   await chrome.storage.sync.remove(STORAGE_KEYS.token);
   // Audit cleanup — drop per-account state that would otherwise leak across
   // sign-ins on a shared device.
-  await chrome.storage.local.remove([
-    'pingedPRs',          // Story 5.1 ping-throttle
-    'resolved_threads',   // Story 2.8 already-resolved-threads
-  ]);
+  await removeAccountKey('pingedPRs');
+  await removeAccountKey('resolved_threads');
 }
 
 // ── Back-compat shims so callers don't all need to know about the new shape ──

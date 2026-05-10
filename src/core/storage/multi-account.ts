@@ -82,7 +82,7 @@ function perAccountSettingsKey(id: string): string {
 
 export async function getActiveAccountId(): Promise<string | null> {
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.activeAccountId);
-  const id = result[STORAGE_KEYS_V2.activeAccountId];
+  const id = (result ?? {})[STORAGE_KEYS_V2.activeAccountId];
   return typeof id === 'string' ? id : null;
 }
 
@@ -92,7 +92,7 @@ export async function setActiveAccountId(id: string): Promise<void> {
 
 export async function listAccountIds(): Promise<string[]> {
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
-  const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<string, unknown>;
+  const accounts = ((result ?? {})[STORAGE_KEYS_V2.accounts] ?? {}) as Record<string, unknown>;
   return Object.keys(accounts);
 }
 
@@ -103,7 +103,7 @@ export async function getAccountState<K extends keyof AccountState>(
   key: K,
 ): Promise<AccountState[K] | undefined> {
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
-  const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
+  const accounts = ((result ?? {})[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
     string,
     Partial<AccountState>
   >;
@@ -116,7 +116,7 @@ export async function setAccountState<K extends keyof AccountState>(
   value: AccountState[K],
 ): Promise<void> {
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
-  const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
+  const accounts = ((result ?? {})[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
     string,
     Partial<AccountState>
   >;
@@ -202,6 +202,56 @@ export async function setPerAccountSetting<K extends keyof PerAccountSettings>(
     [fullKey]: settings,
     [STORAGE_KEYS_V2.perAccountSettingsIndex]: nextIndex,
   });
+}
+
+// ── transition-layer helpers ──────────────────────────────────────────────
+//
+// Stores call these instead of touching chrome.storage directly. Reads
+// resolve the active account; if no v2 namespace exists yet (fresh
+// install pre-migration, or tests that mock the legacy shape), they
+// fall back to the v1 top-level key. Writes go to v2 if there's an
+// active account, otherwise to the v1 top-level key. The fallback path
+// disappears in production after migration runs once.
+
+export async function readAccountKey<K extends keyof AccountState>(
+  key: K,
+): Promise<AccountState[K] | undefined> {
+  const id = await getActiveAccountId();
+  if (id) {
+    const v2 = await getAccountState(id, key);
+    if (v2 !== undefined) return v2;
+  }
+  const legacy = await chrome.storage.local.get(key);
+  return (legacy ?? {})[key] as AccountState[K] | undefined;
+}
+
+export async function writeAccountKey<K extends keyof AccountState>(
+  key: K,
+  value: AccountState[K],
+): Promise<void> {
+  const id = await getActiveAccountId();
+  if (id) {
+    await setAccountState(id, key, value);
+    return;
+  }
+  await chrome.storage.local.set({ [key]: value });
+}
+
+export async function removeAccountKey<K extends keyof AccountState>(key: K): Promise<void> {
+  const id = await getActiveAccountId();
+  if (id) {
+    const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
+    const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
+      string,
+      Partial<AccountState>
+    >;
+    if (accounts[id]) {
+      const { [key]: _removed, ...rest } = accounts[id];
+      accounts[id] = rest;
+      await chrome.storage.local.set({ [STORAGE_KEYS_V2.accounts]: accounts });
+    }
+  }
+  await chrome.storage.local.remove(key);
 }
 
 /** Test/migration-only — do not import in app code. */
