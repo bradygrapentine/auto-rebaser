@@ -13,7 +13,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ✅ Shipped | 25 |
+| ✅ Shipped | 26 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -27,8 +27,8 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
 
 ### MKT-2 — Add GitHub repo topics
-**Status:** 🟢 Ready
-**Why:** Free SEO via GitHub's topic index — repos with relevant topics surface in topic-scoped searches and the "Explore" graph. ~1-minute change.
+**Status:** ✅ Shipped (2026-05-09, set via `gh api repos/.../topics` — `auto-merge`, `chrome-extension`, `developer-tools`, `firefox-extension`, `github-extension`, `pull-request`, `rebase`)
+**Why:** Free SEO via GitHub's topic index — repos with relevant topics surface in topic-scoped searches and the "Explore" graph.
 **How:** On the repo page → "About" → gear icon → add: `chrome-extension`, `firefox-extension`, `github-extension`, `pull-request`, `rebase`, `auto-merge`, `developer-tools`.
 **Done when:** Topics visible on https://github.com/bradygrapentine/auto-rebaser.
 
@@ -63,6 +63,17 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 - When disabled, behavior matches today (no-op log entry, cleaned up by MERGE-1).
 - Method preference fallback verified against repos that disable squash or rebase.
 - Tests cover: clean-PR with toggle on (merges), clean-PR with toggle off (skips), method fallback on 405, SHA mismatch rejection.
+
+### MA-1 — Wave A-lite — Multi-account storage refactor (V2 prerequisite)
+**Status:** 🟢 Ready
+**Why:** Every V2 deliverable (account switcher, per-account settings, activity-log filter, repo-filter chip) reads or writes account-scoped state. Doing the storage shape first means those are straightforward UI follow-ups; doing them in parallel forces incremental account-awareness retrofits onto each store module. Migration risk is highest now and lowest later — touching it once with a backup escape hatch is safer.
+**How:** See full plan at `docs/superpowers/plans/2026-05-09-wave-a-lite-multi-account-storage.md`. Ships:
+- New `src/core/storage/multi-account.ts` facade (per-account read/write).
+- New `src/core/storage/migration.ts` one-shot v1 → v2 migration with `_migration_backup_v1` escape hatch.
+- Refactor of every `src/core/*-store.ts` to take an `accountId`. `etags` dropped (regenerable). `known_repos` stays global.
+- `chrome.storage.sync` per-account split into separate keys to dodge the 8 KB-per-key quota.
+- Polling stays single-account in this wave (multi-account polling lands in Wave B1).
+**Done when:** all acceptance criteria in the plan are met; tests cover migration happy/idempotent/failure paths; coverage ≥ baseline; bundle delta < 5%.
 
 ### MKT-3 — Show HN launch post
 **Status:** 🟢 Ready (Chrome live; soft-blocked on Firefox AMO approval so the post can link both stores)
