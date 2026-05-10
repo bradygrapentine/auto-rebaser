@@ -27,6 +27,7 @@ export type ActivityEntry = {
   threadId?: string;                          // for thread_resolved
   reviewers?: string[];                       // for reviewer_pinged (Track 2C)
   prUrl?: string;                             // absolute URL to the PR; entry row links to this
+  accountId?: string;                         // populated at read time in 'all' scope; identifies the source account
 };
 
 export type ActivityStore = { entries: ActivityEntry[] };
