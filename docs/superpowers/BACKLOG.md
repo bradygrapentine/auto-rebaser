@@ -9,10 +9,11 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 3 |
+| 🟢 Ready | 2 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
+| ⏸ Held | 1 |
 | ✅ Shipped | 26 |
 | 🧊 Deferred / dropped | 3 |
 
@@ -76,7 +77,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 **Done when:** all acceptance criteria in the plan are met; tests cover migration happy/idempotent/failure paths; coverage ≥ baseline; bundle delta < 5%.
 
 ### MKT-3 — Show HN launch post
-**Status:** 🟢 Ready (Chrome live; soft-blocked on Firefox AMO approval so the post can link both stores)
+**Status:** ⏸ Held (decided 2026-05-09: revisit after V2 ships so the launch leads with multi-account as the headline; Firefox AMO clears in the background in the meantime)
 **Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
 **How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
 **Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
