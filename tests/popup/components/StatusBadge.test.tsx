@@ -6,7 +6,8 @@ import type { PRState } from '../../../src/core/types';
 const cases: Array<[PRState, string]> = [
   ['current', 'Current'],
   ['behind', 'Behind'],
-  ['updating', 'Updating…'],
+  ['pending', 'Pending'],
+  ['draft', 'Draft'],
   ['updated', 'Updated'],
   ['conflict', 'Conflict'],
   ['needs-manual', 'Manual'],

@@ -16,6 +16,12 @@ export function deriveStateFromMergeable(
   if (mergeableState === 'dirty') {
     return { action: 'none', nextState: 'conflict' };
   }
+  if (mergeableState === 'blocked' || mergeableState === 'unstable') {
+    return { action: 'none', nextState: 'pending' };
+  }
+  if (mergeableState === 'draft') {
+    return { action: 'none', nextState: 'draft' };
+  }
   if (mergeableState === 'unknown') {
     return { action: 'none', nextState: previousState };
   }

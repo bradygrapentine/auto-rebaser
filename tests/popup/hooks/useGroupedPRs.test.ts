@@ -76,8 +76,9 @@ describe('useGroupedPRs', () => {
 
   it.each<[PRState, boolean]>([
     ['current', false],
+    ['pending', false],
+    ['draft', false],
     ['behind', true],
-    ['updating', true],
     ['updated', true],
     ['conflict', true],
     ['needs-manual', true],

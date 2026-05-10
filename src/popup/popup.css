@@ -455,7 +455,8 @@ code, .mono {
 
 .state-badge[data-state="current"]      { color: var(--term-fg-dim); }
 .state-badge[data-state="behind"]       { color: var(--term-yellow); }
-.state-badge[data-state="updating"]     { color: var(--term-blue); }
+.state-badge[data-state="pending"]      { color: var(--term-yellow); }
+.state-badge[data-state="draft"]        { color: var(--term-fg-muted); }
 .state-badge[data-state="updated"]      { color: var(--term-green); }
 .state-badge[data-state="conflict"]     { color: var(--term-red); }
 .state-badge[data-state="needs-manual"] { color: var(--term-red); }
