@@ -185,7 +185,7 @@ async function runPollCycleInner(): Promise<void> {
     const ownerIsSuspended = suspendedOwnerSet.has(owner.toLowerCase());
     let derived = ownerIsSuspended
       ? { action: 'noop' as const, nextState: previousState }
-      : deriveStateFromMergeable(pr.mergeable_state, previousState);
+      : deriveStateFromMergeable(pr.mergeable_state, previousState, pr.draft === true);
 
     // BEHIND-1: GitHub returns mergeable_state='blocked' or 'unstable' when
     // checks/reviews are pending, which masks a separately-true "behind base"
