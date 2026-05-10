@@ -20,7 +20,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'shortcuts' | 'stale';
+type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale';
 
 const STALE_THRESHOLDS: StaleThresholdDays[] = [3, 7, 14, 30, 60];
 
@@ -145,6 +145,7 @@ export function AutomationsSettings() {
     ignored: true,
     autoDelete: true,
     autoMerge: true,
+    mergeClean: true,
     autoResolve: true,
     shortcuts: true,
     stale: true,
@@ -248,8 +249,13 @@ export function AutomationsSettings() {
               disabled={!settings.autoEnableAutoMerge}
               onChange={(mergeMethodPreference) => save({ mergeMethodPreference })}
             />
-            <div className="automation-block">
-              <div className="automation-row automation-row--leaf">
+            <div className="automation-divider">
+              <div className="automation-row">
+                <Chevron
+                  expanded={expanded.mergeClean}
+                  onClick={() => toggle('mergeClean')}
+                  label="merge-clean-immediately section"
+                />
                 <label className="toggle">
                   <span className="toggle__name">Merge clean PRs immediately</span>
                   <input
@@ -260,13 +266,15 @@ export function AutomationsSettings() {
                   />
                 </label>
               </div>
+              {expanded.mergeClean && (
+                <RepoOptOutList
+                  label="Skip repos"
+                  repos={settings.autoMergeOptOutRepos}
+                  onChange={(autoMergeOptOutRepos) => save({ autoMergeOptOutRepos })}
+                  suggestions={knownRepos}
+                />
+              )}
             </div>
-            <RepoOptOutList
-              label="Skip repos"
-              repos={settings.autoMergeOptOutRepos}
-              onChange={(autoMergeOptOutRepos) => save({ autoMergeOptOutRepos })}
-              suggestions={knownRepos}
-            />
           </>
         )}
       </div>
