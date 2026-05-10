@@ -20,7 +20,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'autoResolve' | 'shortcuts' | 'stale';
+type SubKey = 'ignored' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale';
 
 const STALE_THRESHOLDS: StaleThresholdDays[] = [3, 7, 14, 30, 60];
 
@@ -145,6 +145,7 @@ export function AutomationsSettings() {
     ignored: true,
     autoDelete: true,
     autoMerge: true,
+    mergeClean: true,
     autoResolve: true,
     shortcuts: true,
     stale: true,
@@ -249,22 +250,31 @@ export function AutomationsSettings() {
               onChange={(mergeMethodPreference) => save({ mergeMethodPreference })}
             />
             <div className="automation-divider">
-              <label className="toggle">
-                <span className="toggle__name">Merge clean PRs immediately</span>
-                <input
-                  type="checkbox"
-                  checked={settings.mergeCleanPRsImmediately}
-                  disabled={!settings.autoEnableAutoMerge}
-                  onChange={(e) => save({ mergeCleanPRsImmediately: e.target.checked })}
+              <div className="automation-row">
+                <Chevron
+                  expanded={expanded.mergeClean}
+                  onClick={() => toggle('mergeClean')}
+                  label="merge-clean-immediately section"
                 />
-              </label>
+                <label className="toggle">
+                  <span className="toggle__name">Merge clean PRs immediately</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.mergeCleanPRsImmediately}
+                    disabled={!settings.autoEnableAutoMerge}
+                    onChange={(e) => save({ mergeCleanPRsImmediately: e.target.checked })}
+                  />
+                </label>
+              </div>
+              {expanded.mergeClean && (
+                <RepoOptOutList
+                  label="Skip repos"
+                  repos={settings.autoMergeOptOutRepos}
+                  onChange={(autoMergeOptOutRepos) => save({ autoMergeOptOutRepos })}
+                  suggestions={knownRepos}
+                />
+              )}
             </div>
-            <RepoOptOutList
-              label="Skip repos"
-              repos={settings.autoMergeOptOutRepos}
-              onChange={(autoMergeOptOutRepos) => save({ autoMergeOptOutRepos })}
-              suggestions={knownRepos}
-            />
           </>
         )}
       </div>
