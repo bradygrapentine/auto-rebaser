@@ -743,19 +743,20 @@ code, .mono {
 }
 
 .automation-block {
-  /* padding-top slightly smaller than padding-bottom: the title text
-     below a dashed line has top-leading inside its line-box, so the
-     visible gap reads as ~2px larger than the layout value. Trimming
-     padding-top by 2px makes the visible margin above and below the
-     content match. */
-  padding: 10px 0 12px 0;
+  padding: 12px 0;
   border-top: 1px dashed var(--term-border);
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
-/* Nested automation-block needs an explicit margin-top equal to the
-   block's padding-bottom — top-level siblings already get this from
-   the preceding block's padding-bottom, but nested ones sit flush. */
-.automation-block .automation-block { margin-top: 12px; }
+/* Inline dashed divider used inside an expanded automation-block
+   (e.g. between "Preference order" and "Merge clean PRs immediately"
+   inside the auto-merge section). Same 12px-above + 12px-below
+   visual rhythm as the section-level dashed lines. */
+.automation-divider {
+  margin-top: 12px;
+  padding-top: 12px;
+  padding-left: 16px;
+  border-top: 1px dashed var(--term-border);
+}
 
 /* ─── Chip list ────────────────────────────────────────────────────────── */
 .chip-list-wrap { margin-top: 6px; margin-left: 18px; }
