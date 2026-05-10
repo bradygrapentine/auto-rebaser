@@ -585,6 +585,17 @@ code, .mono {
   margin: 0 0 14px;
 }
 .settings__heading::before { content: "# "; color: var(--term-fg-dim); font-weight: 400; }
+.settings__heading-suffix { color: var(--term-fg-muted); font-weight: 400; }
+.settings__section-hint {
+  color: var(--term-fg-muted);
+  font-size: 11px;
+  margin: -8px 0 12px;
+}
+.settings-account-divider {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--term-border);
+}
 .settings__heading-row {
   display: flex;
   align-items: center;

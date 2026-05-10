@@ -10,6 +10,19 @@ vi.mock('../../../src/popup/hooks/useKnownRepos', () => ({
   useKnownRepos: () => [],
 }));
 
+vi.mock('../../../src/popup/hooks/useAccounts', () => ({
+  useAccounts: () => ({
+    accounts: [
+      { id: 'gh_octocat', login: 'octocat', avatarUrl: '', method: 'github_app', host: '', suspended: false },
+    ],
+    activeId: 'gh_octocat',
+    loading: false,
+    switchTo: vi.fn(),
+    signOut: vi.fn(),
+    signOutAll: vi.fn(),
+  }),
+}));
+
 vi.mock('../../../src/core/automations-store', () => ({
   // Inline literal — vi.mock factories are hoisted above imports.
   getAutomationSettings: vi.fn().mockResolvedValue({
@@ -100,6 +113,14 @@ describe('SettingsView', () => {
     render(<SettingsView onBack={vi.fn()} />);
     await act(async () => {});
     expect(screen.getByTestId('automations-settings')).toBeInTheDocument();
+  });
+
+  it('shows global heading and "this account (login)" divider with active login', () => {
+    render(<SettingsView onBack={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: /^global$/i })).toBeInTheDocument();
+    const divider = screen.getByTestId('account-scoped-divider');
+    expect(divider).toHaveTextContent(/this account/i);
+    expect(divider).toHaveTextContent(/octocat/);
   });
 
   it('renders the account section when authMethod is provided', () => {
