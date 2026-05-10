@@ -744,19 +744,18 @@ code, .mono {
 }
 
 .automation-block {
-  padding: 14px 0;
+  /* Title text has ~3px of half-leading above its visible glyph;
+     bottom elements (inputs, buttons) end at their visible border with
+     no leading. So padding-top + leading ≈ padding-bottom keeps the
+     visible top-glyph-to-dashed-line and bottom-border-to-dashed-line
+     gaps equal. */
+  padding: 14px 0 17px 0;
   border-top: 1px dashed var(--term-border);
-  /* Tighten line-height inside automation sections so the visible
-     glyph fills its line-box. Body's 1.55 default leaves 3-4px of
-     half-leading above and below text glyphs, which makes the
-     visible bottom-content-to-dashed-line gap vary by content type
-     (text rows have invisible bottom space, buttons end at their
-     border). Normalize so padding controls the visible gap. */
   line-height: 1.2;
 }
 .automation-block:first-of-type { border-top: none; padding-top: 4px; }
 .automation-divider {
-  margin-top: 14px;
+  margin-top: 17px;
   padding-top: 14px;
   padding-left: 16px;
   border-top: 1px dashed var(--term-border);
