@@ -8,10 +8,8 @@ Local-first, single-user. No backend. Everything runs in the extension service w
 
 ## Install
 
-> _Store links go live when the v1.0.2 review clears. Until then, load unpacked from `dist/` (Chrome) or `dist-firefox/` (Firefox) — see Development below._
-
-- Chrome Web Store: _pending review_
-- Firefox Add-ons: _pending review_
+- **Chrome Web Store**: https://chromewebstore.google.com/detail/auto-rebaser/fcbanfgcfcjmhnoanachedlpbopiodpi
+- **Firefox Add-ons**: _in review_ — load unpacked from `dist-firefox/` in the meantime (see Development).
 
 ## Features
 
