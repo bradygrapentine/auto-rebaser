@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-10 (post-#106 — test-coverage-followups shipped)_
+_Last `/backlog-sync`: 2026-05-11 (post-#108, #109 — flake fix + FOLLOWUP-3 shipped)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,12 +9,12 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 2 |
+| 🟢 Ready | 1 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 1 |
-| ✅ Shipped | 44 |
+| ✅ Shipped | 46 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -45,11 +45,7 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
-### FOLLOWUP-3 — Settings-store read-side migration gap
-**Status:** 🟢 Ready
-**Why:** Companion to FOLLOWUP-1 (PR #106). The write-side leak is fixed, but a user with `global_settings` already populated (partial v2 migration, lost `active_account_id` from browser profile reset, etc.) will still hit the same masking on the read side — `getAutomationSettings` takes the v2 branch, reads an empty `perAccount`, returns DEFAULTS.
-**How:** Either reset `global_settings` when no account exists, or have `getAutomationSettings` prefer the v1 fallback when `perAccount` is empty AND `perAccountSettingsIndex` has no entry for the active account.
-**Done when:** A unit test seeding `global_settings` + no `active_account_id` + a v1 fallback blob returns the v1 values, not DEFAULTS.
+_(empty — FOLLOWUP-3 shipped 2026-05-11 via PR #109; CHORE-1 UTC-midnight test flake fixed via PR #108)_
 
 ---
 
@@ -117,6 +113,8 @@ PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat:
 - **E2E-1** Playwright E2E test harness + GitHub Actions CI pipeline. Three smoke tests (sign-in view, post-rebase regression for #103, settings persistence across popup reload). MV3 service-worker registration handled via `--headless=new` + persistent context. CI runs typecheck + vitest + build + e2e on every PR — PR #104
 - **REVIEWER-AUTOMATIONS** Reviewer dashboard tab (opt-in, default OFF) showing PRs where the user is a requested reviewer or assignee. Conservatively-gated 4-gate auto-merge automation: master toggle + sub-toggle + per-repo allowlist + (my-approval AND `reviewDecision=APPROVED` AND no remaining requested-reviewers). Head-SHA-change invalidation clears the arm cache so a fresh push re-opens the gate. New pure detector with 10 truth-table unit tests; 7-test integration suite for the new poll-cycle phase — PR #105
 - **FOLLOWUP-1 / FOLLOWUP-2 / TEST-1 / TEST-2** Settings-store v1/v2 split bug fix (saveAutomationSettings no longer leaks `global_settings` writes on the no-active-account path, so the v1 fallback write isn't silently dropped on read) + reviewer-tab visibility fix (force-expand groups regardless of attention state when on the reviewer tab) + new E2E for the reviewer-tab popup flow + 3 new integration tests anchoring previously-untested reviewer-phase error paths. Out of scope: read-side migration gap (separate followup) — PR #106
+- **CHORE-1** UTC-midnight test flake fix in `ActivityLogView.test.tsx`. Two date-filter tests used `Date.now() - 60_000` for fixture timestamps + `toLocalDateString(Date.now())` for the "today" boundary, which broke on UTC runners during the ~minute spanning midnight (caught at 2026-05-11T00:00:27Z). Now pinned via `vi.useFakeTimers` + `vi.setSystemTime` — PR #108
+- **FOLLOWUP-3** Settings-store read-side migration gap. Read-side companion to PR #106: `getAutomationSettings` now forks on `getActiveAccountId()` (signed-in → v2 split, signed-out → v1 fallback), ignoring any populated `global_settings` on the no-account path as pre-#106 leakage. Closes the silent-DEFAULTS upgrade scenario — PR #109
 
 ---
 
