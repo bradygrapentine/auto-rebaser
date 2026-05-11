@@ -230,6 +230,9 @@ export function PRListView({
         }
       />
       <div className="view-body">
+        {authMethod === 'pat' && (
+          <MigrationBanner onSwitchToApp={onSignOut} />
+        )}
         {settings.enableReviewerTab && (
           <div className="pr-tabs" data-testid="pr-tabs" role="tablist">
             <button
@@ -253,9 +256,6 @@ export function PRListView({
               Reviewer ({reviewerStore.prs.length})
             </button>
           </div>
-        )}
-        {authMethod === 'pat' && (
-          <MigrationBanner onSwitchToApp={onSignOut} />
         )}
         {authMethod === 'github_app'
           && (!installations || installations.length === 0) && (

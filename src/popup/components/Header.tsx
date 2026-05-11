@@ -75,9 +75,12 @@ export function Header({
         />
       ) : (
         user && (
-          <button type="button" aria-label="Sign out" onClick={onSignOut} className="btn">
-            log-out
-          </button>
+          <>
+            <span className="header__user" data-testid="header-user">@{user.login}</span>
+            <button type="button" aria-label="Sign out" onClick={onSignOut} className="btn">
+              log-out
+            </button>
+          </>
         )
       )}
     </header>

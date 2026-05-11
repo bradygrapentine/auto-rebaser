@@ -78,10 +78,23 @@ code, .mono {
 }
 .popup-header__title {
   color: var(--term-cyan);
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-right: auto;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .popup-header__title::before { content: "## "; color: var(--term-fg-dim); font-weight: 400; }
+.header__user {
+  font-size: 11px;
+  color: var(--term-cyan);
+  padding: 2px 6px;
+  border: 1px solid var(--term-border);
+  border-radius: 3px;
+  white-space: nowrap;
+}
 .popup-header__user {
   color: var(--term-fg-dim);
   font-size: 12px;
@@ -378,9 +391,10 @@ code, .mono {
 }
 .pr-row__title {
   color: var(--term-fg);
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
   font-size: 13px;
 }
 .pr-row__error-hint {
@@ -537,16 +551,37 @@ code, .mono {
 }
 .repo-group__coverage-badge--suspended { color: #d24f4f; border-color: rgba(210, 79, 79, 0.45); }
 
-.migration-banner {
-  border-bottom: 1px solid rgba(86, 212, 221, 0.45);
-  background: rgba(86, 212, 221, 0.06);
-  padding: 8px 14px;
-  margin: 0 0 8px;
+.migration-banner--compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
   font-size: 11px;
+  border-bottom: 1px solid var(--term-border);
+  background: rgba(86, 212, 221, 0.04);
+  color: var(--term-fg-muted);
 }
-.view-body > .migration-banner:first-child { margin-top: -4px; }
-.migration-banner p { margin: 0 0 6px 0; }
-.migration-banner__actions { display: flex; gap: 6px; }
+.migration-banner__hint { color: var(--term-fg-muted); }
+.migration-banner__action {
+  background: transparent;
+  border: none;
+  color: var(--term-cyan);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+.migration-banner__action:hover { text-decoration: underline; }
+.migration-banner__dismiss {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--term-fg-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+.migration-banner__dismiss:hover { color: var(--term-fg); }
 
 .popup-footer__via {
   font-size: 10px;
