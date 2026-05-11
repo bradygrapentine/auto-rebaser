@@ -173,6 +173,34 @@ describe('automations-store', () => {
     expect(round.autoRebaseEnabled).toBe(false);
   });
 
+  it('upgrade-from-old-build: returns v1 fallback values when global_settings is leaked and no active account', async () => {
+    // FOLLOWUP-3 — read-side companion to PR #106. A user who saved settings
+    // on a pre-#106 build has both `global_settings` (leaked write-side) AND
+    // the v1 fallback blob in storage. Without this fix, getAutomationSettings
+    // sees the leaked globals, takes the v2 branch, reads an empty perAccount,
+    // and returns DEFAULTS — silently dropping the user's v1-blob settings.
+    const storage: Record<string, unknown> = {
+      global_settings: { ignoredRepos: [], enableKeyboardShortcuts: true },
+      [AUTOMATION_STORAGE_KEYS.settings]: {
+        ...DEFAULT_AUTOMATION_SETTINGS,
+        autoRebaseEnabled: false,
+        mergeCleanPRsImmediately: true,
+      },
+    };
+    chrome.storage.sync.get = vi.fn(async (keys: unknown) => {
+      if (keys == null) return { ...storage };
+      const want = Array.isArray(keys) ? (keys as string[]) : [keys as string];
+      const out: Record<string, unknown> = {};
+      for (const k of want) if (k in storage) out[k] = storage[k];
+      return out;
+    }) as typeof chrome.storage.sync.get;
+    chrome.storage.local.get = vi.fn().mockResolvedValue({}); // no active_account_id
+
+    const result = await getAutomationSettings();
+    expect(result.autoRebaseEnabled).toBe(false);
+    expect(result.mergeCleanPRsImmediately).toBe(true);
+  });
+
   // ── getResolvedThreads ─────────────────────────────────────────────────────
 
   it('returns {} when nothing stored', async () => {

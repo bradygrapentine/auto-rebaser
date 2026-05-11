@@ -60,16 +60,14 @@ async function writePerAccountSettings(patch: Partial<PerAccountSettings>): Prom
 }
 
 export async function getAutomationSettings(): Promise<AutomationSettings> {
-  // Prefer the v2 split shape (global + per-account).
-  const ignoredRepos = await getGlobalSetting('ignoredRepos');
-  const enableKeyboardShortcuts = await getGlobalSetting('enableKeyboardShortcuts');
-  const perAccount = await readPerAccountSettings();
+  const id = await getActiveAccountId();
 
-  if (
-    ignoredRepos !== undefined ||
-    enableKeyboardShortcuts !== undefined ||
-    Object.keys(perAccount).length > 0
-  ) {
+  if (id) {
+    // v2 split shape — perAccount is the source of truth, with globals
+    // (ignoredRepos, enableKeyboardShortcuts) shared across accounts.
+    const ignoredRepos = await getGlobalSetting('ignoredRepos');
+    const enableKeyboardShortcuts = await getGlobalSetting('enableKeyboardShortcuts');
+    const perAccount = await readPerAccountSettings();
     const merged: AutomationSettings = {
       ...DEFAULT_AUTOMATION_SETTINGS,
       ...perAccount,
@@ -79,7 +77,11 @@ export async function getAutomationSettings(): Promise<AutomationSettings> {
     return merged;
   }
 
-  // Pre-migration / test fallback — single v1 key.
+  // No active account — read from the v1 single-key fallback, mirroring the
+  // save-side path (PR #106). Any populated `global_settings` here is leakage
+  // from a pre-#106 build and is intentionally ignored; without this branch,
+  // the v2 fork above would fire on the leaked globals, return DEFAULTS, and
+  // silently drop the user's v1-blob settings (FOLLOWUP-3).
   const result = await chrome.storage.sync.get(AUTOMATION_STORAGE_KEYS.settings);
   const stored = ((result ?? {})[AUTOMATION_STORAGE_KEYS.settings] ?? undefined) as
     | (Partial<AutomationSettings> & { autoMergeMethod?: MergeMethod })
