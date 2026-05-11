@@ -54,6 +54,10 @@ export interface AccountState {
   rerequestedPRs: Record<number, { at: number }>;
   /** REVIEWER-AUTOMATIONS — parallel store to `pr_store` for PRs the user is reviewing. */
   reviewerPRs: PRStore;
+  /** Cross-account action-dot — count of PRs in actionable state under this
+   * account, computed at the end of each poll cycle. Absent until first
+   * poll; callers default to 0. Source of truth for the AccountSwitcher dot. */
+  actionable_count?: number;
 }
 
 export interface GlobalSettings {

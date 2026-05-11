@@ -163,6 +163,17 @@ code, .mono {
 }
 .account-switcher__dot--active { background: var(--term-cyan); }
 .account-switcher__dot--suspended { background: var(--term-yellow); }
+.account-switcher__dot--attention { background: var(--term-yellow); }
+.account-switcher__pill-attention {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--term-yellow);
+  margin-left: 4px;
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: middle;
+}
 .account-switcher__login { flex: 1 1 auto; }
 .account-switcher__host { color: var(--term-fg-muted); font-size: 11px; }
 .account-switcher__hint { color: var(--term-fg-muted); font-size: 10px; margin-left: 4px; }

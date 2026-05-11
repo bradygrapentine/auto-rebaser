@@ -25,6 +25,8 @@ export interface AccountSummary {
    * `suspended` state. Surface as a yellow dot on the switcher row.
    */
   suspended: boolean;
+  /** PRs in actionable state under this account (poll-computed). 0 when none. */
+  actionableCount: number;
 }
 
 /** Strip the `gh_` (and any GHES `<host>_`) prefix from an accountId
@@ -55,6 +57,8 @@ export async function getAccountSummaries(): Promise<AccountSummary[]> {
     const installations = auth.method === 'github_app' ? auth.installations ?? [] : [];
     const suspended =
       installations.length > 0 && installations.every((i) => i.suspended_at !== null);
+    const actionableCount =
+      ((await getAccountState(id, 'actionable_count')) as number | undefined) ?? 0;
     out.push({
       id,
       login: loginFromId(id),
@@ -62,6 +66,7 @@ export async function getAccountSummaries(): Promise<AccountSummary[]> {
       method: auth.method,
       host: hostFromId(id),
       suspended,
+      actionableCount,
     });
   }
   return out;
