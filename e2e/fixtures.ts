@@ -181,11 +181,21 @@ export interface MockPRDetail {
 export async function mockPRDetail(context: BrowserContext, prs: MockPRDetail[]): Promise<void> {
   await context.route('**/api.github.com/repos/*/*/pulls/*', async (route) => {
     const url = new URL(route.request().url());
-    // path: /repos/:owner/:repo/pulls/:number
+    // path: /repos/:owner/:repo/pulls/:number  (exactly — sub-resources like
+    // /pulls/:num/reviews, /pulls/:num/files etc. must fall through to the
+    // default mockGitHubApi handler so they don't get our PR-detail JSON).
     const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length !== 5 || parts[0] !== 'repos' || parts[3] !== 'pulls') {
+      await route.fallback();
+      return;
+    }
     const owner = parts[1];
     const repoName = parts[2];
     const number = parseInt(parts[4], 10);
+    if (!Number.isFinite(number)) {
+      await route.fallback();
+      return;
+    }
     const match = prs.find((p) => p.number === number && p.repo === `${owner}/${repoName}`);
     if (!match) {
       await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
