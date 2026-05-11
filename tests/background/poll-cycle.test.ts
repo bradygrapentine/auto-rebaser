@@ -46,7 +46,8 @@ import { setBadgeCount, clearBadge } from '../../src/background/badge';
 import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../../src/core/automations-store';
 import { runAllAutomations } from '../../src/background/automations/orchestrator';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
-import type { PRStore, SearchResult, PullRequest } from '../../src/core/types';
+import type { PRStore, SearchResult, PullRequest, PRRecord } from '../../src/core/types';
+import type { PRRecordPhaseTwo } from '../../src/core/automations-types';
 import { appendActivity } from '../../src/core/activity-log';
 import type { ActivityEntry } from '../../src/core/activity-log-types';
 
@@ -1240,5 +1241,57 @@ describe('activity log', () => {
       0
     );
     expect(entryCount).toBe(0);
+  });
+});
+
+describe('search-cap soft dropout (lastFetchError fallback)', () => {
+  it('PR drops from search + getPR returns malformed detail → preserve prior state, stamp lastFetchError', async () => {
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue({
+      prs: [
+        {
+          id: 99, number: 99, title: 'silent dropout',
+          repo: 'org/heavy', url: 'https://github.com/org/heavy/pull/99',
+          state: 'current', lastUpdated: 0,
+        } as PRRecord & PRRecordPhaseTwo,
+      ],
+      lastPollAt: null,
+    } as PRStore);
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [] } as unknown as SearchResult);
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue({} as PullRequest);
+
+    await runPollCycle();
+
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+    const dropout = upserted.find((p) => p.id === 99);
+    expect(dropout).toBeDefined();
+    expect(dropout!.state).toBe('current');
+    expect(dropout!.lastFetchError).toMatchObject({
+      at: expect.any(Number),
+      message: expect.stringMatching(/missing|unparseable|empty|state field/i),
+    });
+  });
+
+  it('PR drops from search + getPR returns state="closed" → flip to closed (no error stamp)', async () => {
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue({
+      prs: [
+        {
+          id: 99, number: 99, title: 'real close',
+          repo: 'org/heavy', url: 'https://github.com/org/heavy/pull/99',
+          state: 'current', lastUpdated: 0,
+        } as PRRecord & PRRecordPhaseTwo,
+      ],
+      lastPollAt: null,
+    } as PRStore);
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [] } as unknown as SearchResult);
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 99, number: 99, state: 'closed', merged: false,
+    } as unknown as PullRequest);
+
+    await runPollCycle();
+
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+    const dropout = upserted.find((p) => p.id === 99);
+    expect(dropout!.state).toBe('closed');
+    expect(dropout!.lastFetchError).toBeUndefined();
   });
 });

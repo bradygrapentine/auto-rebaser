@@ -490,18 +490,34 @@ async function runPollCycleInner(): Promise<number> {
       continue;
     }
 
-    // Only stamp merged/closed when GitHub agrees the PR is actually closed.
-    // If detail.state is 'open', the PR is still open and was just hidden from
-    // search (e.g., GitHub Search API's 1000-result cap). Preserve the prior
-    // open record — pruneStale won't drop it now that we re-pushed it.
+    // Only stamp merged/closed when GitHub *affirmatively* says the PR is
+    // closed or merged. A malformed/empty detail (e.g. search-1000-cap soft
+    // dropout) preserves prior state with a fetch-error flag — without this
+    // guard, every search-cap miss flips to [closed] silently.
     const carry = prev as PRRecord & PRRecordPhaseTwo;
+    const detailHasState = typeof detail.state === 'string';
+    const detailHasMerge = detail.merged === true || detail.merged_at != null;
 
     if (detail.state === 'open') {
-      processedPRs.push({ ...carry, lastUpdated: Date.now() } as PRRecord);
+      processedPRs.push({
+        ...carry,
+        lastUpdated: Date.now(),
+        lastFetchError: undefined,
+      } as PRRecord);
       continue;
     }
 
-    const merged = detail.merged === true || detail.merged_at != null;
+    if (!detailHasState && !detailHasMerge) {
+      // Malformed / empty response — preserve prior state, stamp error.
+      processedPRs.push({
+        ...carry,
+        lastUpdated: Date.now(),
+        lastFetchError: { at: Date.now(), message: 'detail response missing state field' },
+      } as PRRecord);
+      continue;
+    }
+
+    const merged = detailHasMerge;
     const mergedAtMs = detail.merged_at ? Date.parse(detail.merged_at) : carry.mergedAt;
 
     processedPRs.push({

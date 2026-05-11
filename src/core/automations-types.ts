@@ -228,6 +228,16 @@ export interface PRRecordPhaseTwo {
    * chip on the Reviewer tab.
    */
   myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED';
+
+  /**
+   * Set when the most recent `getPR` for this PR returned a malformed/empty
+   * detail (e.g. GitHub search-1000-cap soft dropout). Prior state is
+   * preserved on the record; next poll retries. Cleared on the next
+   * successful detail fetch (state==='open' branch). UI may surface a
+   * subtle "last fetch failed" indicator but should otherwise treat the
+   * PR as still in its prior state.
+   */
+  lastFetchError?: { at: number; message: string };
 }
 
 /** threadId → epoch ms when we auto-resolved it. Skip if already in this map. */
