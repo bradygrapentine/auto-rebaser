@@ -12,6 +12,8 @@ npm run build:firefox
 
 Confirm `dist-firefox/manifest.json` has `browser_specific_settings.gecko.id` and `version` matches `package.json`.
 
+> Ask: "run npm run build:firefox in the auto-rebaser repo, then confirm dist-firefox/manifest.json has a browser_specific_settings.gecko.id field and that its version matches package.json"
+
 In Firefox (115+):
 
 1. Open `about:debugging#/runtime/this-firefox`.
@@ -98,6 +100,8 @@ Temporary add-ons disappear on browser restart. To persist, use Developer Editio
 - [ ] `dist-firefox/manifest.json` does NOT contain `manifest.key` (the `npm run build:store` script strips it)
 - [ ] No `console.error` in the SW DevTools during a full poll cycle
 - [ ] `dist-firefox/` zip size < 500KB (anything larger means `node_modules` leaked in)
+
+> Ask: "in the auto-rebaser repo, confirm dist-firefox/manifest.json does NOT contain a 'key' field, and report the zipped size of dist-firefox/ — flag if >500KB"
 
 ## Out of scope (run separately if relevant)
 
