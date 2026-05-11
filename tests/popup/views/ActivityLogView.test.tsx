@@ -72,18 +72,30 @@ describe('ActivityLogView', () => {
   });
 
   it('initialFilter.todayOnly limits to today entries', async () => {
-    const yesterday = Date.now() - 26 * 60 * 60 * 1000;
-    mountWith(
-      [
-        e({ at: yesterday, prNumber: 1 }),
-        e({ at: Date.now() - 60_000, prNumber: 2 }),
-      ],
-      { todayOnly: true },
-    );
-    await act(async () => {});
-    const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
-    expect(items).toHaveLength(1);
-    expect(items[0]).toHaveTextContent('#2');
+    // Pin the wall clock to mid-day UTC so fixture timestamps and the
+    // component's `toLocalDateString(Date.now())` stay on the same calendar
+    // day. Without this the test is flaky around UTC midnight (CI runner
+    // hit it at 2026-05-11T00:00:27Z): `Date.now() - 60_000` lands on
+    // "yesterday" relative to the component's "today" boundary.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-10T12:00:00Z'));
+    try {
+      const now = Date.now();
+      const yesterday = now - 26 * 60 * 60 * 1000;
+      mountWith(
+        [
+          e({ at: yesterday, prNumber: 1 }),
+          e({ at: now - 60_000, prNumber: 2 }),
+        ],
+        { todayOnly: true },
+      );
+      await act(async () => {});
+      const items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+      expect(items).toHaveLength(1);
+      expect(items[0]).toHaveTextContent('#2');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clear log: confirm dialog → confirm calls storage.set with empty entries', async () => {
@@ -188,23 +200,31 @@ describe('ActivityLogView', () => {
   });
 
   it('today button toggles the date filter to today and back to empty', async () => {
-    const today = Date.now() - 60_000;
-    const yesterday = Date.now() - 26 * 60 * 60 * 1000;
-    mountWith([
-      e({ at: today, prNumber: 100 }),
-      e({ at: yesterday, prNumber: 99 }),
-    ]);
-    await act(async () => {});
-    const todayBtn = screen.getByRole('button', { name: /set date to today/i });
-    fireEvent.click(todayBtn);
-    let items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
-    expect(items).toHaveLength(1);
-    expect(items[0]).toHaveTextContent('#100');
-    // Clicking again clears.
-    const clearBtn = screen.getByRole('button', { name: /clear date filter/i });
-    fireEvent.click(clearBtn);
-    items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
-    expect(items).toHaveLength(2);
+    // See sibling test for the UTC-midnight flake explanation.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-10T12:00:00Z'));
+    try {
+      const now = Date.now();
+      const today = now - 60_000;
+      const yesterday = now - 26 * 60 * 60 * 1000;
+      mountWith([
+        e({ at: today, prNumber: 100 }),
+        e({ at: yesterday, prNumber: 99 }),
+      ]);
+      await act(async () => {});
+      const todayBtn = screen.getByRole('button', { name: /set date to today/i });
+      fireEvent.click(todayBtn);
+      let items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+      expect(items).toHaveLength(1);
+      expect(items[0]).toHaveTextContent('#100');
+      // Clicking again clears.
+      const clearBtn = screen.getByRole('button', { name: /clear date filter/i });
+      fireEvent.click(clearBtn);
+      items = within(screen.getByTestId('activity-list')).getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sort by oldest reverses default order', async () => {
