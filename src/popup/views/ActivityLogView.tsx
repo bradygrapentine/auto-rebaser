@@ -29,7 +29,9 @@ function formatTime(at: number, now: number = Date.now()): string {
   const ageMs = now - at;
   if (ageMs < 60_000) return 'just now';
   if (ageMs < 3_600_000) return `${Math.floor(ageMs / 60_000)}m ago`;
-  return new Date(at).toLocaleString();
+  if (ageMs < 86_400_000) return `${Math.floor(ageMs / 3_600_000)}h ago`;
+  if (ageMs < 7 * 86_400_000) return `${Math.floor(ageMs / 86_400_000)}d ago`;
+  return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function toLocalDateString(at: number): string {
