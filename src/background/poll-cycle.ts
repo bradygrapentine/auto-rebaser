@@ -42,7 +42,9 @@ import {
   getActiveAccountId,
   listAccountIds,
   setActiveAccountId,
+  setAccountState,
 } from '../core/storage/multi-account';
+import { isPRActionable } from '../core/actionable-pr';
 
 const ABORT_ERRORS = new Set(['AUTH_ERROR', 'NOT_AUTHENTICATED', 'RATE_LIMITED']);
 
@@ -536,6 +538,24 @@ async function runPollCycleInner(): Promise<number> {
   await upsertPRs(processedPRs);
   await pruneStale(processedPRs.map((p) => p.id));
   await stampPollTime();
+
+  // Step 4.4: cross-account action-dot — count actionable PRs and persist
+  // per-account so the popup can render the dot without re-walking the
+  // store on every render. Mandatory `if (activeId)` guard: setAccountState
+  // with id='' would write a phantom `''` row into the accounts namespace
+  // which listAccountIds() would then return as a real account.
+  try {
+    const activeId = await getActiveAccountId();
+    if (activeId) {
+      const settings = staleSettings ?? (await getAutomationSettings());
+      const actionable = processedPRs.filter((p) =>
+        isPRActionable(p as PRRecord & Partial<PRRecordPhaseTwo>, settings),
+      ).length;
+      await setAccountState(activeId, 'actionable_count', actionable);
+    }
+  } catch (err) {
+    console.warn('[poll-cycle] actionable_count update failed', err);
+  }
 
   // Step 4.5: phase-2 automations (best-effort; never blocks the next poll)
   // Story 4.5 — suspended-installation PRs display but never write. Filter

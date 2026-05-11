@@ -46,11 +46,19 @@ export function AccountSwitcher({
 
   if (!active) return null;
 
+  const otherAccountNeedsAttention = accounts.some(
+    (a) => a.id !== activeId && a.actionableCount > 0,
+  );
+
   return (
     <div className="account-switcher" ref={ref}>
       <button
         type="button"
-        aria-label={`Account ${active.login}, click to open switcher`}
+        aria-label={
+          otherAccountNeedsAttention
+            ? `Account ${active.login}, another account has PRs needing attention, click to open switcher`
+            : `Account ${active.login}, click to open switcher`
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         className="account-switcher__pill"
@@ -60,6 +68,13 @@ export function AccountSwitcher({
         <span aria-hidden className="account-switcher__chevron">
           {open ? '▴' : '▾'}
         </span>
+        {otherAccountNeedsAttention && (
+          <span
+            aria-hidden
+            className="account-switcher__pill-attention"
+            data-testid="account-switcher-pill-attention"
+          />
+        )}
       </button>
       {open && (
         <div className="account-switcher__menu" role="menu">
@@ -89,6 +104,13 @@ export function AccountSwitcher({
                 <span className="account-switcher__hint" title="App installation suspended">
                   suspended
                 </span>
+              )}
+              {a.actionableCount > 0 && a.id !== activeId && (
+                <span
+                  className="account-switcher__dot account-switcher__dot--attention"
+                  aria-label={`${a.actionableCount} PR${a.actionableCount === 1 ? '' : 's'} need attention`}
+                  data-testid={`account-switcher-row-attention-${a.id}`}
+                />
               )}
             </button>
           ))}

@@ -38,6 +38,13 @@ vi.mock('../../src/core/activity-log', () => ({
   appendActivity: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../src/core/storage/multi-account', () => ({
+  getActiveAccountId: vi.fn().mockResolvedValue('gh_brady'),
+  setActiveAccountId: vi.fn().mockResolvedValue(undefined),
+  listAccountIds: vi.fn().mockResolvedValue([]),
+  setAccountState: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { searchAuthoredPRs, getPR, updateBranch } from '../../src/github/endpoints';
 import { getBranchHeadSHA } from '../../src/github/endpoints/repos';
@@ -48,6 +55,7 @@ import { runAllAutomations } from '../../src/background/automations/orchestrator
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
 import type { PRStore, SearchResult, PullRequest, PRRecord } from '../../src/core/types';
 import type { PRRecordPhaseTwo } from '../../src/core/automations-types';
+import { getActiveAccountId, setAccountState, listAccountIds } from '../../src/core/storage/multi-account';
 import { appendActivity } from '../../src/core/activity-log';
 import type { ActivityEntry } from '../../src/core/activity-log-types';
 
@@ -86,6 +94,9 @@ beforeEach(() => {
   (updateBranch as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
   (getResolvedThreads as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue('gh_brady');
+  (setAccountState as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (runAllAutomations as ReturnType<typeof vi.fn>).mockResolvedValue({
     summary: { ranAt: 1000, rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
     prUpdates: [],
@@ -1293,5 +1304,58 @@ describe('search-cap soft dropout (lastFetchError fallback)', () => {
     const dropout = upserted.find((p) => p.id === 99);
     expect(dropout!.state).toBe('closed');
     expect(dropout!.lastFetchError).toBeUndefined();
+  });
+});
+
+describe('cross-account action-dot — actionable_count persistence', () => {
+  it('writes actionable_count=1 to the active account when one conflict PR is present', async () => {
+    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue('gh_brady');
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 5, number: 5 }),
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 5, number: 5, title: 't',
+      html_url: 'https://github.com/org/repo/pull/5',
+      mergeable_state: 'dirty',
+      base: { repo: { full_name: 'org/repo' } },
+    } as PullRequest);
+
+    await runPollCycle();
+
+    expect(setAccountState).toHaveBeenCalledWith('gh_brady', 'actionable_count', 1);
+  });
+
+  it('does NOT write actionable_count when there is no active account', async () => {
+    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 5, number: 5 }),
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 5, number: 5, title: 't',
+      html_url: 'https://github.com/org/repo/pull/5',
+      mergeable_state: 'dirty',
+      base: { repo: { full_name: 'org/repo' } },
+    } as PullRequest);
+
+    await runPollCycle();
+
+    expect(setAccountState).not.toHaveBeenCalledWith(expect.anything(), 'actionable_count', expect.any(Number));
+  });
+
+  it('writes actionable_count=0 when all PRs are clean', async () => {
+    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue('gh_brady');
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSearchResult({ id: 5, number: 5 }),
+    );
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ id: 5, number: 5, mergeable_state: 'clean' }),
+    );
+
+    await runPollCycle();
+
+    expect(setAccountState).toHaveBeenCalledWith('gh_brady', 'actionable_count', 0);
   });
 });
