@@ -153,3 +153,61 @@ export async function mockGitHubApi(context: BrowserContext): Promise<void> {
     });
   });
 }
+
+export interface MockPRDetail {
+  number: number;
+  /** `${owner}/${repo}` */
+  repo: string;
+  state?: 'open' | 'closed';
+  /** Defaults to 'clean'. */
+  mergeable_state?: string;
+  merged?: boolean;
+  draft?: boolean;
+  node_id?: string;
+  head_sha?: string;
+  base_sha?: string;
+  base_ref?: string;
+  /** Extra fields merged into the response shape. */
+  extra?: Record<string, unknown>;
+}
+
+/**
+ * Add a `/repos/:owner/:repo/pulls/:number` route handler returning a
+ * realistic open-PR detail shape. Use AFTER `mockGitHubApi` for any PR
+ * that the test seeds into pr_store / reviewerPRs — without this, the
+ * SW startup poll's transitionedFromOpen path will flip the seeded
+ * state to `[closed]` because the default mock returns {}.
+ */
+export async function mockPRDetail(context: BrowserContext, prs: MockPRDetail[]): Promise<void> {
+  await context.route('**/api.github.com/repos/*/*/pulls/*', async (route) => {
+    const url = new URL(route.request().url());
+    // path: /repos/:owner/:repo/pulls/:number
+    const parts = url.pathname.split('/').filter(Boolean);
+    const owner = parts[1];
+    const repoName = parts[2];
+    const number = parseInt(parts[4], 10);
+    const match = prs.find((p) => p.number === number && p.repo === `${owner}/${repoName}`);
+    if (!match) {
+      await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: match.number,
+        number: match.number,
+        title: `PR #${match.number}`,
+        html_url: `https://github.com/${match.repo}/pull/${match.number}`,
+        state: match.state ?? 'open',
+        mergeable_state: match.mergeable_state ?? 'clean',
+        draft: match.draft ?? false,
+        merged: match.merged ?? false,
+        node_id: match.node_id ?? `PR_node_${match.number}`,
+        base: { ref: match.base_ref ?? 'main', sha: match.base_sha ?? 'base-sha', repo: { full_name: match.repo } },
+        head: { ref: 'feature', sha: match.head_sha ?? 'head-sha', repo: { full_name: match.repo } },
+        ...(match.extra ?? {}),
+      }),
+    });
+  });
+}
