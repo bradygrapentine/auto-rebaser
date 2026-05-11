@@ -29,6 +29,8 @@ unzip -q auto-rebaser-source.zip -d /tmp/check-src && cd /tmp/check-src && npm c
 
 AMO reviewers will run something similar.
 
+> Ask: "in the auto-rebaser repo, build the Firefox AMO submission artifacts: (1) npm run build:store, (2) zip dist-firefox/ into auto-rebaser-firefox.zip, (3) build the AMO source zip per Step 1's command list (src tests e2e scripts icons LICENSE + the listed config files), (4) verify the source zip by unzipping into /tmp/check-src and running npm ci + npm run build:firefox there. Report both zip sizes and whether the source rebuild succeeded — STOP and flag if the temp-dir build fails."
+
 ## Step 2 — Submit to addons.mozilla.org
 
 1. Open the [AMO developer hub](https://addons.mozilla.org/en-US/developers/) → Auto Rebaser → **Submit a new version**.

@@ -14,10 +14,14 @@ Run these in order. Each is a green-or-stop gate.
 - [ ] Main CI green: `gh run list --branch main --limit 1 --json conclusion --jq '.[0].conclusion'` returns `"success"`
 - [ ] No open release-blocker PRs: `gh pr list --state open` (anything open should be explicitly deferred to v2.1)
 
+> Ask: "in the auto-rebaser repo, run the code-state pre-release checks: (1) confirm local main matches origin/main after git fetch, (2) git status is clean, (3) main CI's most recent run is success, (4) list any open PRs. Report pass/fail per item — STOP and surface failures, don't proceed."
+
 ### Test posture
 - [ ] `npm run typecheck` — clean
 - [ ] `npx vitest run --coverage` — all tests pass, coverage meets thresholds (lines ≥95 / branches ≥88 / functions ≥95 / statements ≥95, per `vite.config.ts`)
 - [ ] `npx playwright test` — 4/4 E2E green (`sign-in`, `pr-list-state-chips`, `settings-persistence`, `reviewer-tab`)
+
+> Ask: "in the auto-rebaser repo, run npm run typecheck, npx vitest run --coverage, and npx playwright test. Report pass/fail and the coverage numbers (lines/branches/functions/statements). Flag any threshold misses (lines ≥95 / branches ≥88 / functions ≥95 / statements ≥95)."
 
 ### Manual smoke (load `dist/` as unpacked extension in Chrome)
 - [ ] **Multi-account:** sign in to one account, add a second account, switch between them. Popup, badge, settings, and activity log all reflect the active account.
@@ -48,6 +52,8 @@ grep '"version"' package.json manifest.json manifest.firefox.json
 
 All three lines must show `2.0.0`. macOS sed needs the empty `''` after `-i`; on Linux drop the `''`.
 
+> Ask: "bump the version to v2.0.0 in auto-rebaser: run the sed commands in package.json, manifest.json, manifest.firefox.json — then grep all three files and report the resulting versions. STOP and flag if any of the three doesn't show 2.0.0."
+
 ## Step 2 — Build the Chrome artifact
 
 ```bash
@@ -59,6 +65,8 @@ ls -lh auto-rebaser-chrome.zip
 The zip should be ~150–250 KB. If it's >1 MB something pulled `node_modules` into the build — abort and inspect `dist/`.
 
 Chrome Web Store does NOT require a separate source-code zip (AMO does — see `docs/runbooks/v2-release-firefox.md`).
+
+> Ask: "in the auto-rebaser repo, run npm run build:store, then zip dist/ into auto-rebaser-chrome.zip at the repo root. Report the zip size — flag if >1MB (means node_modules leaked into the build)."
 
 ## Step 3 — PR + merge the version bump
 
@@ -73,6 +81,8 @@ gh pr merge --auto --squash
 
 Wait for merge before continuing.
 
+> Ask: "in the auto-rebaser repo, cut the v2.0.0 release branch and PR: create branch release/v2.0.0, stage package.json + both manifest files, commit as chore(release): v2.0.0, push, open the PR with --body-file docs/release-notes/v2.0.0.md, arm auto-merge --squash. Report the PR URL and wait for me to confirm merge before moving to Step 4."
+
 ## Step 4 — Tag + GitHub release
 
 ```bash
@@ -85,6 +95,8 @@ gh release create v2.0.0 --title "v2.0.0" \
 ```
 
 The release page will be visible at `https://github.com/bradygrapentine/auto-rebaser/releases/tag/v2.0.0`. Copy the URL — the Chrome Web Store changelog can link to it.
+
+> Ask: "in the auto-rebaser repo, after PR #<release-pr> merged: sync main, create annotated tag v2.0.0 with the multi-feature title, push the tag, and create the GitHub release with --notes-file docs/release-notes/v2.0.0.md and the auto-rebaser-chrome.zip artifact. Report the release URL."
 
 ## Step 5 — Submit to Chrome Web Store
 
@@ -112,6 +124,8 @@ After Chrome approves the update:
 - [ ] Watch the GitHub issue tracker for the next 48h for migration bugs. The `_migration_backup_v1` key buys 60 days of safe rollback (see `docs/runbooks/multi-account-migration.md`).
 - [ ] Update `docs/superpowers/BACKLOG.md` §7 with the v2.0.0 ship date.
 - [ ] If Firefox is on a parallel ship, cross-link from the Firefox runbook to this one's PR / tag for traceability.
+
+> Ask: "in the auto-rebaser repo, after Chrome approves v2.0.0: open docs/superpowers/BACKLOG.md, add a §7 entry recording the v2.0.0 ship date (today, ISO), then open a small PR for that docs change. Report the PR URL."
 
 ## Rollback
 
