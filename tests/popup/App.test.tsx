@@ -409,4 +409,61 @@ describe('App', () => {
     // After setView('list'), PRListView empty state shows again.
     expect(screen.getByText(/no open prs found/i)).toBeInTheDocument();
   });
+
+  // Covers the App.tsx useEffect that reads the browser window height via
+  // chrome.windows.getCurrent and sets the --popup-h CSS custom property.
+  it('sets --popup-h from chrome.windows.getCurrent height', async () => {
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    (chrome as unknown as { windows: { getCurrent: () => Promise<{ height: number }> } }).windows = {
+      getCurrent: vi.fn().mockResolvedValue({ height: 900 }),
+    };
+    document.documentElement.style.removeProperty('--popup-h');
+    await act(async () => {
+      render(<App />);
+    });
+    // 900 - 120 = 780, capped at 600.
+    expect(document.documentElement.style.getPropertyValue('--popup-h')).toBe('600px');
+  });
+
+  it('skips --popup-h when browser height is below 200px', async () => {
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    (chrome as unknown as { windows: { getCurrent: () => Promise<{ height: number }> } }).windows = {
+      getCurrent: vi.fn().mockResolvedValue({ height: 100 }),
+    };
+    document.documentElement.style.removeProperty('--popup-h');
+    await act(async () => {
+      render(<App />);
+    });
+    expect(document.documentElement.style.getPropertyValue('--popup-h')).toBe('');
+  });
+
+  it('swallows chrome.windows errors silently', async () => {
+    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      status: 'signed-in',
+      user: { login: 'testuser', avatarUrl: '' },
+      signInWithPAT: vi.fn(),
+      signOut: vi.fn(),
+      refresh: vi.fn(),
+    });
+    (chrome as unknown as { windows: { getCurrent: () => Promise<unknown> } }).windows = {
+      getCurrent: vi.fn().mockRejectedValue(new Error('no windows api')),
+    };
+    document.documentElement.style.removeProperty('--popup-h');
+    await act(async () => {
+      render(<App />);
+    });
+    expect(document.documentElement.style.getPropertyValue('--popup-h')).toBe('');
+  });
 });

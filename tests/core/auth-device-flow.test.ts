@@ -152,4 +152,31 @@ describe('pollDeviceFlow', () => {
       pollDeviceFlow(baseStart, { sleep: noSleep, now: () => 1_700_000_000_000 }),
     ).rejects.toThrow(/HTTP_502/);
   });
+
+  it('throws device_flow_unexpected_response when body has neither error nor access_token', async () => {
+    mockFetch(() => jsonResponse({}));
+    await expect(
+      pollDeviceFlow(baseStart, { sleep: noSleep, now: () => 1_700_000_000_000 }),
+    ).rejects.toThrow(/device_flow_unexpected_response/);
+  });
+
+  it('uses defaultSleep when no sleep adapter is provided', async () => {
+    let calls = 0;
+    mockFetch(() => {
+      calls += 1;
+      return jsonResponse(
+        calls === 1
+          ? { error: 'authorization_pending' }
+          : { access_token: 'tok', refresh_token: 'rt', expires_in: 3600, refresh_token_expires_in: 7200 },
+      );
+    });
+    const promise = pollDeviceFlow(
+      { ...baseStart, intervalMs: 10 },
+      { now: () => 1_700_000_000_000 },
+    );
+    // Drain pending timers + microtasks so defaultSleep's setTimeout resolves.
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
+    await expect(promise).resolves.toMatchObject({ accessToken: 'tok' });
+  });
 });
