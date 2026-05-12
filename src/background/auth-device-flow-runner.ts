@@ -14,7 +14,7 @@ import {
   type DeviceFlowStart,
   type TokenSet,
 } from '../core/auth-device-flow';
-import { setAuthGitHubApp, setInstallations } from '../core/auth-store';
+import { setAuthGitHubApp, setInstallations, setInstallationsFor } from '../core/auth-store';
 import { getUserInstallations } from '../github/endpoints/installations';
 import {
   buildAccountId,
@@ -55,15 +55,15 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
   const abort = new AbortController();
   state.status = { state: 'pending', start };
   state.abort = abort;
-  // Capture in closure — state.addingAccount is module-level and can be
-  // reset (e.g. by SW eviction) between flow start and .then resolution,
-  // which would silently route an add-account success down the legacy
-  // single-account path and overwrite the active account's auth.
+  // Capture in closure — module-level state can be reset (e.g. by SW eviction)
+  // between flow start and .then resolution. Reads from state.* after the await
+  // are unsafe — decisions must come from closure-captured locals only.
   const addAccount = state.addingAccount;
+  const abortSignal = abort.signal;
 
   // Fire-and-forget polling loop; the result is parked in `state` for
   // whoever asks via `getStatus()`.
-  void pollDeviceFlow(start, { signal: abort.signal })
+  void pollDeviceFlow(start, { signal: abortSignal })
     .then(async (tokenSet) => {
       state.lastTokenSet = tokenSet;
 
@@ -85,11 +85,11 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
           const settings = await getSettings();
           const newId = buildAccountId(me.login, settings.enterpriseHost);
           await setAccountState(newId, 'auth', { method: 'github_app', ...tokenSet });
-          // Best-effort installations fetch under the new active.
+          // Best-effort installations fetch + store under the new account.
           await setActiveAccountId(newId);
           try {
-            const installations = await getUserInstallations();
-            await setInstallations(installations);
+            const installations = await getUserInstallations(newId);
+            await setInstallationsFor(newId, installations);
           } catch (err) {
             console.warn('[device-flow] could not fetch installations:', err);
           }
