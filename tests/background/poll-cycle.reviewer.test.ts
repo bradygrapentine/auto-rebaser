@@ -168,7 +168,7 @@ describe('poll-cycle — reviewer phase', () => {
     await runPollCycle();
 
     expect(enablePullRequestAutoMerge).toHaveBeenCalledTimes(1);
-    expect(enablePullRequestAutoMerge).toHaveBeenCalledWith('PR_nodeid_42', 'SQUASH');
+    expect(enablePullRequestAutoMerge).toHaveBeenCalledWith('PR_nodeid_42', 'SQUASH', undefined);
     const upserted = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0][0];
     expect(upserted.reviewerAutoMergeArmed).toMatchObject({ at: expect.any(Number) });
   });

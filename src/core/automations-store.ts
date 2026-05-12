@@ -7,6 +7,8 @@ import { AUTOMATION_STORAGE_KEYS } from './automations-constants';
 import {
   readAccountKey,
   writeAccountKey,
+  readAccountKeyFor,
+  writeAccountKeyFor,
   getActiveAccountId,
   getGlobalSetting,
   setGlobalSetting,
@@ -129,4 +131,34 @@ export async function getResolvedThreads(): Promise<ResolvedThreadsStore> {
 
 export async function saveResolvedThreads(s: ResolvedThreadsStore): Promise<void> {
   await writeAccountKey('resolved_threads', s);
+}
+
+/**
+ * Explicit-id variant — reads automation settings for the named account
+ * directly. Skips the legacy single-key v1 fallback (that path is popup-only).
+ */
+export async function getAutomationSettingsFor(accountId: string): Promise<AutomationSettings> {
+  const ignoredRepos = await getGlobalSetting('ignoredRepos');
+  const enableKeyboardShortcuts = await getGlobalSetting('enableKeyboardShortcuts');
+  const key = `${STORAGE_KEYS_V2.perAccountSettingsPrefix}${accountId}`;
+  const result = await chrome.storage.sync.get(key);
+  const perAccount = ((result ?? {})[key] ?? {}) as Partial<PerAccountSettings>;
+  return {
+    ...DEFAULT_AUTOMATION_SETTINGS,
+    ...perAccount,
+    ...(ignoredRepos !== undefined ? { ignoredRepos } : {}),
+    ...(enableKeyboardShortcuts !== undefined ? { enableKeyboardShortcuts } : {}),
+  };
+}
+
+export async function getResolvedThreadsFor(accountId: string): Promise<ResolvedThreadsStore> {
+  const stored = await readAccountKeyFor(accountId, 'resolved_threads');
+  return stored ?? {};
+}
+
+export async function saveResolvedThreadsFor(
+  accountId: string,
+  s: ResolvedThreadsStore,
+): Promise<void> {
+  await writeAccountKeyFor(accountId, 'resolved_threads', s);
 }

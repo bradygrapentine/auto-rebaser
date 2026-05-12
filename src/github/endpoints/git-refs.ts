@@ -6,11 +6,12 @@ export type DeleteRefResult = 'deleted' | 'already-gone';
 export async function deleteRef(
   owner: string,
   repo: string,
-  branch: string
+  branch: string,
+  accountId?: string,
 ): Promise<DeleteRefResult> {
   const status = await requestNoBody(
     `/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', accountId }
   );
   if (status === 204) return 'deleted';
   if (status === 404 || status === 422) return 'already-gone';

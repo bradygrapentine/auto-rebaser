@@ -17,6 +17,13 @@ vi.mock('../../src/core/pr-store', () => ({
   upsertPRs: vi.fn().mockResolvedValue(undefined),
   pruneStale: vi.fn().mockResolvedValue(undefined),
   stampPollTime: vi.fn().mockResolvedValue(undefined),
+  // T2 — explicit-id variants used by the multi-account poll loop. Tests that
+  // exercise `listAccountIds=[ids]` drive these instead of the implicit ones.
+  loadStoreFor: vi.fn(),
+  saveStoreFor: vi.fn().mockResolvedValue(undefined),
+  upsertPRsFor: vi.fn().mockResolvedValue(undefined),
+  pruneStaleFor: vi.fn().mockResolvedValue(undefined),
+  stampPollTimeFor: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../src/background/badge', () => ({
@@ -26,8 +33,11 @@ vi.mock('../../src/background/badge', () => ({
 
 vi.mock('../../src/core/automations-store', () => ({
   getAutomationSettings: vi.fn(),
+  getAutomationSettingsFor: vi.fn(),
   getResolvedThreads: vi.fn(),
+  getResolvedThreadsFor: vi.fn(),
   saveResolvedThreads: vi.fn().mockResolvedValue(undefined),
+  saveResolvedThreadsFor: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../src/background/automations/orchestrator', () => ({
@@ -36,6 +46,19 @@ vi.mock('../../src/background/automations/orchestrator', () => ({
 
 vi.mock('../../src/core/activity-log', () => ({
   appendActivity: vi.fn().mockResolvedValue(undefined),
+  appendActivityFor: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/core/known-repos-store', () => ({
+  recordKnownRepos: vi.fn().mockResolvedValue(undefined),
+  recordKnownReposFor: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/core/auth-store', () => ({
+  getAuth: vi.fn().mockResolvedValue(null),
+  getAuthFor: vi.fn().mockResolvedValue(null),
+  setInstallations: vi.fn().mockResolvedValue(undefined),
+  setInstallationsFor: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../src/core/storage/multi-account', () => ({
@@ -48,9 +71,15 @@ vi.mock('../../src/core/storage/multi-account', () => ({
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { searchAuthoredPRs, getPR, updateBranch } from '../../src/github/endpoints';
 import { getBranchHeadSHA } from '../../src/github/endpoints/repos';
-import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../../src/core/pr-store';
+import {
+  loadStore, saveStore, upsertPRs, pruneStale, stampPollTime,
+  loadStoreFor, upsertPRsFor, pruneStaleFor, stampPollTimeFor,
+} from '../../src/core/pr-store';
 import { setBadgeCount, clearBadge } from '../../src/background/badge';
-import { getAutomationSettings, getResolvedThreads, saveResolvedThreads } from '../../src/core/automations-store';
+import {
+  getAutomationSettings, getResolvedThreads, saveResolvedThreads,
+  getAutomationSettingsFor,
+} from '../../src/core/automations-store';
 import { runAllAutomations } from '../../src/background/automations/orchestrator';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
 import type { PRStore, SearchResult, PullRequest, PRRecord } from '../../src/core/types';
@@ -91,8 +120,14 @@ beforeEach(() => {
   (upsertPRs as ReturnType<typeof vi.fn>).mockResolvedValue(EMPTY_STORE);
   (pruneStale as ReturnType<typeof vi.fn>).mockResolvedValue(EMPTY_STORE);
   (stampPollTime as ReturnType<typeof vi.fn>).mockResolvedValue(EMPTY_STORE);
+  // T2 — *For mocks default-resolve so multi-account-path tests don't crash.
+  (loadStoreFor as ReturnType<typeof vi.fn>).mockResolvedValue({ ...EMPTY_STORE });
+  (upsertPRsFor as ReturnType<typeof vi.fn>).mockResolvedValue(EMPTY_STORE);
+  (pruneStaleFor as ReturnType<typeof vi.fn>).mockResolvedValue(EMPTY_STORE);
+  (stampPollTimeFor as ReturnType<typeof vi.fn>).mockResolvedValue(EMPTY_STORE);
   (updateBranch as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
+  (getAutomationSettingsFor as ReturnType<typeof vi.fn>).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
   (getResolvedThreads as ReturnType<typeof vi.fn>).mockResolvedValue({});
   (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue('gh_brady');
@@ -137,7 +172,7 @@ describe('behind PR rebase', () => {
 
     await runPollCycle();
 
-    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1, undefined);
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted[0].state).toBe('updated');
     expect(setBadgeCount).toHaveBeenCalledWith(1);
@@ -156,7 +191,7 @@ describe('behind PR rebase', () => {
 
     await runPollCycle();
 
-    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1, undefined);
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted[0].state).toBe('pending');
   });
@@ -285,8 +320,8 @@ describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
 
     await runPollCycle();
 
-    expect(getBranchHeadSHA).toHaveBeenCalledWith('org', 'repo', 'main');
-    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+    expect(getBranchHeadSHA).toHaveBeenCalledWith('org', 'repo', 'main', undefined);
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1, undefined);
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted[0].state).toBe('pending');
   });
@@ -326,7 +361,7 @@ describe('BEHIND-1: blocked/unstable + behind base triggers rebase', () => {
 
     await runPollCycle();
 
-    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1);
+    expect(updateBranch).toHaveBeenCalledWith('org', 'repo', 1, undefined);
   });
 
   it('getBranchHeadSHA failure leaves PR as pending (does not abort cycle)', async () => {
@@ -883,7 +918,7 @@ describe('Transition detection: open→merged/closed (Codex finding #1 fix)', ()
 
     await runPollCycle();
 
-    expect(getPR).toHaveBeenCalledWith('org', 'repo', 42);
+    expect(getPR).toHaveBeenCalledWith('org', 'repo', 42, undefined);
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted).toHaveLength(1);
     expect(upserted[0].state).toBe('merged');
@@ -960,7 +995,7 @@ describe('Transition detection: open→merged/closed (Codex finding #1 fix)', ()
 
     await runPollCycle();
 
-    expect(getPR).toHaveBeenCalledWith('org', 'repo', 61);
+    expect(getPR).toHaveBeenCalledWith('org', 'repo', 61, undefined);
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted[0].state).toBe('merged');
     expect(upserted[0].branchDeleted).toBe(false);
@@ -1041,7 +1076,7 @@ describe('ignoredRepos filter', () => {
 
     // Only the kept PR was fetched.
     expect((getPR as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
-    expect((getPR as ReturnType<typeof vi.fn>).mock.calls[0]).toEqual(['org', 'keep', 1]);
+    expect((getPR as ReturnType<typeof vi.fn>).mock.calls[0]).toEqual(['org', 'keep', 1, undefined]);
     // Only the kept PR was persisted.
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(upserted).toHaveLength(1);
@@ -1309,7 +1344,9 @@ describe('search-cap soft dropout (lastFetchError fallback)', () => {
 
 describe('cross-account action-dot — actionable_count persistence', () => {
   it('writes actionable_count=1 to the active account when one conflict PR is present', async () => {
-    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    // T2 — accountId is now threaded via listAccountIds iteration, not read
+    // from a shared active-account pointer mid-loop.
+    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue(['gh_brady']);
     (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue('gh_brady');
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSearchResult({ id: 5, number: 5 }),
@@ -1345,7 +1382,7 @@ describe('cross-account action-dot — actionable_count persistence', () => {
   });
 
   it('writes actionable_count=0 when all PRs are clean', async () => {
-    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (listAccountIds as ReturnType<typeof vi.fn>).mockResolvedValue(['gh_brady']);
     (getActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue('gh_brady');
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSearchResult({ id: 5, number: 5 }),

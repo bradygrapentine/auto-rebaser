@@ -14,7 +14,7 @@ describe('endpoints', () => {
       await searchAuthoredPRs();
       expect(request).toHaveBeenCalledWith(
         expect.stringContaining('/search/issues?q=is:pr+is:open+author:@me&per_page=100&page=1'),
-        { useETag: true }
+        { useETag: true, accountId: undefined }
       );
     });
 
@@ -54,7 +54,7 @@ describe('endpoints', () => {
     it('calls request with correct path, no etag', async () => {
       vi.mocked(request).mockResolvedValue({ id: 1, number: 42 });
       await getPR('owner', 'repo', 42);
-      expect(request).toHaveBeenCalledWith('/repos/owner/repo/pulls/42');
+      expect(request).toHaveBeenCalledWith('/repos/owner/repo/pulls/42', { accountId: undefined });
     });
 
     it('returns PullRequest', async () => {
@@ -73,6 +73,7 @@ describe('endpoints', () => {
         method: 'PUT',
         body: JSON.stringify({ update_method: 'rebase' }),
         headers: { 'Content-Type': 'application/json' },
+        accountId: undefined,
       });
     });
   });
@@ -81,7 +82,7 @@ describe('endpoints', () => {
     it('calls GET /user', async () => {
       vi.mocked(request).mockResolvedValue({ login: 'me', avatar_url: 'https://x.com/img' });
       await getAuthenticatedUser();
-      expect(request).toHaveBeenCalledWith('/user');
+      expect(request).toHaveBeenCalledWith('/user', { accountId: undefined });
     });
 
     it('returns GitHubUser', async () => {

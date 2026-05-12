@@ -2,7 +2,13 @@
 // Disables the badge action for 24h after a successful re-request so the user
 // doesn't double-fire on the same PR.
 
-import { readAccountKey, writeAccountKey, removeAccountKey } from './storage/multi-account';
+import {
+  readAccountKey,
+  writeAccountKey,
+  removeAccountKey,
+  readAccountKeyFor,
+  writeAccountKeyFor,
+} from './storage/multi-account';
 
 const STORAGE_KEY = 'rerequestedPRs';
 const THROTTLE_MS = 24 * 60 * 60 * 1000;
@@ -33,6 +39,22 @@ export async function recordRerequest(prId: number, now: number = Date.now()): P
 
 export async function clearRerequestStore(): Promise<void> {
   await removeAccountKey('rerequestedPRs');
+}
+
+/** Explicit-id variants for SW poll-cycle use. */
+export async function getRerequestStoreFor(accountId: string): Promise<RerequestStore> {
+  const stored = await readAccountKeyFor(accountId, 'rerequestedPRs');
+  return (stored as RerequestStore | undefined) ?? {};
+}
+
+export async function recordRerequestFor(
+  accountId: string,
+  prId: number,
+  now: number = Date.now(),
+): Promise<void> {
+  const store = prune(await getRerequestStoreFor(accountId), now);
+  store[prId] = { at: now };
+  await writeAccountKeyFor(accountId, 'rerequestedPRs', store);
 }
 
 export function isThrottled(

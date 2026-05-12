@@ -19,38 +19,46 @@ export const EVICT_BATCH = 50;
 // account B polls the same URL, sends If-None-Match X, and on 304 we return
 // A's cached body to B — the cross-account leak.
 
-async function loadMap(): Promise<ETagMap> {
-  const id = await getActiveAccountId();
-  if (id) {
+async function loadMap(accountId: string | null): Promise<ETagMap> {
+  if (accountId) {
     const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
     const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<string, Record<string, unknown>>;
-    return (accounts[id]?.[STORAGE_KEYS.etags] as ETagMap) ?? {};
+    return (accounts[accountId]?.[STORAGE_KEYS.etags] as ETagMap) ?? {};
   }
   const result = await chrome.storage.local.get(STORAGE_KEYS.etags);
   return (result[STORAGE_KEYS.etags] as ETagMap) ?? {};
 }
 
-async function saveMap(map: ETagMap): Promise<void> {
-  const id = await getActiveAccountId();
-  if (id) {
+async function saveMap(accountId: string | null, map: ETagMap): Promise<void> {
+  if (accountId) {
     const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
     const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<string, Record<string, unknown>>;
-    const acct = { ...(accounts[id] ?? {}), [STORAGE_KEYS.etags]: map };
+    const acct = { ...(accounts[accountId] ?? {}), [STORAGE_KEYS.etags]: map };
     await chrome.storage.local.set({
-      [STORAGE_KEYS_V2.accounts]: { ...accounts, [id]: acct },
+      [STORAGE_KEYS_V2.accounts]: { ...accounts, [accountId]: acct },
     });
     return;
   }
   await chrome.storage.local.set({ [STORAGE_KEYS.etags]: map });
 }
 
-export async function getEntry(url: string): Promise<ETagEntry | null> {
-  const map = await loadMap();
+/**
+ * Get the cached entry for a URL. Pass `accountId` from the poll cycle's
+ * iteration; popup callers pass null and the implicit-id resolution runs.
+ */
+export async function getEntry(url: string, accountId?: string | null): Promise<ETagEntry | null> {
+  const id = accountId === undefined ? await getActiveAccountId() : accountId;
+  const map = await loadMap(id);
   return map[url] ?? null;
 }
 
-export async function setEntry(url: string, entry: ETagEntry): Promise<void> {
-  const map = await loadMap();
+export async function setEntry(
+  url: string,
+  entry: ETagEntry,
+  accountId?: string | null,
+): Promise<void> {
+  const id = accountId === undefined ? await getActiveAccountId() : accountId;
+  const map = await loadMap(id);
 
   // Bump position to most-recent. Object key insertion order is stable in JS, so
   // delete-then-set moves an existing key to the end of the iteration order.
@@ -62,5 +70,5 @@ export async function setEntry(url: string, entry: ETagEntry): Promise<void> {
     for (const stale of keys.slice(0, EVICT_BATCH)) delete map[stale];
   }
 
-  await saveMap(map);
+  await saveMap(id, map);
 }

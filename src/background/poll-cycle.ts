@@ -1,7 +1,7 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
 import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
 import { computeIdleDays, resolveThreshold } from '../core/staleness';
-import { getAuth, setInstallations } from '../core/auth-store';
+import { getAuth, getAuthFor, setInstallations, setInstallationsFor } from '../core/auth-store';
 import { suspendedOwners } from '../core/installations-helpers';
 import { getUserInstallations } from '../github/endpoints/installations';
 import {
@@ -12,12 +12,22 @@ import {
   stampPollTime,
   loadReviewerStore,
   upsertReviewerPRs,
+  loadStoreFor,
+  saveStoreFor,
+  upsertPRsFor,
+  pruneStaleFor,
+  stampPollTimeFor,
+  loadReviewerStoreFor,
+  upsertReviewerPRsFor,
 } from '../core/pr-store';
 import {
   getAutomationSettings,
   getResolvedThreads,
   saveResolvedThreads,
   saveAutomationSettings,
+  getAutomationSettingsFor,
+  getResolvedThreadsFor,
+  saveResolvedThreadsFor,
 } from '../core/automations-store';
 import { searchAuthoredPRs, getPR, updateBranch, getAuthenticatedUser } from '../github/endpoints';
 import { searchReviewerPRs } from '../github/endpoints/reviewer-search';
@@ -32,17 +42,15 @@ import { runAllAutomations, type OrchestratorDeps } from './automations/orchestr
 import type { PullRequestDetail } from './automations/adapters';
 import { clearBadge, setBadgeCount } from './badge';
 import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './state-machine';
-import { appendActivity } from '../core/activity-log';
+import { appendActivity, appendActivityFor } from '../core/activity-log';
 import type { ActivityEntry } from '../core/activity-log-types';
 import { notify, type NotifEvent } from './notifications';
 import { listReviews } from '../github/endpoints/reviews';
 import { detectStaleApproval, type StaleApprovalResult } from '../core/stale-approval';
-import { recordKnownRepos } from '../core/known-repos-store';
+import { recordKnownRepos, recordKnownReposFor } from '../core/known-repos-store';
 import {
-  getActiveAccountId,
   listAccountIds,
   setAccountState,
-  setPollActiveAccountIdOverride,
 } from '../core/storage/multi-account';
 import { isPRActionable } from '../core/actionable-pr';
 
@@ -78,10 +86,15 @@ function computeStalenessPatch(
   return { staleness: { idleDays, lastActivityAt } };
 }
 
-/** Flips PRStore.pollInProgress without going through upsert (avoids racing the store). */
-async function setPollInProgress(value: boolean): Promise<void> {
-  const store = await loadStore();
-  await saveStore({ ...store, pollInProgress: value });
+/** Flips PRStore.pollInProgress without going through upsert (avoids racing the store).
+ *  Threads accountId explicitly — no override consulted. */
+async function setPollInProgress(value: boolean, accountId?: string): Promise<void> {
+  const store = accountId ? await loadStoreFor(accountId) : await loadStore();
+  if (accountId) {
+    await saveStoreFor(accountId, { ...store, pollInProgress: value });
+  } else {
+    await saveStore({ ...store, pollInProgress: value });
+  }
 }
 
 export async function runPollCycle(): Promise<void> {
@@ -89,9 +102,10 @@ export async function runPollCycle(): Promise<void> {
   // each in turn, with per-account error isolation so one account's 401 /
   // rate-limit doesn't take down siblings.
   //
-  // The active accountId is briefly flipped to each id via an IN-MEMORY
-  // override (setPollActiveAccountIdOverride). chrome.storage is NOT touched,
-  // so a user switch mid-poll persists and isn't clobbered when the loop ends.
+  // accountId is threaded EXPLICITLY into runPollCycleInner. No global
+  // override is consulted — that pattern is fragile under Chrome MV3 SW
+  // eviction, which resets module state and chrome.storage.session reads
+  // race with the iteration loop.
   const ids = await listAccountIds();
 
   // Fresh-install / pre-migration path — no accounts namespace yet. Run once
@@ -110,39 +124,45 @@ export async function runPollCycle(): Promise<void> {
 
   clearBadge();
   let totalRebased = 0;
-  try {
-    for (const id of ids) {
+  for (const id of ids) {
+    try {
+      await setPollInProgress(true, id);
       try {
-        // Override persisted to chrome.storage.session so it survives SW
-        // eviction mid-poll. User-switch (chrome.storage.local) is on a
-        // separate key, so a user switch mid-poll isn't clobbered.
-        await setPollActiveAccountIdOverride(id);
-        await setPollInProgress(true);
-        try {
-          const rebasedThisAccount = await runPollCycleInner();
-          totalRebased += rebasedThisAccount;
-        } finally {
-          await setPollInProgress(false);
-        }
-      } catch (err) {
-        console.warn(`[poll-cycle] account ${id} failed:`, err);
+        const rebasedThisAccount = await runPollCycleInner(id);
+        totalRebased += rebasedThisAccount;
+      } finally {
+        await setPollInProgress(false, id);
       }
+    } catch (err) {
+      console.warn(`[poll-cycle] account ${id} failed:`, err);
     }
-  } finally {
-    await setPollActiveAccountIdOverride(null);
   }
   // Aggregate badge across accounts (B1: total rebased this cycle).
   if (totalRebased > 0) setBadgeCount(totalRebased);
 }
 
-async function runPollCycleInner(): Promise<number> {
+async function runPollCycleInner(accountId?: string): Promise<number> {
+  // Tiny context helpers — branch on accountId once instead of at every call
+  // site. Explicit-id path is the SW poll cycle (cross-account isolation);
+  // implicit-id is the pre-migration fresh-install fallback.
+  const ctxLoadStore = () => accountId ? loadStoreFor(accountId) : loadStore();
+  const ctxUpsertPRs = (recs: PRRecord[]) => accountId ? upsertPRsFor(accountId, recs) : upsertPRs(recs);
+  const ctxPruneStale = (ids: number[]) => accountId ? pruneStaleFor(accountId, ids) : pruneStale(ids);
+  const ctxStampPollTime = () => accountId ? stampPollTimeFor(accountId) : stampPollTime();
+  const ctxGetAutomationSettings = () => accountId ? getAutomationSettingsFor(accountId) : getAutomationSettings();
+  const ctxRecordKnownRepos = (names: readonly string[]) =>
+    accountId ? recordKnownReposFor(accountId, names) : recordKnownRepos(names);
+  const ctxGetAuth = () => accountId ? getAuthFor(accountId) : getAuth();
+  const ctxSetInstallations = (insts: Awaited<ReturnType<typeof getUserInstallations>>) =>
+    accountId ? setInstallationsFor(accountId, insts) : setInstallations(insts);
+
   // Load automation settings first — `ignoredRepos` filters BOTH the rebase
   // loop and the orchestrator pass, so it has to be available before either.
   // Failure to load defaults to "no repos ignored", matching current behavior.
   let ignoredRepos = new Set<string>();
   let staleSettings: AutomationSettings | null = null;
   try {
-    staleSettings = await getAutomationSettings();
+    staleSettings = await ctxGetAutomationSettings();
     ignoredRepos = staleSettings.enableIgnoredRepos === false
       ? new Set<string>()
       : new Set(staleSettings.ignoredRepos ?? []);
@@ -160,11 +180,11 @@ async function runPollCycleInner(): Promise<number> {
   // as the current truth rather than blocking the cycle.
   let suspendedOwnerSet = new Set<string>();
   try {
-    const auth = await getAuth();
+    const auth = await ctxGetAuth();
     if (auth?.method === 'github_app') {
       try {
-        const fresh = await getUserInstallations();
-        await setInstallations(fresh);
+        const fresh = await getUserInstallations(accountId);
+        await ctxSetInstallations(fresh);
         suspendedOwnerSet = suspendedOwners(fresh);
       } catch (err) {
         // Network / auth error — fall back to whatever we have stored.
@@ -179,14 +199,14 @@ async function runPollCycleInner(): Promise<number> {
   // Step 2: search
   let searchResult;
   try {
-    searchResult = await searchAuthoredPRs();
+    searchResult = await searchAuthoredPRs(accountId);
   } catch (err) {
     // RATE_LIMITED, NOT_AUTHENTICATED, AUTH_ERROR — abort
     return 0;
   }
 
   // Load store once before loop
-  const store = await loadStore();
+  const store = await ctxLoadStore();
   const storeMap = new Map(store.prs.map((pr) => [pr.id, pr]));
 
   const processedPRs: PRRecord[] = [];
@@ -222,7 +242,7 @@ async function runPollCycleInner(): Promise<number> {
     // Fetch PR
     let pr: PullRequest;
     try {
-      pr = await getPR(owner, repo, item.number);
+      pr = await getPR(owner, repo, item.number, accountId);
       prDetails.set(item.id, pr);
     } catch (err) {
       if (isAbortError(err)) {
@@ -270,7 +290,7 @@ async function runPollCycleInner(): Promise<number> {
       let baseSHA = baseHeadSHACache.get(cacheKey);
       if (baseSHA === undefined) {
         try {
-          baseSHA = await getBranchHeadSHA(owner, repo, pr.base.ref);
+          baseSHA = await getBranchHeadSHA(owner, repo, pr.base.ref, accountId);
         } catch {
           // Network/auth error fetching base branch — leave state as pending;
           // a rebase miss this cycle is preferable to surfacing a noisy error.
@@ -300,7 +320,7 @@ async function runPollCycleInner(): Promise<number> {
 
     if (action === 'rebase' && !rebaseSkipped) {
       try {
-        await updateBranch(owner, repo, item.number);
+        await updateBranch(owner, repo, item.number, accountId);
         updatedCount++;
         // Re-fetch the PR so the post-rebase mergeable_state can override the
         // transient 'updated' label when there's still a real blocker (failing
@@ -311,7 +331,7 @@ async function runPollCycleInner(): Promise<number> {
         // throws, keep 'updated' as a best-effort affirmation.
         let postRebaseState: PRState = 'updated';
         try {
-          const postRebasePr = await getPR(owner, repo, item.number);
+          const postRebasePr = await getPR(owner, repo, item.number, accountId);
           if (postRebasePr.mergeable_state !== 'unknown') {
             const reDerived = deriveStateFromMergeable(
               postRebasePr.mergeable_state,
@@ -404,7 +424,7 @@ async function runPollCycleInner(): Promise<number> {
         const lastHeadShaChangedAt = headChanged ? Date.now() : (cachedChangedAt ?? Date.now());
         let staleApproval: StaleApprovalResult | null = null;
         try {
-          const reviews = await listReviews(owner, repo, item.number);
+          const reviews = await listReviews(owner, repo, item.number, accountId);
           staleApproval = detectStaleApproval({
             lastPushedAt: lastHeadShaChangedAt,
             reviews,
@@ -452,7 +472,7 @@ async function runPollCycleInner(): Promise<number> {
 
   // Best-effort: persist the set of repos we saw in this scan.
   try {
-    await recordKnownRepos([...seenFullNames]);
+    await ctxRecordKnownRepos([...seenFullNames]);
   } catch (err) {
     console.warn('[auto-rebaser] failed to record known repos', err);
   }
@@ -485,7 +505,7 @@ async function runPollCycleInner(): Promise<number> {
 
     let detail: PullRequest;
     try {
-      detail = await getPR(owner, repo, prev.number);
+      detail = await getPR(owner, repo, prev.number, accountId);
       prDetails.set(prev.id, detail);
     } catch (err) {
       if (isAbortError(err)) return 0;
@@ -541,26 +561,22 @@ async function runPollCycleInner(): Promise<number> {
   }
 
   // Step 4: persist v1 rebase results
-  await upsertPRs(processedPRs);
-  await pruneStale(processedPRs.map((p) => p.id));
-  await stampPollTime();
+  await ctxUpsertPRs(processedPRs);
+  await ctxPruneStale(processedPRs.map((p) => p.id));
+  await ctxStampPollTime();
 
   // Step 4.4: cross-account action-dot — count actionable PRs and persist
-  // per-account so the popup can render the dot without re-walking the
-  // store on every render. Mandatory `if (activeId)` guard: setAccountState
-  // with id='' would write a phantom `''` row into the accounts namespace
-  // which listAccountIds() would then return as a real account.
-  try {
-    const activeId = await getActiveAccountId();
-    if (activeId) {
-      const settings = staleSettings ?? (await getAutomationSettings());
+  // under the iteration's accountId. Threaded explicitly, no override.
+  if (accountId) {
+    try {
+      const settings = staleSettings ?? (await ctxGetAutomationSettings());
       const actionable = processedPRs.filter((p) =>
         isPRActionable(p as PRRecord & Partial<PRRecordPhaseTwo>, settings),
       ).length;
-      await setAccountState(activeId, 'actionable_count', actionable);
+      await setAccountState(accountId, 'actionable_count', actionable);
+    } catch (err) {
+      console.warn('[poll-cycle] actionable_count update failed', err);
     }
-  } catch (err) {
-    console.warn('[poll-cycle] actionable_count update failed', err);
   }
 
   // Step 4.5: phase-2 automations (best-effort; never blocks the next poll)
@@ -580,13 +596,13 @@ async function runPollCycleInner(): Promise<number> {
     if (!prevStale && nextStale) newlyIdlePRIds.add(next.id);
   }
 
-  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries, newlyIdlePRIds);
+  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries, newlyIdlePRIds, accountId);
 
   // REVIEWER-AUTOMATIONS — reviewer phase. Gated on the master toggle so
   // existing users stay on the authored-only experience by default.
   if (staleSettings?.enableReviewerTab) {
     try {
-      await runReviewerPhase(staleSettings);
+      await runReviewerPhase(staleSettings, accountId);
     } catch (err) {
       console.warn('[poll-cycle] reviewer phase failed:', err);
     }
@@ -606,10 +622,10 @@ async function runPollCycleInner(): Promise<number> {
  * (including `reviewerAutoMergeArmed` and `lastSeenHeadSha`) so subsequent
  * cycles don't re-fire and so a new push correctly re-opens the gate.
  */
-async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
+async function runReviewerPhase(settings: AutomationSettings, accountId?: string): Promise<void> {
   let me: { login: string };
   try {
-    me = await getAuthenticatedUser();
+    me = await getAuthenticatedUser(accountId);
   } catch (err) {
     console.warn('[reviewer-phase] could not resolve current user; skipping cycle', err);
     return;
@@ -617,13 +633,15 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
 
   let search;
   try {
-    search = await searchReviewerPRs();
+    search = await searchReviewerPRs(accountId);
   } catch (err) {
     console.warn('[reviewer-phase] search failed; skipping cycle', err);
     return;
   }
 
-  const existing = (await loadReviewerStore()).prs as Array<PRRecord & PRRecordPhaseTwo>;
+  const existing = (accountId
+    ? (await loadReviewerStoreFor(accountId))
+    : (await loadReviewerStore())).prs as Array<PRRecord & PRRecordPhaseTwo>;
   const existingById = new Map(existing.map((p) => [p.id, p]));
   const processed: Array<PRRecord & PRRecordPhaseTwo> = [];
 
@@ -638,7 +656,7 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
 
     let pr: PullRequest;
     try {
-      pr = await getPR(owner, repo, item.number);
+      pr = await getPR(owner, repo, item.number, accountId);
     } catch (err) {
       console.warn(`[reviewer-phase] getPR ${fullName}#${item.number} failed; skipping`, err);
       continue;
@@ -653,7 +671,7 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
     let reviewsForGate: Array<{ login: string; state: 'APPROVED' | 'CHANGES_REQUESTED' | 'DISMISSED' | 'COMMENTED' | 'PENDING'; submittedAt: string }> = [];
     let myReviewState: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED' = 'AWAITING';
     try {
-      const reviews = await listReviews(owner, repo, item.number);
+      const reviews = await listReviews(owner, repo, item.number, accountId);
       reviewsForGate = reviews.map((r) => ({
         login: r.login,
         state: r.state,
@@ -695,7 +713,7 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
     let reviewDecision: 'APPROVED' | 'REVIEW_REQUIRED' | 'CHANGES_REQUESTED' | null = null;
     if (settings.enableReviewerAutoMerge && settings.autoMergeReviewerOptInRepos.includes(fullName) && pr.node_id) {
       try {
-        reviewDecision = await getPRReviewDecision(pr.node_id);
+        reviewDecision = await getPRReviewDecision(pr.node_id, accountId);
       } catch (err) {
         console.warn(`[reviewer-phase] getPRReviewDecision ${fullName}#${item.number} failed; treating as REVIEW_REQUIRED`, err);
       }
@@ -726,10 +744,10 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
     const method = settings.mergeMethodPreference?.[0] ?? 'SQUASH';
     let armed = false;
     try {
-      const result = await enablePullRequestAutoMerge(pr.node_id, method);
+      const result = await enablePullRequestAutoMerge(pr.node_id, method, accountId);
       if (result.enabled) {
         armed = true;
-        await appendActivity([{
+        const entry: ActivityEntry = {
           at: Date.now(),
           action: 'reviewer_auto_merge_armed',
           repo: fullName,
@@ -738,7 +756,9 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
           prUrl: pr.html_url,
           result: 'success',
           mergeMethod: method,
-        }]);
+        };
+        if (accountId) await appendActivityFor(accountId, [entry]);
+        else await appendActivity([entry]);
       } else if (result.unsupported && result.reason && /not allowed|not enabled|does not support/i.test(result.reason)) {
         // Repo doesn't allow auto-merge for this user — quietly revoke the
         // allowlist entry so we don't bang on the mutation each cycle.
@@ -759,7 +779,8 @@ async function runReviewerPhase(settings: AutomationSettings): Promise<void> {
     });
   }
 
-  await upsertReviewerPRs(processed);
+  if (accountId) await upsertReviewerPRsFor(accountId, processed);
+  else await upsertReviewerPRs(processed);
 }
 
 /**
@@ -773,18 +794,28 @@ async function runAutomationsPass(
   rebasedCount: number,
   rebaseActivityEntries: ActivityEntry[] = [],
   newlyIdlePRIds: Set<number> = new Set(),
+  accountId?: string,
 ): Promise<void> {
   try {
-    const settings = await getAutomationSettings();
-    const resolvedThreads = await getResolvedThreads();
+    const settings = accountId
+      ? await getAutomationSettingsFor(accountId)
+      : await getAutomationSettings();
+    const resolvedThreads = accountId
+      ? await getResolvedThreadsFor(accountId)
+      : await getResolvedThreads();
 
+    // Wrap each endpoint to inject accountId. When accountId is undefined,
+    // the endpoints fall back to the implicit-id path via undefined.
     const deps: OrchestratorDeps = {
-      getRepo,
-      deleteRef,
-      enableAutoMerge: enablePullRequestAutoMerge,
-      listThreads: listReviewThreads,
-      resolveThread: resolveReviewThread,
-      mergePR,
+      getRepo: (owner, repo) => getRepo(owner, repo, accountId),
+      deleteRef: (owner, repo, ref) => deleteRef(owner, repo, ref, accountId),
+      enableAutoMerge: (prNodeId, method) =>
+        enablePullRequestAutoMerge(prNodeId, method, accountId),
+      listThreads: (owner, repo, number) =>
+        listReviewThreads(owner, repo, number, accountId),
+      resolveThread: (threadId) => resolveReviewThread(threadId, accountId),
+      mergePR: (owner, repo, number, opts) =>
+        mergePR(owner, repo, number, opts, accountId),
     };
 
     const result = await runAllAutomations({
@@ -805,12 +836,14 @@ async function runAutomationsPass(
         const patch = patches.get(pr.id);
         return patch ? ({ ...pr, ...patch } as PRRecord) : pr;
       });
-      await upsertPRs(patched);
+      if (accountId) await upsertPRsFor(accountId, patched);
+      else await upsertPRs(patched);
     }
 
     // Persist resolvedThreads (only if changed — orchestrator returns same ref when untouched).
     if (result.resolvedThreads !== resolvedThreads) {
-      await saveResolvedThreads(result.resolvedThreads);
+      if (accountId) await saveResolvedThreadsFor(accountId, result.resolvedThreads);
+      else await saveResolvedThreads(result.resolvedThreads);
     }
 
     // Capture the most-recently-deleted branch (if any) for the popup footer.
@@ -831,13 +864,14 @@ async function runAutomationsPass(
     }
 
     // Persist the summary, stamping in the rebase count from this cycle.
-    const store = await loadStore();
+    const store = accountId ? await loadStoreFor(accountId) : await loadStore();
     const next: PRStore = {
       ...store,
       lastPollSummary: { ...result.summary, rebased: rebasedCount },
       ...(lastDeletedBranch !== undefined ? { lastDeletedBranch } : {}),
     };
-    await saveStore(next);
+    if (accountId) await saveStoreFor(accountId, next);
+    else await saveStore(next);
 
     console.log('automations: ran', { ...next.lastPollSummary, errors: result.summary.errors });
 
@@ -972,7 +1006,8 @@ async function runAutomationsPass(
     }
 
     // Write all this cycle's entries in one storage call.
-    await appendActivity(cycleEntries);
+    if (accountId) await appendActivityFor(accountId, cycleEntries);
+    else await appendActivity(cycleEntries);
 
     // Story 2.4 — dispatch desktop notifications for the events the user
     // opted in to. Best-effort: failures are swallowed inside `notify`.

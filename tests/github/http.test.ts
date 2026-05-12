@@ -71,10 +71,11 @@ describe('http.request', () => {
     global.fetch = mockFetch(200, { items: [] }, { etag: '"new-etag"' });
 
     await request('/search/issues', { useETag: true });
-    expect(etagCache.setEntry).toHaveBeenCalledWith(`${GITHUB_API_BASE}/search/issues`, {
-      etag: '"new-etag"',
-      data: { items: [] },
-    });
+    expect(etagCache.setEntry).toHaveBeenCalledWith(
+      `${GITHUB_API_BASE}/search/issues`,
+      { etag: '"new-etag"', data: { items: [] } },
+      undefined,
+    );
   });
 
   it('401 → throws AUTH_ERROR and calls clearToken', async () => {

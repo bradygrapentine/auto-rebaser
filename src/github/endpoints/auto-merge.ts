@@ -20,10 +20,11 @@ const MUTATION = `
 
 export async function enablePullRequestAutoMerge(
   prNodeId: string,
-  mergeMethod: MergeMethod
+  mergeMethod: MergeMethod,
+  accountId?: string,
 ): Promise<EnableAutoMergeResult> {
   try {
-    await graphql<unknown>(MUTATION, { prId: prNodeId, method: mergeMethod });
+    await graphql<unknown>(MUTATION, { prId: prNodeId, method: mergeMethod }, accountId);
     return { enabled: true, unsupported: false };
   } catch (err) {
     if (err instanceof GraphQLError) {

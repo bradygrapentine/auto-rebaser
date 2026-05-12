@@ -11,15 +11,23 @@ export interface RequestOptions extends RequestInit {
    * on GHES they live at different paths (`/api/v3` vs `/api/graphql`).
    */
   useGraphQL?: boolean;
+  /**
+   * Explicit account binding. When set, the request reads auth via
+   * `getAuthFor(accountId)`, scopes the ETag cache to that account, and
+   * passes the id into `forceRefresh` on 401. Used by the SW poll cycle
+   * for cross-account isolation under SW eviction. Popup callers omit this.
+   */
+  accountId?: string;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   if (!path.startsWith('/')) throw new Error('INVALID_PATH');
 
-  const token = await ensureFreshToken();
+  const { useETag, useGraphQL, accountId, ...fetchOptions } = options;
+
+  const token = await ensureFreshToken(Date.now(), accountId);
   if (!token) throw new Error('NOT_AUTHENTICATED');
 
-  const { useETag, useGraphQL, ...fetchOptions } = options;
   const url = useGraphQL
     ? await getGraphQLEndpoint()
     : (await getApiBase()) + path;
@@ -36,7 +44,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   let cachedData: unknown = undefined;
   if (useETag) {
-    const entry = await getEntry(url);
+    const entry = await getEntry(url, accountId);
     if (entry) {
       baseHeaders['If-None-Match'] = entry.etag;
       cachedData = entry.data;
@@ -49,7 +57,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   // server invalidated it earlier than expected. Force a refresh and retry
   // once. PAT 401 falls through to the existing clear-and-throw path.
   if (response.status === 401) {
-    const refreshed = await forceRefresh().catch(() => null);
+    const refreshed = await forceRefresh(accountId).catch(() => null);
     if (refreshed) {
       const retryHeaders = { ...baseHeaders, Authorization: `Bearer ${refreshed}`, ...userHeaders };
       response = await fetch(url, { ...fetchOptions, headers: retryHeaders });
@@ -69,7 +77,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   // dump the user into a sign-in loop the next mount can't escape. Surface
   // it as a non-fatal HTTP error instead.
   if (status === 401) {
-    await clearToken();
+    if (!accountId) {
+      // Implicit-id path — clearing the active account's auth is correct.
+      await clearToken();
+    }
+    // For explicit-id callers (poll cycle), leave the per-account auth in
+    // place and let the caller's error handling decide.
     throw new Error('AUTH_ERROR');
   }
   if (status === 403) {
@@ -89,9 +102,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (useETag) {
     const etag = response.headers.get('etag');
     if (etag) {
-      await setEntry(url, { etag, data });
+      await setEntry(url, { etag, data }, accountId);
     }
   }
 
   return data;
+}
+
+/** Wrapper that injects an explicit accountId into RequestOptions before delegating. */
+export async function requestFor<T>(
+  accountId: string,
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return request<T>(path, { ...options, accountId });
 }

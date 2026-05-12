@@ -26,7 +26,7 @@ interface ListInstallationsResponse {
   installations: Installation[];
 }
 
-export async function getUserInstallations(): Promise<Installation[]> {
-  const data = await request<ListInstallationsResponse>('/user/installations');
+export async function getUserInstallations(accountId?: string): Promise<Installation[]> {
+  const data = await request<ListInstallationsResponse>('/user/installations', { accountId });
   return data.installations ?? [];
 }

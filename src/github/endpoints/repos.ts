@@ -9,9 +9,13 @@ export interface Repo {
   allow_rebase_merge: boolean;
 }
 
-export async function getRepo(owner: string, repo: string): Promise<Repo | null> {
+export async function getRepo(
+  owner: string,
+  repo: string,
+  accountId?: string,
+): Promise<Repo | null> {
   try {
-    return await request<Repo>(`/repos/${owner}/${repo}`, { useETag: true });
+    return await request<Repo>(`/repos/${owner}/${repo}`, { useETag: true, accountId });
   } catch (err) {
     if (err instanceof Error && err.message === 'HTTP_404') return null;
     throw err;
@@ -34,11 +38,12 @@ export async function getBranchHeadSHA(
   owner: string,
   repo: string,
   branch: string,
+  accountId?: string,
 ): Promise<string | null> {
   try {
     const data = await request<Branch>(
       `/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
-      { useETag: true },
+      { useETag: true, accountId },
     );
     return data.commit.sha;
   } catch (err) {

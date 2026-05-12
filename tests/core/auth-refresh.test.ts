@@ -4,6 +4,8 @@ vi.mock('../../src/core/auth-store', () => ({
   getAuth: vi.fn(),
   setAuthGitHubApp: vi.fn(),
   clearAuth: vi.fn(),
+  getAuthFor: vi.fn(),
+  setAuthGitHubAppFor: vi.fn(),
 }));
 
 import {
@@ -16,6 +18,8 @@ import {
   getAuth,
   setAuthGitHubApp,
   clearAuth,
+  getAuthFor,
+  setAuthGitHubAppFor,
   type AuthGitHubApp,
 } from '../../src/core/auth-store';
 
@@ -183,5 +187,88 @@ describe('forceRefresh', () => {
       refresh_token_expires_in: 15897600,
     }));
     expect(await forceRefresh()).toBe('gho_forced');
+  });
+});
+
+// T2 acceptance — per-account in-flight dedup. Two concurrent ensureFreshToken
+// calls on DIFFERENT accountIds must each issue their own network refresh
+// (separate /login/oauth/access_token POSTs). Same-account concurrent calls
+// share one. Regression target: pre-T2, a single global inFlight slot caused
+// A's refresh to cross-resolve B's caller.
+describe('ensureFreshToken — per-account refresh dedup', () => {
+  it('different accountIds each get their own network roundtrip', async () => {
+    const mGetAuthFor = vi.mocked(getAuthFor);
+    const mSetAuthFor = vi.mocked(setAuthGitHubAppFor);
+
+    // Both accounts are at/past their access-token expiry so a refresh is forced.
+    const aAuth = baseAppAuth({ accessTokenExpiresAt: NOW - 1000, refreshToken: 'ghr_a' });
+    const bAuth = baseAppAuth({ accessTokenExpiresAt: NOW - 1000, refreshToken: 'ghr_b' });
+    mGetAuthFor.mockImplementation(async (id: string) => (id === 'gh_a' ? aAuth : bAuth));
+    mSetAuthFor.mockResolvedValue(undefined);
+
+    let aResolve!: (r: Response) => void;
+    let bResolve!: (r: Response) => void;
+    const calls: string[] = [];
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
+      const body = String(opts.body ?? '');
+      calls.push(body.includes('ghr_a') ? 'a' : 'b');
+      return new Promise<Response>((resolve) => {
+        if (body.includes('ghr_a')) aResolve = resolve;
+        else bResolve = resolve;
+      });
+    });
+
+    // Kick off both concurrently — they should NOT collapse onto one promise.
+    const pA = ensureFreshToken(NOW, 'gh_a');
+    const pB = ensureFreshToken(NOW, 'gh_b');
+
+    // Give the microtask queue a couple of ticks so fetches land.
+    // Flush the getAuthFor + host-config + refreshSharedFlight await chain.
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(calls.sort()).toEqual(['a', 'b']);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+
+    // Resolve each independently with distinct tokens — they must not swap.
+    aResolve(jsonResponse({
+      access_token: 'gho_a_new', refresh_token: 'ghr_a_new',
+      expires_in: 3600, refresh_token_expires_in: 15897600,
+    }));
+    bResolve(jsonResponse({
+      access_token: 'gho_b_new', refresh_token: 'ghr_b_new',
+      expires_in: 3600, refresh_token_expires_in: 15897600,
+    }));
+
+    expect(await pA).toBe('gho_a_new');
+    expect(await pB).toBe('gho_b_new');
+  });
+
+  it('same accountId concurrent calls share one network roundtrip', async () => {
+    const mGetAuthFor = vi.mocked(getAuthFor);
+    const mSetAuthFor = vi.mocked(setAuthGitHubAppFor);
+    mGetAuthFor.mockResolvedValue(baseAppAuth({ accessTokenExpiresAt: NOW - 1000 }));
+    mSetAuthFor.mockResolvedValue(undefined);
+
+    let resolveFetch!: (r: Response) => void;
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise<Response>((resolve) => { resolveFetch = resolve; }),
+    );
+
+    const p1 = ensureFreshToken(NOW, 'gh_a');
+    // p1 must register its inFlight entry before p2 arrives — otherwise both
+    // race past getAuthFor and each issues its own fetch.
+    await new Promise((r) => setTimeout(r, 0));
+    const p2 = ensureFreshToken(NOW, 'gh_a');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    resolveFetch(jsonResponse({
+      access_token: 'gho_shared', refresh_token: 'ghr_shared',
+      expires_in: 3600, refresh_token_expires_in: 15897600,
+    }));
+
+    expect(await p1).toBe('gho_shared');
+    expect(await p2).toBe('gho_shared');
   });
 });

@@ -10,7 +10,13 @@
 import { STORAGE_KEYS } from './constants';
 import type { TokenSet } from './auth-device-flow';
 import type { Installation } from '../github/endpoints/installations';
-import { readAccountKey, writeAccountKey, removeAccountKey } from './storage/multi-account';
+import {
+  readAccountKey,
+  writeAccountKey,
+  removeAccountKey,
+  readAccountKeyFor,
+  writeAccountKeyFor,
+} from './storage/multi-account';
 
 export const AUTH_KEY = 'auth';
 
@@ -85,6 +91,36 @@ export async function setPATLogin(login: string): Promise<void> {
   const prev = await getAuth();
   if (!prev || prev.method !== 'pat') return;
   await writeAccountKey('auth', { ...prev, login });
+}
+
+/** Explicit-id variant — reads the named account's auth directly. */
+export async function getAuthFor(accountId: string): Promise<Auth | null> {
+  const stored = await readAccountKeyFor(accountId, 'auth');
+  return stored ?? null;
+}
+
+/** Explicit-id variant — update only installations on the named account's auth. No-op for non-App. */
+export async function setInstallationsFor(
+  accountId: string,
+  installations: Installation[],
+): Promise<void> {
+  const prev = await getAuthFor(accountId);
+  if (!prev || prev.method !== 'github_app') return;
+  const next: AuthGitHubApp = { ...prev, installations };
+  await writeAccountKeyFor(accountId, 'auth', next);
+}
+
+/** Explicit-id variant — write the named account's GitHub App auth. Preserves installations. */
+export async function setAuthGitHubAppFor(accountId: string, tokenSet: TokenSet): Promise<void> {
+  const prev = await getAuthFor(accountId);
+  const installations =
+    prev && prev.method === 'github_app' ? prev.installations : undefined;
+  const auth: AuthGitHubApp = {
+    method: 'github_app',
+    ...tokenSet,
+    ...(installations ? { installations } : {}),
+  };
+  await writeAccountKeyFor(accountId, 'auth', auth);
 }
 
 export async function clearAuth(): Promise<void> {

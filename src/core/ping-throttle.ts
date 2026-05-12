@@ -2,7 +2,13 @@
 // the user successfully posts a ping comment. Lives in `chrome.storage.local`
 // so it doesn't sync across devices.
 
-import { readAccountKey, writeAccountKey, removeAccountKey } from './storage/multi-account';
+import {
+  readAccountKey,
+  writeAccountKey,
+  removeAccountKey,
+  readAccountKeyFor,
+  writeAccountKeyFor,
+} from './storage/multi-account';
 
 const STORAGE_KEY = 'pingedPRs';
 const PING_THROTTLE_MS = 24 * 60 * 60 * 1000;
@@ -38,6 +44,22 @@ export async function recordPing(prId: number, now: number = Date.now()): Promis
 /** Sign-out cleanup — drops the throttle map entirely. */
 export async function clearPingedStore(): Promise<void> {
   await removeAccountKey('pingedPRs');
+}
+
+/** Explicit-id variants for SW poll-cycle use. */
+export async function getPingedStoreFor(accountId: string): Promise<PingedStore> {
+  const stored = await readAccountKeyFor(accountId, 'pingedPRs');
+  return stored ?? {};
+}
+
+export async function recordPingFor(
+  accountId: string,
+  prId: number,
+  now: number = Date.now(),
+): Promise<void> {
+  const store = prune(await getPingedStoreFor(accountId), now);
+  store[prId] = { at: now };
+  await writeAccountKeyFor(accountId, 'pingedPRs', store);
 }
 
 export function isThrottled(
