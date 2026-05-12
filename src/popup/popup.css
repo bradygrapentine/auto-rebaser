@@ -39,21 +39,21 @@ html, body, #root {
   background: var(--term-bg);
   font-feature-settings: "calt" 1, "liga" 1;
   position: relative;
-  /* Chrome's max popup height is ~600px and the popup window itself can be
-     shorter when the browser viewport is small. Fill available height and
-     let view-body / settings be the only scroll surface. Header / footer
-     stay pinned via flex: 0 0 auto. */
+  /* Chrome MV3 popup auto-sizes to body content up to ~600px, BUT the browser
+     can cap the popup to a smaller window when the browser viewport itself is
+     short. `100vh` resolves to the popup window's actual height, so capping
+     max-height at min(600px, 100vh) makes view-body / settings the scroll
+     surface in either case. */
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: 600px;
+  max-height: min(600px, 100vh);
   min-height: 0;
   overflow: hidden;
 }
 .popup-root > .popup-header,
 .popup-root > .popup-footer { flex: 0 0 auto; }
 .popup-root > .view-body,
-.popup-root > .settings { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+.popup-root > .settings { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; min-height: 0; }
 
 a {
   color: var(--term-cyan);
@@ -412,9 +412,9 @@ code, .mono {
 }
 .pr-row__title {
   color: var(--term-fg);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   min-width: 0;
   font-size: 13px;
 }
