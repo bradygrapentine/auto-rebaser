@@ -105,6 +105,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
             <p className="settings__section-hint">applies to every signed-in account</p>
           </>
         )}
+        <h2 className="settings__heading">poll</h2>
         <div className="enterprise-row">
           <span className="settings-row__label">github_poll_interval</span>
           <span className="settings-row__sep" aria-hidden>—</span>
