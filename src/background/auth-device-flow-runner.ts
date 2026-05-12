@@ -55,6 +55,11 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
   const abort = new AbortController();
   state.status = { state: 'pending', start };
   state.abort = abort;
+  // Capture in closure — state.addingAccount is module-level and can be
+  // reset (e.g. by SW eviction) between flow start and .then resolution,
+  // which would silently route an add-account success down the legacy
+  // single-account path and overwrite the active account's auth.
+  const addAccount = state.addingAccount;
 
   // Fire-and-forget polling loop; the result is parked in `state` for
   // whoever asks via `getStatus()`.
@@ -62,7 +67,7 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
     .then(async (tokenSet) => {
       state.lastTokenSet = tokenSet;
 
-      if (state.addingAccount) {
+      if (addAccount) {
         // Add-account path — derive the new accountId from /user using
         // THIS tokenSet specifically (don't go through ensureFreshToken,
         // which would route to the currently active account's auth).
