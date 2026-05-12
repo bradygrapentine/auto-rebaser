@@ -60,7 +60,9 @@ function entryDetails(e: ActivityEntry): string {
 export function ActivityLogView({ onBack, initialFilter }: Props) {
   const { accounts, activeId } = useAccounts();
   const showAccountChip = accounts.length > 1;
-  const { entries, loading, clear } = useActivityLog({ scope: 'all' });
+  // Activity log is scoped to the active account — cross-account aggregation
+  // leaks rows whose URLs 404 under the active token.
+  const { entries, loading, clear } = useActivityLog({ scope: 'account' });
   const loginById = useMemo(() => {
     const m: Record<string, string> = {};
     for (const a of accounts) m[a.id] = a.login;

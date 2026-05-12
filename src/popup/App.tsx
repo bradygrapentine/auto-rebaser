@@ -54,7 +54,7 @@ export function App() {
 
   if (auth.status === 'loading') {
     return (
-      <div className="popup-root">
+      <div className="popup-root popup-root--auto">
         <div className="cmd-line">loading…</div>
       </div>
     );
@@ -62,7 +62,7 @@ export function App() {
 
   if (auth.status === 'signed-out' || auth.status === 'error') {
     return (
-      <div className="popup-root">
+      <div className="popup-root popup-root--auto">
         <SignInView
           onSubmit={auth.signInWithPAT}
           onDeviceFlowSuccess={auth.refresh}

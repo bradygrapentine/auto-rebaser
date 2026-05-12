@@ -27,6 +27,9 @@ export interface AuthGitHubApp extends TokenSet {
 export interface AuthPAT {
   method: 'pat';
   token: string;
+  /** Cached GitHub login, populated after a successful /user fetch so the
+   * account switcher pill shows the username instead of "me". */
+  login?: string;
 }
 
 export type Auth = AuthGitHubApp | AuthPAT;
@@ -75,6 +78,13 @@ export async function setInstallations(installations: Installation[]): Promise<v
 export async function setAuthPAT(token: string): Promise<void> {
   const auth: AuthPAT = { method: 'pat', token };
   await writeAccountKey('auth', auth);
+}
+
+/** Cache the GitHub login on the current PAT auth blob. No-op for other methods. */
+export async function setPATLogin(login: string): Promise<void> {
+  const prev = await getAuth();
+  if (!prev || prev.method !== 'pat') return;
+  await writeAccountKey('auth', { ...prev, login });
 }
 
 export async function clearAuth(): Promise<void> {

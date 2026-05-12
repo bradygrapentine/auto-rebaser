@@ -82,7 +82,9 @@ export async function getAccountSummaries(): Promise<AccountSummary[]> {
       const login =
         legacy.method === 'github_app' && legacy.installations?.[0]
           ? legacy.installations[0].account.login
-          : 'me';
+          : legacy.method === 'pat' && legacy.login
+            ? legacy.login
+            : 'me';
       out.push({
         id: '__legacy__',
         login,

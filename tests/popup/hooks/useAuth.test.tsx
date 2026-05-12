@@ -4,6 +4,7 @@ import { useAuth } from '../../../src/popup/hooks/useAuth';
 
 vi.mock('../../../src/core/auth-store', () => ({
   getAuth: vi.fn(),
+  setPATLogin: vi.fn(),
 }));
 
 vi.mock('../../../src/core/auth', () => ({
