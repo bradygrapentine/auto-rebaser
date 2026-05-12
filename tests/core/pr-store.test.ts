@@ -1,5 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { loadStore, saveStore, upsertPRs, pruneStale, stampPollTime } from '../../src/core/pr-store';
+import {
+  loadStore,
+  saveStore,
+  upsertPRs,
+  pruneStale,
+  stampPollTime,
+  loadReviewerStore,
+  saveReviewerStore,
+  upsertReviewerPRs,
+} from '../../src/core/pr-store';
 import { STORAGE_KEYS } from '../../src/core/constants';
 import type { PRRecord, PRStore } from '../../src/core/types';
 
@@ -127,6 +136,48 @@ describe('pr-store', () => {
 
       expect(result.lastPollAt).toBeGreaterThanOrEqual(before);
       expect(result.lastPollAt).toBeLessThanOrEqual(after);
+    });
+  });
+
+  describe('reviewer store', () => {
+    it('loadReviewerStore returns empty default when nothing stored', async () => {
+      chrome.storage.local.get = vi.fn().mockResolvedValue({});
+      const store = await loadReviewerStore();
+      expect(store).toEqual({ prs: [], lastPollAt: null });
+    });
+
+    it('round-trips via saveReviewerStore/loadReviewerStore', async () => {
+      const set = vi.fn().mockResolvedValue(undefined);
+      let saved: Record<string, unknown> = {};
+      chrome.storage.local.set = vi.fn().mockImplementation((obj: Record<string, unknown>) => {
+        saved = obj;
+        return Promise.resolve();
+      }) as unknown as typeof chrome.storage.local.set;
+      chrome.storage.local.get = vi.fn().mockImplementation(() =>
+        Promise.resolve({ reviewerPRs: (saved as Record<string, unknown>).reviewerPRs }),
+      ) as unknown as typeof chrome.storage.local.get;
+
+      const initial: PRStore = { prs: [makePR(7)], lastPollAt: 999 };
+      await saveReviewerStore(initial);
+      const loaded = await loadReviewerStore();
+      expect(loaded).toEqual(initial);
+      expect(set).not.toHaveBeenCalled();
+    });
+
+    it('upsertReviewerPRs merges by id and preserves lastPollAt', async () => {
+      let saved: PRStore = { prs: [makePR(1, { title: 'old' })], lastPollAt: 42 };
+      chrome.storage.local.get = vi.fn().mockImplementation(() =>
+        Promise.resolve({ reviewerPRs: saved }),
+      ) as unknown as typeof chrome.storage.local.get;
+      chrome.storage.local.set = vi.fn().mockImplementation((obj: Record<string, unknown>) => {
+        saved = obj.reviewerPRs as PRStore;
+        return Promise.resolve();
+      }) as unknown as typeof chrome.storage.local.set;
+
+      const result = await upsertReviewerPRs([makePR(1, { title: 'new' }), makePR(2)]);
+      expect(result.prs).toHaveLength(2);
+      expect(result.prs.find((p) => p.id === 1)?.title).toBe('new');
+      expect(result.lastPollAt).toBe(42);
     });
   });
 });

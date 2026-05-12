@@ -11,16 +11,20 @@ vi.mock('../../src/background/alarm', () => ({
 }));
 vi.mock('../../src/background/auth-device-flow-runner', () => ({
   beginDeviceFlow: vi.fn(),
+  beginDeviceFlowAddAccount: vi.fn(),
   cancelDeviceFlow: vi.fn(),
   getStatus: vi.fn(),
+  resetStatus: vi.fn(),
 }));
 
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { setupAlarm } from '../../src/background/alarm';
 import {
   beginDeviceFlow,
+  beginDeviceFlowAddAccount,
   cancelDeviceFlow,
   getStatus,
+  resetStatus,
 } from '../../src/background/auth-device-flow-runner';
 
 describe('handleMessage', () => {
@@ -127,6 +131,56 @@ describe('registerMessageListener', () => {
       handleMessage({ type: 'AUTH_BEGIN_DEVICE_FLOW' }, sendResponse);
       await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
       expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'boom' });
+    });
+
+    it('returns fallback error code when rejection is non-Error', async () => {
+      (beginDeviceFlow as ReturnType<typeof vi.fn>).mockRejectedValue('plain string');
+      const sendResponse = vi.fn();
+      handleMessage({ type: 'AUTH_BEGIN_DEVICE_FLOW' }, sendResponse);
+      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'DEVICE_FLOW_START_FAILED' });
+    });
+  });
+
+  describe('AUTH_BEGIN_DEVICE_FLOW_ADD', () => {
+    it('returns the DeviceFlowStart on success', async () => {
+      const start = {
+        userCode: 'BBB-222',
+        verificationUri: 'https://github.com/login/device',
+        deviceCode: 'DC2', intervalMs: 5000, expiresAt: 0,
+      };
+      (beginDeviceFlowAddAccount as ReturnType<typeof vi.fn>).mockResolvedValue(start);
+      const sendResponse = vi.fn();
+      const isAsync = handleMessage({ type: 'AUTH_BEGIN_DEVICE_FLOW_ADD' }, sendResponse);
+      expect(isAsync).toBe(true);
+      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+      expect(sendResponse).toHaveBeenCalledWith({ ok: true, data: start });
+    });
+
+    it('returns ok=false with Error message on failure', async () => {
+      (beginDeviceFlowAddAccount as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('add boom'));
+      const sendResponse = vi.fn();
+      handleMessage({ type: 'AUTH_BEGIN_DEVICE_FLOW_ADD' }, sendResponse);
+      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'add boom' });
+    });
+
+    it('returns fallback error code on non-Error rejection', async () => {
+      (beginDeviceFlowAddAccount as ReturnType<typeof vi.fn>).mockRejectedValue(42);
+      const sendResponse = vi.fn();
+      handleMessage({ type: 'AUTH_BEGIN_DEVICE_FLOW_ADD' }, sendResponse);
+      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'DEVICE_FLOW_START_FAILED' });
+    });
+  });
+
+  describe('AUTH_RESET_DEVICE_FLOW', () => {
+    it('calls resetStatus and responds ok=true synchronously', () => {
+      const sendResponse = vi.fn();
+      const isAsync = handleMessage({ type: 'AUTH_RESET_DEVICE_FLOW' }, sendResponse);
+      expect(isAsync).toBe(false);
+      expect(resetStatus).toHaveBeenCalledTimes(1);
+      expect(sendResponse).toHaveBeenCalledWith({ ok: true });
     });
   });
 

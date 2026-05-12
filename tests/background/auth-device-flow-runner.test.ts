@@ -10,6 +10,22 @@ vi.mock('../../src/core/auth-device-flow', () => ({
 }));
 vi.mock('../../src/core/auth-store', () => ({
   setAuthGitHubApp: vi.fn(),
+  getAuth: vi.fn().mockResolvedValue(null),
+  setInstallations: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../src/github/endpoints/installations', () => ({
+  getUserInstallations: vi.fn().mockResolvedValue([]),
+}));
+vi.mock('../../src/core/storage/multi-account', () => ({
+  buildAccountId: vi.fn().mockReturnValue('gh_octocat'),
+  setAccountState: vi.fn().mockResolvedValue(undefined),
+  setActiveAccountId: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../src/core/settings-store', () => ({
+  getSettings: vi.fn().mockResolvedValue({ intervalMinutes: 5 }),
+}));
+vi.mock('../../src/core/host-config', () => ({
+  getApiBase: vi.fn().mockResolvedValue('https://api.github.com'),
 }));
 
 import {
@@ -20,8 +36,10 @@ import {
 import { setAuthGitHubApp } from '../../src/core/auth-store';
 import {
   beginDeviceFlow,
+  beginDeviceFlowAddAccount,
   cancelDeviceFlow,
   getStatus,
+  resetStatus,
   _resetForTests,
 } from '../../src/background/auth-device-flow-runner';
 
@@ -116,5 +134,27 @@ describe('cancelDeviceFlow', () => {
     await beginDeviceFlow();
     cancelDeviceFlow();
     expect(getStatus()).toEqual({ state: 'cancelled' });
+  });
+});
+
+describe('resetStatus', () => {
+  it('returns status to idle after a terminal state', async () => {
+    mStart.mockResolvedValue(exampleStart);
+    mPoll.mockReturnValue(new Promise(() => {}));
+    await beginDeviceFlow();
+    cancelDeviceFlow();
+    expect(getStatus().state).toBe('cancelled');
+    resetStatus();
+    expect(getStatus()).toEqual({ state: 'idle' });
+  });
+});
+
+describe('beginDeviceFlowAddAccount', () => {
+  it('starts a device flow and returns the start payload', async () => {
+    mStart.mockResolvedValue(exampleStart);
+    mPoll.mockReturnValue(new Promise(() => {}));
+    const result = await beginDeviceFlowAddAccount();
+    expect(result).toEqual(exampleStart);
+    expect(getStatus().state).toBe('pending');
   });
 });

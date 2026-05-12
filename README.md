@@ -45,9 +45,8 @@ All automations apply only to PRs you authored. Each one has its own kill-switch
 
 - **Account switcher** — popup header dropdown lists every signed-in account; click to switch active. Supports `+ Add account`, `Sign out <login>`, and `Sign out all`.
 - **Multi-account polling** — every signed-in account polls independently on each cycle; the toolbar badge shows the combined rebased-this-cycle count across accounts.
-- **Settings split** — global cross-account settings (poll interval, ignored repos, keyboard shortcuts, GHES host) sit above an explicit `this account (<login>)` divider that scopes everything else (the per-automation toggles + skip lists).
-- **Activity log account filter** — when more than one account is signed in, a `this account · all accounts` chip appears; `all` interleaves activity newest-first and tags non-active rows with `[login]`.
-- **Repo-filter chip** — header `[ filter (N) ▾ ]` dropdown narrows the popup PR list to a chosen subset of repos. Multi-select, persists per-account, polling is unchanged.
+- **Settings split** — global cross-account settings (poll interval, ignored repos, keyboard shortcuts, GHES host) sit above the per-account `account (<login>)` section header (shown when more than one account is signed in) that scopes everything else — the per-automation toggles + skip lists.
+- **Activity log** — single merged feed across every signed-in account. Non-active rows are tagged `[login]`. Background still polls every account independently.
 - **Desktop notifications** (default OFF, opt-in) — toggle ON in settings to fire a system notification when a PR is rebased / hits a conflict / merges / goes idle / reviewer-ping confirms. 1-hour throttle per (PR, event); permission is requested on first toggle and removed on toggle-off.
 
 ### Settings
@@ -76,11 +75,13 @@ The popup uses a terminal-inspired theme — JetBrains Mono, Tokyo Night palette
 ```sh
 npm install
 npm run dev            # vite build --watch
-npm test               # vitest run (~810 tests)
+npm test               # vitest run (~930 tests)
+npm run test:coverage  # vitest with v8 coverage
 npm run typecheck
 npm run build          # chrome
 npm run build:firefox  # firefox (writes to dist-firefox/)
 npm run build:all      # both
+npx playwright test    # E2E suite (loads unpacked extension, drives the popup)
 ```
 
 Load the unpacked extension from `dist/` (Chrome) or `dist-firefox/` (Firefox).

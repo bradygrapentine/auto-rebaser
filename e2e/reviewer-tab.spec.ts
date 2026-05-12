@@ -15,13 +15,10 @@ test('signed-in: reviewer tab renders rows with chips and auto-expands current-s
   await popupPage.evaluate(async () => {
     const id = 'gh_e2e-user';
     await chrome.storage.local.set({
-      auth: { method: 'pat', token: 'fake-token-for-e2e' },
       active_account_id: id,
       accounts: {
         [id]: {
-          login: 'e2e-user',
-          method: 'pat',
-          token: 'fake-token-for-e2e',
+          auth: { method: 'pat', token: 'fake-token-for-e2e' },
           pr_store: { prs: [], lastPollAt: Date.now() },
           reviewerPRs: {
             prs: [

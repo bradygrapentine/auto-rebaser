@@ -18,10 +18,16 @@ test('signed-in: toggling auto-rebase persists across popup reload', async ({ co
   // account v2 round-trip.
   await seedStorage(popupPage, {
     local: {
-      auth: { method: 'pat', token: 'fake-token-for-e2e' },
-      pr_store: { prs: [], lastPollAt: Date.now() },
       active_account_id: 'gh_e2e-user',
-      accounts: { 'gh_e2e-user': { login: 'e2e-user', method: 'pat', token: 'fake-token-for-e2e' } },
+      // v2 shape — readAccountKey only consults the active account's nested
+      // state; the previous legacy-fallback path was removed in the
+      // multi-account leak fix.
+      accounts: {
+        'gh_e2e-user': {
+          auth: { method: 'pat', token: 'fake-token-for-e2e' },
+          pr_store: { prs: [], lastPollAt: Date.now() },
+        },
+      },
     },
   });
   await reloadPopup(popupPage);
