@@ -30,11 +30,22 @@ beforeEach(() => {
   chrome.storage.local.get = local.get as unknown as typeof chrome.storage.local.get;
   chrome.storage.local.set = local.set as unknown as typeof chrome.storage.local.set;
   chrome.storage.local.remove = local.remove as unknown as typeof chrome.storage.local.remove;
+  // getAuth falls through to chrome.storage.sync.get for the v1-fallback path
+  // when there's no per-account auth — mock it as empty by default.
+  chrome.storage.sync.get = vi.fn().mockResolvedValue({}) as unknown as typeof chrome.storage.sync.get;
 });
 
 describe('getAccountSummaries', () => {
-  it('returns [] on fresh install', async () => {
+  it('returns [] on fresh install with no auth at all', async () => {
     expect(await getAccountSummaries()).toEqual([]);
+  });
+
+  it('synthesizes a legacy entry when top-level auth exists with no v2 namespace', async () => {
+    local.data.auth = { method: 'pat', token: 'leg' };
+    const summaries = await getAccountSummaries();
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].id).toBe('__legacy__');
+    expect(summaries[0].method).toBe('pat');
   });
 
   it('returns one summary per signed-in account, insertion order', async () => {
@@ -57,7 +68,7 @@ describe('getAccountSummaries', () => {
     expect(summaries[1].method).toBe('pat');
   });
 
-  it('skips accounts whose namespace exists but auth is missing', async () => {
+  it('skips accounts whose namespace exists but auth is missing (no synthetic when no top-level auth either)', async () => {
     local.data[STORAGE_KEYS_V2.accounts] = {
       gh_octocat: { pr_store: { prs: [], lastPollAt: 1 } },
     };

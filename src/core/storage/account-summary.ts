@@ -8,6 +8,7 @@
 
 import { listAccountIds, getAccountState } from './multi-account';
 import type { Auth } from '../auth-store';
+import { getAuth } from '../auth-store';
 
 export interface AccountSummary {
   /** Stable id, matches `accounts.<id>` namespace key. */
@@ -45,8 +46,10 @@ function hostFromId(id: string): string {
 }
 
 /**
- * Returns one row per signed-in account, in insertion order.
- * Returns [] when no accounts namespace exists (fresh install).
+ * Returns one row per signed-in account, in insertion order. Includes a
+ * synthetic legacy single-account when there's no v2 namespace but a top-
+ * level `auth` exists (pre-multi-account installs), so the popup switcher
+ * pill always renders for any signed-in user.
  */
 export async function getAccountSummaries(): Promise<AccountSummary[]> {
   const ids = await listAccountIds();
@@ -68,6 +71,28 @@ export async function getAccountSummaries(): Promise<AccountSummary[]> {
       suspended,
       actionableCount,
     });
+  }
+
+  if (out.length === 0) {
+    // Legacy / pre-multi-account fallback. getAuth reads the top-level
+    // `auth` key when there's no active account. Build a single synthetic
+    // entry so the switcher pill still appears with sign-out + add account.
+    const legacy = await getAuth();
+    if (legacy) {
+      const login =
+        legacy.method === 'github_app' && legacy.installations?.[0]
+          ? legacy.installations[0].account.login
+          : 'me';
+      out.push({
+        id: '__legacy__',
+        login,
+        avatarUrl: '',
+        method: legacy.method,
+        host: '',
+        suspended: false,
+        actionableCount: 0,
+      });
+    }
   }
   return out;
 }
