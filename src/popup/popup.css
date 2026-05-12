@@ -39,15 +39,14 @@ html, body, #root {
   background: var(--term-bg);
   font-feature-settings: "calt" 1, "liga" 1;
   position: relative;
-  /* Chrome MV3 popup auto-sizes to body content up to ~600px, BUT the browser
-     can cap the popup to a smaller window when the browser viewport itself is
-     short. `100vh` resolves to the popup window's actual height, so capping
-     max-height at min(600px, 100vh) makes view-body / settings the scroll
-     surface in either case. */
+  /* Chrome MV3 popup auto-sizes to body content. Cap at 600px so very long
+     content scrolls inside view-body instead of growing the popup window
+     past Chrome's natural max. Do NOT use `100vh` here — in a popup, vh
+     resolves to the popup window's own height (chicken-and-egg) and ends up
+     pinning the popup at whatever size it currently is. */
   display: flex;
   flex-direction: column;
-  max-height: min(600px, 100vh);
-  min-height: 0;
+  max-height: 600px;
   overflow: hidden;
 }
 .popup-root > .popup-header,
