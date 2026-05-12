@@ -1358,7 +1358,7 @@ code, .mono {
   top: calc(100% + 2px);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 50;
   margin: 0;
   padding: 2px 0;
   list-style: none;
@@ -1370,6 +1370,8 @@ code, .mono {
   overflow-y: auto;
   font-size: 12px;
 }
+/* JS-positioned variant — coords set inline, escapes ancestor overflow. */
+.select-menu--fixed { left: auto; right: auto; }
 .select-option {
   padding: 4px 10px;
   cursor: pointer;
