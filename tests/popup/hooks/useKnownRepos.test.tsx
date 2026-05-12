@@ -75,18 +75,15 @@ describe('useKnownRepos', () => {
       area: string,
     ) => void;
 
+    // Per-account model: the hook refetches via getKnownRepos when any of
+    // (knownRepos / accounts / active_account_id) keys change.
+    (getKnownRepos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { fullName: 'x/y', lastSeenAt: 10 },
+      { fullName: 'p/q', lastSeenAt: 5 },
+    ]);
+
     act(() => {
-      listener(
-        {
-          knownRepos: {
-            newValue: [
-              { fullName: 'x/y', lastSeenAt: 10 },
-              { fullName: 'p/q', lastSeenAt: 5 },
-            ],
-          },
-        },
-        'local',
-      );
+      listener({ knownRepos: { newValue: [] } }, 'local');
     });
 
     await waitFor(() => {

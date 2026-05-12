@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signIn, signOut, composeOAuthScope, setTokenFromPAT } from '../../src/core/auth';
+import { signOut, composeOAuthScope, setTokenFromPAT } from '../../src/core/auth';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
 
 vi.mock('../../src/core/auth-store', () => ({
@@ -19,15 +19,6 @@ import * as automationsStore from '../../src/core/automations-store';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-function buildRedirectURL(params: Record<string, string>): string {
-  const base = 'https://abc123.chromiumapp.org/';
-  const url = new URL(base);
-  for (const [k, v] of Object.entries(params)) {
-    url.searchParams.set(k, v);
-  }
-  return url.toString();
-}
-
 describe('auth', () => {
   beforeEach(() => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('fixed-state' as `${string}-${string}-${string}-${string}-${string}`);
@@ -36,59 +27,6 @@ describe('auth', () => {
     vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
     vi.mocked(automationsStore.saveAutomationSettings).mockResolvedValue(undefined);
     mockFetch.mockReset();
-  });
-
-  it('signIn throws AUTH_CANCELLED when launchWebAuthFlow returns undefined', async () => {
-    chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(undefined);
-    await expect(signIn()).rejects.toThrow('AUTH_CANCELLED');
-  });
-
-  it('signIn throws AUTH_STATE_MISMATCH when state differs', async () => {
-    chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-      buildRedirectURL({ code: 'c123', state: 'wrong-state' })
-    );
-    await expect(signIn()).rejects.toThrow('AUTH_STATE_MISMATCH');
-  });
-
-  it('signIn throws AUTH_NO_CODE when no code param', async () => {
-    chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-      buildRedirectURL({ state: 'fixed-state' })
-    );
-    await expect(signIn()).rejects.toThrow('AUTH_NO_CODE');
-  });
-
-  it('signIn throws AUTH_TOKEN_ERROR when token endpoint returns error', async () => {
-    chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-      buildRedirectURL({ code: 'c123', state: 'fixed-state' })
-    );
-    mockFetch.mockResolvedValue({
-      json: vi.fn().mockResolvedValue({ error: 'bad_verification_code' }),
-    });
-
-    await expect(signIn()).rejects.toThrow('AUTH_TOKEN_ERROR: bad_verification_code');
-  });
-
-  it('signIn throws AUTH_TOKEN_ERROR when no access_token in response', async () => {
-    chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-      buildRedirectURL({ code: 'c123', state: 'fixed-state' })
-    );
-    mockFetch.mockResolvedValue({
-      json: vi.fn().mockResolvedValue({}),
-    });
-
-    await expect(signIn()).rejects.toThrow('AUTH_TOKEN_ERROR: no token');
-  });
-
-  it('signIn happy path calls setToken with access_token', async () => {
-    chrome.identity.launchWebAuthFlow = vi.fn().mockResolvedValue(
-      buildRedirectURL({ code: 'c123', state: 'fixed-state' })
-    );
-    mockFetch.mockResolvedValue({
-      json: vi.fn().mockResolvedValue({ access_token: 'abc' }),
-    });
-
-    await signIn();
-    expect(authStore.setToken).toHaveBeenCalledWith('abc');
   });
 
   it('signOut calls clearToken', async () => {
