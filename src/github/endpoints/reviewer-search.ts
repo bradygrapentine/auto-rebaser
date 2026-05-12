@@ -8,12 +8,12 @@ import { request } from '../http';
 const SEARCH_PAGE_SIZE = 100;
 const SEARCH_MAX_PAGES = 10;
 
-export async function searchReviewerPRs(): Promise<SearchResult> {
+export async function searchReviewerPRs(accountId?: string): Promise<SearchResult> {
   const aggregated: SearchResult['items'] = [];
   const q = encodeURIComponent('is:pr is:open (review-requested:@me OR assignee:@me) -author:@me');
   for (let page = 1; page <= SEARCH_MAX_PAGES; page++) {
     const url = `/search/issues?q=${q}&per_page=${SEARCH_PAGE_SIZE}&page=${page}`;
-    const result = await request<SearchResult>(url, { useETag: true });
+    const result = await request<SearchResult>(url, { useETag: true, accountId });
     aggregated.push(...result.items);
     if (result.items.length < SEARCH_PAGE_SIZE) break;
   }

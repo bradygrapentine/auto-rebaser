@@ -6,7 +6,14 @@ import {
   ACTIVITY_MAX_ENTRIES,
   ACTIVITY_MAX_AGE_MS,
 } from './activity-log-types';
-import { readAccountKey, writeAccountKey, listAccountIds, getAccountState } from './storage/multi-account';
+import {
+  readAccountKey,
+  writeAccountKey,
+  readAccountKeyFor,
+  writeAccountKeyFor,
+  listAccountIds,
+  getAccountState,
+} from './storage/multi-account';
 
 /**
  * Trim entries to satisfy both the cap (max N) and the age limit (max age ms).
@@ -48,6 +55,26 @@ export async function appendActivity(newEntries: ActivityEntry[]): Promise<void>
     await writeAccountKey('activity', { entries: trimmed });
   } catch (err) {
     console.error('[activity] append failed:', err);
+  }
+}
+
+/**
+ * Explicit-id variant — appends to the named account's activity log.
+ * Used by the SW poll cycle where the per-iteration accountId is known.
+ */
+export async function appendActivityFor(
+  accountId: string,
+  newEntries: ActivityEntry[],
+): Promise<void> {
+  if (newEntries.length === 0) return;
+  try {
+    const store = await readAccountKeyFor(accountId, 'activity');
+    const existing: ActivityEntry[] = store?.entries ?? [];
+    const merged = [...existing, ...newEntries];
+    const trimmed = trimByCapAndAge(merged);
+    await writeAccountKeyFor(accountId, 'activity', { entries: trimmed });
+  } catch (err) {
+    console.error('[activity] appendFor failed:', err);
   }
 }
 

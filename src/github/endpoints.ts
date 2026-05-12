@@ -11,11 +11,11 @@ const SEARCH_MAX_PAGES = 10;
  * Each page is ETag-cached individually so repeat polls cost ~0 when nothing
  * has changed.
  */
-export async function searchAuthoredPRs(): Promise<SearchResult> {
+export async function searchAuthoredPRs(accountId?: string): Promise<SearchResult> {
   const aggregated: SearchResult['items'] = [];
   for (let page = 1; page <= SEARCH_MAX_PAGES; page++) {
     const url = `/search/issues?q=is:pr+is:open+author:@me&per_page=${SEARCH_PAGE_SIZE}&page=${page}`;
-    const result = await request<SearchResult>(url, { useETag: true });
+    const result = await request<SearchResult>(url, { useETag: true, accountId });
     aggregated.push(...result.items);
     // GitHub returns fewer than per_page items on the last page.
     if (result.items.length < SEARCH_PAGE_SIZE) break;
@@ -23,18 +23,29 @@ export async function searchAuthoredPRs(): Promise<SearchResult> {
   return { items: aggregated };
 }
 
-export async function getPR(owner: string, repo: string, number: number): Promise<PullRequest> {
-  return request<PullRequest>(`/repos/${owner}/${repo}/pulls/${number}`);
+export async function getPR(
+  owner: string,
+  repo: string,
+  number: number,
+  accountId?: string,
+): Promise<PullRequest> {
+  return request<PullRequest>(`/repos/${owner}/${repo}/pulls/${number}`, { accountId });
 }
 
-export async function updateBranch(owner: string, repo: string, number: number): Promise<void> {
+export async function updateBranch(
+  owner: string,
+  repo: string,
+  number: number,
+  accountId?: string,
+): Promise<void> {
   await request<void>(`/repos/${owner}/${repo}/pulls/${number}/update-branch`, {
     method: 'PUT',
     body: JSON.stringify({ update_method: 'rebase' }),
     headers: { 'Content-Type': 'application/json' },
+    accountId,
   });
 }
 
-export async function getAuthenticatedUser(): Promise<GitHubUser> {
-  return request<GitHubUser>('/user');
+export async function getAuthenticatedUser(accountId?: string): Promise<GitHubUser> {
+  return request<GitHubUser>('/user', { accountId });
 }

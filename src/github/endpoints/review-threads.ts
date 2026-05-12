@@ -32,9 +32,10 @@ interface ListResponse {
 export async function listReviewThreads(
   owner: string,
   repo: string,
-  number: number
+  number: number,
+  accountId?: string,
 ): Promise<ReviewThread[]> {
-  const data = await graphql<ListResponse>(LIST_QUERY, { owner, repo, number });
+  const data = await graphql<ListResponse>(LIST_QUERY, { owner, repo, number }, accountId);
   return data.repository?.pullRequest?.reviewThreads.nodes ?? [];
 }
 
@@ -46,6 +47,6 @@ const RESOLVE_MUTATION = `
   }
 `;
 
-export async function resolveReviewThread(threadId: string): Promise<void> {
-  await graphql<unknown>(RESOLVE_MUTATION, { threadId });
+export async function resolveReviewThread(threadId: string, accountId?: string): Promise<void> {
+  await graphql<unknown>(RESOLVE_MUTATION, { threadId }, accountId);
 }

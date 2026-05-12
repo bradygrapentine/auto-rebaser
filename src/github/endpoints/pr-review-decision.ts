@@ -17,7 +17,10 @@ const QUERY = `
   }
 `;
 
-export async function getPRReviewDecision(prNodeId: string): Promise<ReviewDecision> {
-  const data = await graphql<Response>(QUERY, { prId: prNodeId });
+export async function getPRReviewDecision(
+  prNodeId: string,
+  accountId?: string,
+): Promise<ReviewDecision> {
+  const data = await graphql<Response>(QUERY, { prId: prNodeId }, accountId);
   return data.node?.reviewDecision ?? null;
 }

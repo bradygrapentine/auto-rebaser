@@ -21,13 +21,15 @@ export class GraphQLError extends Error {
 
 export async function graphql<T>(
   query: string,
-  variables?: Record<string, unknown>
+  variables?: Record<string, unknown>,
+  accountId?: string,
 ): Promise<T> {
   const result = await request<GraphQLResponse<T>>('/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables: variables ?? {} }),
     useGraphQL: true,
+    accountId,
   });
 
   if (result.errors && result.errors.length > 0) {

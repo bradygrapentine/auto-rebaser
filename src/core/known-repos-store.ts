@@ -1,6 +1,8 @@
 import {
   readAccountKey,
   writeAccountKey,
+  readAccountKeyFor,
+  writeAccountKeyFor,
   getActiveAccountId,
 } from './storage/multi-account';
 
@@ -62,4 +64,24 @@ export async function recordKnownRepos(fullNames: readonly string[]): Promise<vo
     return;
   }
   await chrome.storage.local.set({ [KNOWN_REPOS_KEY]: capped });
+}
+
+/** Explicit-id variant for SW poll-cycle use. */
+export async function recordKnownReposFor(
+  accountId: string,
+  fullNames: readonly string[],
+): Promise<void> {
+  const valid = fullNames.filter(isValidFullName);
+  if (valid.length === 0) return;
+  const existing = sanitize(await readAccountKeyFor(accountId, 'knownRepos'));
+  const map = new Map<string, KnownRepo>(existing.map((r) => [r.fullName, r]));
+  const now = Date.now();
+
+  for (const name of valid) {
+    map.set(name, { fullName: name, lastSeenAt: now });
+  }
+
+  const sorted = [...map.values()].sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+  const capped = sorted.slice(0, KNOWN_REPOS_CAP);
+  await writeAccountKeyFor(accountId, 'knownRepos', capped);
 }

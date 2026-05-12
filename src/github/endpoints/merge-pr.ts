@@ -43,6 +43,7 @@ export async function mergePR(
   repo: string,
   number: number,
   opts: MergePROpts,
+  accountId?: string,
 ): Promise<MergePRResult> {
   try {
     return await request<MergePRResult>(
@@ -51,6 +52,7 @@ export async function mergePR(
         method: 'PUT',
         body: JSON.stringify({ sha: opts.sha, merge_method: opts.merge_method }),
         headers: { 'Content-Type': 'application/json' },
+        accountId,
       },
     );
   } catch (err) {

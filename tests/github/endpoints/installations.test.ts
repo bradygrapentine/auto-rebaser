@@ -14,7 +14,7 @@ describe('getUserInstallations', () => {
     vi.spyOn(http, 'request').mockResolvedValue({ total_count: 1, installations: stub });
 
     const result = await getUserInstallations();
-    expect(http.request).toHaveBeenCalledWith('/user/installations');
+    expect(http.request).toHaveBeenCalledWith('/user/installations', { accountId: undefined });
     expect(result).toEqual(stub);
   });
 

@@ -26,10 +26,11 @@ export async function listReviews(
   owner: string,
   repo: string,
   num: number,
+  accountId?: string,
 ): Promise<ReviewSummary[]> {
   const raw = await request<RawReview[]>(
     `/repos/${owner}/${repo}/pulls/${num}/reviews?per_page=100`,
-    { method: 'GET' },
+    { method: 'GET', accountId },
   );
   if (!Array.isArray(raw)) return [];
   const out: ReviewSummary[] = [];
