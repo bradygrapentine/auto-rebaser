@@ -25,7 +25,13 @@ export function App() {
   // read window.innerHeight via JS and expose as a CSS custom property.
   useEffect(() => {
     const apply = () => {
-      document.documentElement.style.setProperty('--popup-max-h', `${window.innerHeight}px`);
+      const h = window.innerHeight;
+      // Guard against tiny/zero readings during the initial layout pass —
+      // a 0px cap would collapse the popup entirely (rendered behind the
+      // web page). Only apply if the reading looks like a real viewport.
+      if (h >= 200) {
+        document.documentElement.style.setProperty('--popup-max-h', `${h}px`);
+      }
     };
     apply();
     window.addEventListener('resize', apply);
