@@ -362,6 +362,7 @@ code, .mono {
   padding: 28px 14px;
   color: var(--term-fg-dim);
   font-size: 13px;
+  text-align: center;
 }
 .empty-state::before {
   content: "$ ";
