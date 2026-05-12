@@ -12,6 +12,9 @@ import {
   setGlobalSetting,
   getPerAccountSetting,
   setPerAccountSetting,
+  readAccountKeyFor,
+  writeAccountKeyFor,
+  removeAccountKeyFor,
   __testing,
 } from '../../../src/core/storage/multi-account';
 
@@ -171,6 +174,44 @@ describe('per-account settings', () => {
     expect(__testing.perAccountSettingsKey('gh_octocat')).toBe(
       'per_account_settings:gh_octocat',
     );
+  });
+
+  it('explicit-id helpers: read returns undefined when account namespace is empty', async () => {
+    const got = await readAccountKeyFor('gh_a', 'pr_store');
+    expect(got).toBeUndefined();
+  });
+
+  it('explicit-id helpers: write creates the account namespace on first write', async () => {
+    await writeAccountKeyFor('gh_a', 'pr_store', { prs: [], lastPollAt: 0 });
+    const got = await readAccountKeyFor('gh_a', 'pr_store');
+    expect(got).toEqual({ prs: [], lastPollAt: 0 });
+  });
+
+  it('explicit-id helpers: reads + writes are isolated across two accountIds, regardless of activeAccountId', async () => {
+    // Active is gh_a; the explicit-id helpers must ignore that.
+    await setActiveAccountId('gh_a');
+    await writeAccountKeyFor('gh_a', 'pr_store', {
+      prs: [{ id: 1, number: 1, title: 'A', repo: 'a/r', url: '', state: 'current', lastUpdated: 0 }],
+      lastPollAt: 0,
+    });
+    await writeAccountKeyFor('gh_b', 'pr_store', {
+      prs: [{ id: 2, number: 2, title: 'B', repo: 'b/r', url: '', state: 'current', lastUpdated: 0 }],
+      lastPollAt: 0,
+    });
+    const a = await readAccountKeyFor('gh_a', 'pr_store');
+    const b = await readAccountKeyFor('gh_b', 'pr_store');
+    expect(a?.prs[0].id).toBe(1);
+    expect(b?.prs[0].id).toBe(2);
+  });
+
+  it('explicit-id helpers: removeAccountKeyFor deletes only the named account+key', async () => {
+    await writeAccountKeyFor('gh_a', 'pr_store', { prs: [], lastPollAt: 0 });
+    await writeAccountKeyFor('gh_a', 'activity', { entries: [] });
+    await writeAccountKeyFor('gh_b', 'pr_store', { prs: [], lastPollAt: 0 });
+    await removeAccountKeyFor('gh_a', 'pr_store');
+    expect(await readAccountKeyFor('gh_a', 'pr_store')).toBeUndefined();
+    expect(await readAccountKeyFor('gh_a', 'activity')).toEqual({ entries: [] });
+    expect(await readAccountKeyFor('gh_b', 'pr_store')).toEqual({ prs: [], lastPollAt: 0 });
   });
 
   it('quota assertion: 50 opt-out repos × 4 lists fits in 8 KB', async () => {
