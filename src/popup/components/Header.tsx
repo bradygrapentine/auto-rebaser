@@ -40,7 +40,7 @@ export function Header({
   extras,
 }: Props) {
   const showSwitcher =
-    accounts && accounts.length > 0 && onSwitchAccount && onAddAccount && onSignOutAccount && onSignOutAll;
+    accounts && accounts.length > 0 && onSwitchAccount && onSignOutAccount && onSignOutAll;
 
   return (
     <header className="popup-header">
@@ -66,25 +66,13 @@ export function Header({
       >
         <span aria-hidden>⚙</span>
       </button>
-      {onAddAccount && authMethod !== 'pat' && (
-        <button
-          type="button"
-          aria-label="Add account"
-          onClick={onAddAccount}
-          className="ar-icon-button ar-icon-button--lg"
-          title="Add account"
-          data-testid="header-add-account"
-        >
-          <span aria-hidden>+</span>
-        </button>
-      )}
       {extras}
       {showSwitcher && (
         <AccountSwitcher
           accounts={accounts}
           activeId={activeId ?? null}
           onSwitch={onSwitchAccount}
-          onAddAccount={onAddAccount}
+          onAddAccount={authMethod === 'pat' ? undefined : onAddAccount}
           onSignOut={onSignOutAccount}
           onSignOutAll={onSignOutAll}
         />

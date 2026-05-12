@@ -248,9 +248,13 @@ export async function readAccountKey<K extends keyof AccountState>(
 ): Promise<AccountState[K] | undefined> {
   const id = await getActiveAccountId();
   if (id) {
-    const v2 = await getAccountState(id, key);
-    if (v2 !== undefined) return v2;
+    // v2 path — return the active account's value (or undefined). Do NOT
+    // fall back to the legacy global key here: a freshly-added account
+    // hasn't polled yet and would inherit the previously-active account's
+    // data (cross-account leak that surfaces as "I see both accounts' repos").
+    return await getAccountState(id, key);
   }
+  // No active account — true pre-migration shape, read from the v1 key.
   const legacy = await chrome.storage.local.get(key);
   return (legacy ?? {})[key] as AccountState[K] | undefined;
 }
