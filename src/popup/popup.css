@@ -39,11 +39,15 @@ html, body, #root {
   background: var(--term-bg);
   font-feature-settings: "calt" 1, "liga" 1;
   position: relative;
-  /* Chrome's max popup height is ~600px. Cap the root so .view-body
-     becomes the only scroll surface and header/footer stay pinned. */
+  /* Chrome's max popup height is ~600px and the popup window itself can be
+     shorter when the browser viewport is small. Fill available height and
+     let view-body / settings be the only scroll surface. Header / footer
+     stay pinned via flex: 0 0 auto. */
   display: flex;
   flex-direction: column;
+  height: 100%;
   max-height: 600px;
+  min-height: 0;
   overflow: hidden;
 }
 .popup-root > .popup-header,

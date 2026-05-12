@@ -17,7 +17,7 @@ export function PollSummaryFooter({ onOpenActivity }: Props = {}) {
   const { entries } = useActivityLog();
   const total = entries.length;
 
-  if (!onOpenActivity || total === 0) return null;
+  if (!onOpenActivity) return null;
 
   return (
     <div data-testid="poll-summary-footer" className="popup-footer__delta">
@@ -27,7 +27,7 @@ export function PollSummaryFooter({ onOpenActivity }: Props = {}) {
         onClick={() => onOpenActivity(false)}
         data-testid="view-activity"
       >
-        View activity ({total})
+        View activity{total > 0 ? ` (${total})` : ''}
       </button>
     </div>
   );

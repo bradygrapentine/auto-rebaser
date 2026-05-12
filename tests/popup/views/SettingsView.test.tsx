@@ -115,9 +115,9 @@ describe('SettingsView', () => {
     expect(screen.getByTestId('automations-settings')).toBeInTheDocument();
   });
 
-  it('shows global heading and hides "this account" divider when only one account is signed in', () => {
+  it('hides "global" heading and per-account divider when only one account is signed in', () => {
     render(<SettingsView onBack={vi.fn()} />);
-    expect(screen.getByRole('heading', { name: /^global$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^global$/i })).not.toBeInTheDocument();
     expect(screen.queryByTestId('account-scoped-divider')).not.toBeInTheDocument();
   });
 

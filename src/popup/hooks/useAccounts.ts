@@ -12,6 +12,7 @@ import {
   removeAccount,
   STORAGE_KEYS_V2,
 } from '../../core/storage/multi-account';
+import { clearAuth } from '../../core/auth-store';
 import {
   getAccountSummaries,
   type AccountSummary,
@@ -71,7 +72,14 @@ export function useAccounts(): UseAccountsResult {
 
   const signOut = useCallback(
     async (id: string) => {
-      await removeAccount(id);
+      if (id === '__legacy__') {
+        // Synthetic single-account fallback (top-level auth, no v2 namespace).
+        // removeAccount('__legacy__') is a no-op; clearAuth wipes the actual
+        // legacy auth key.
+        await clearAuth();
+      } else {
+        await removeAccount(id);
+      }
       await refresh();
     },
     [refresh],
@@ -79,7 +87,13 @@ export function useAccounts(): UseAccountsResult {
 
   const signOutAll = useCallback(async () => {
     const list = await getAccountSummaries();
-    for (const a of list) await removeAccount(a.id);
+    for (const a of list) {
+      if (a.id === '__legacy__') {
+        await clearAuth();
+      } else {
+        await removeAccount(a.id);
+      }
+    }
     await refresh();
   }, [refresh]);
 

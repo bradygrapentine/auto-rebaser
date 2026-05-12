@@ -31,27 +31,28 @@ beforeEach(() => {
 });
 
 describe('PollSummaryFooter', () => {
-  it('renders nothing when no entries', async () => {
+  it('always renders the view-activity link when onOpenActivity is provided (entries=0 → "View activity" without count)', async () => {
     mockStore({});
-    const { container } = render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
+    render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
     await act(async () => {});
-    expect(container).toBeEmptyDOMElement();
+    const link = screen.getByTestId('view-activity');
+    expect(link).toHaveTextContent(/^View activity$/);
   });
 
-  it('renders nothing when rebased>0 but no activity entries', async () => {
+  it('persistent link with rebased>0 but no activity entries: count omitted', async () => {
     mockStore({ lastPollSummary: summary(3) }, []);
-    const { container } = render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
+    render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
     await act(async () => {});
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId('view-activity')).toHaveTextContent(/^View activity$/);
   });
 
-  it('renders nothing when last-deleted-branch present but no activity entries', async () => {
+  it('persistent link with last-deleted-branch but no activity entries', async () => {
     mockStore({
       lastDeletedBranch: { repo: 'org/repo', ref: 'feat/login', deletedAt: 1000 },
     }, []);
-    const { container } = render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
+    render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
     await act(async () => {});
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId('view-activity')).toBeInTheDocument();
   });
 
   it('renders nothing when onOpenActivity is not provided (no-op footer)', async () => {
@@ -79,10 +80,4 @@ describe('PollSummaryFooter', () => {
     expect(onOpenActivity).toHaveBeenCalledWith(false);
   });
 
-  it('renders the view-activity link only when entries exist (entries=0 hides it)', async () => {
-    mockStore({ lastPollSummary: summary(1) }, []);
-    render(<PollSummaryFooter onOpenActivity={vi.fn()} />);
-    await act(async () => {});
-    expect(screen.queryByTestId('view-activity')).not.toBeInTheDocument();
-  });
 });
