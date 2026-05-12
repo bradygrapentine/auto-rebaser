@@ -34,16 +34,17 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 1 auto-rebase + 3 main automation toggles (2.6/2.7/2.8) + 1 stale-badge
-    // toggle + 2 stale sub-toggles + 1 keyboard-shortcuts toggle + 3 merge-
-    // method pref checkboxes + 1 merge-clean-PRs-immediately + 1 desktop-
-    // notifications master + 5 notification sub-toggles (visible by default,
-    // disabled when master off) + 1 push-since-approval master (default ON) +
-    // 1 enable-request-rereview sub (visible by default) + 1 reviewer-tab
-    // master (default OFF) + 1 reviewer-auto-merge sub (visible by default,
-    // disabled when master off) = 22.
+    // 1 ignored-repos master + 1 auto-rebase + 3 main automation toggles
+    // (2.6/2.7/2.8) + 1 stale-badge toggle + 2 stale sub-toggles + 1
+    // keyboard-shortcuts toggle + 3 merge-method pref checkboxes + 1
+    // merge-clean-PRs-immediately + 1 desktop-notifications master + 5
+    // notification sub-toggles (visible by default, disabled when master off)
+    // + 1 push-since-approval master (default ON) + 1 enable-request-rereview
+    // sub (visible by default) + 1 reviewer-tab master (default OFF) + 1
+    // reviewer-auto-merge sub (visible by default, disabled when master off)
+    // = 23.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(22);
+    expect(checkboxes).toHaveLength(23);
     expect(screen.getByLabelText(/Auto-rebase behind PRs/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/^Auto-enable auto-merge$/)).not.toBeChecked();

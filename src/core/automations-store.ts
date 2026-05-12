@@ -26,7 +26,7 @@ function migrateMergeMethod(stored: Record<string, unknown>): MergeMethod[] | un
   return [legacy, ...rest];
 }
 
-const GLOBAL_KEYS = ['ignoredRepos', 'enableKeyboardShortcuts'] as const;
+const GLOBAL_KEYS = ['ignoredRepos', 'enableIgnoredRepos', 'enableKeyboardShortcuts'] as const;
 type GlobalKey = typeof GLOBAL_KEYS[number];
 
 function isGlobalKey(k: string): k is GlobalKey {

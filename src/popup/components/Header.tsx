@@ -3,8 +3,6 @@ import { AccountSwitcher } from './AccountSwitcher';
 import type { AccountSummary } from '../../core/storage/account-summary';
 
 interface Props {
-  user?: { login: string; avatarUrl: string };
-  onSignOut: () => void;
   onSettings: () => void;
   /** When provided, a refresh icon button appears in the toolbar. */
   onPollNow?: () => void;
@@ -18,13 +16,17 @@ interface Props {
   onAddAccount?: () => void;
   onSignOutAccount?: (id: string) => void;
   onSignOutAll?: () => void;
+  /**
+   * Auth method of the currently active account. PAT and GitHub App accounts
+   * cannot coexist (Wave UX) — hide the "+ Add account" button when `pat` so
+   * the user must sign out PAT before adding an App account.
+   */
+  authMethod?: 'github_app' | 'pat';
   /** Story 2.5 — extra controls rendered before the account switcher (e.g. repo filter). */
   extras?: ReactNode;
 }
 
 export function Header({
-  user,
-  onSignOut,
   onSettings,
   onPollNow,
   polling = false,
@@ -34,6 +36,7 @@ export function Header({
   onAddAccount,
   onSignOutAccount,
   onSignOutAll,
+  authMethod,
   extras,
 }: Props) {
   const showSwitcher =
@@ -63,7 +66,7 @@ export function Header({
       >
         <span aria-hidden>⚙</span>
       </button>
-      {onAddAccount && (
+      {onAddAccount && authMethod !== 'pat' && (
         <button
           type="button"
           aria-label="Add account"
@@ -76,7 +79,7 @@ export function Header({
         </button>
       )}
       {extras}
-      {showSwitcher ? (
+      {showSwitcher && (
         <AccountSwitcher
           accounts={accounts}
           activeId={activeId ?? null}
@@ -85,15 +88,6 @@ export function Header({
           onSignOut={onSignOutAccount}
           onSignOutAll={onSignOutAll}
         />
-      ) : (
-        user && (
-          <>
-            <span className="header__user" data-testid="header-user">@{user.login}</span>
-            <button type="button" aria-label="Sign out" onClick={onSignOut} className="btn">
-              log-out
-            </button>
-          </>
-        )
       )}
     </header>
   );

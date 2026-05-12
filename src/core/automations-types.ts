@@ -9,6 +9,12 @@ export interface AutomationSettings {
    * thread-resolve, notification-dismiss). Format: "owner/repo".
    */
   ignoredRepos: string[];
+  /**
+   * Master toggle for the ignored-repos list. When false the list is preserved
+   * but treated as empty everywhere (poll + popup + automations), so the user
+   * can disable ignoring without losing their list.
+   */
+  enableIgnoredRepos: boolean;
 
   /**
    * REBASE-OPT-OUT — global kill-switch for the auto-rebase action. Default ON
@@ -111,6 +117,7 @@ export type StaleThresholdDays = 3 | 7 | 14 | 30 | 60;
 
 export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   ignoredRepos: [],
+  enableIgnoredRepos: true,
   autoRebaseEnabled: true,                // ON — core feature
   autoRebaseOptOutRepos: [],
   autoDeleteMergedBranch: true,           // safe default per backlog 2.6

@@ -217,7 +217,15 @@ export function AutomationsSettings() {
             onClick={() => toggle('ignored')}
             label="ignored-repos section"
           />
-          <span className="toggle__name">Ignored repos</span>
+          <label className="toggle">
+            <span className="toggle__name">Ignored repos</span>
+            <input
+              type="checkbox"
+              checked={settings.enableIgnoredRepos !== false}
+              onChange={(e) => save({ enableIgnoredRepos: e.target.checked })}
+              data-testid="ignored-repos-master"
+            />
+          </label>
         </div>
         {expanded.ignored && (
           <RepoOptOutList

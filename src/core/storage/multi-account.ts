@@ -63,6 +63,7 @@ export interface AccountState {
 export interface GlobalSettings {
   intervalMinutes: Settings['intervalMinutes'];
   ignoredRepos: AutomationSettings['ignoredRepos'];
+  enableIgnoredRepos: AutomationSettings['enableIgnoredRepos'];
   enableKeyboardShortcuts: AutomationSettings['enableKeyboardShortcuts'];
   enterpriseHost?: string;
   enterpriseClientId?: string;
@@ -71,7 +72,7 @@ export interface GlobalSettings {
 /** Per-account half of the split. AutomationSettings minus the keys hoisted to GlobalSettings. */
 export type PerAccountSettings = Omit<
   AutomationSettings,
-  'ignoredRepos' | 'enableKeyboardShortcuts'
+  'ignoredRepos' | 'enableIgnoredRepos' | 'enableKeyboardShortcuts'
 >;
 
 // ── account-id helpers ────────────────────────────────────────────────────

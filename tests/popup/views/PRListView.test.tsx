@@ -107,7 +107,7 @@ describe('PRListView', () => {
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
   });
 
-  it('passes user.login down so RepoGroup receives userLogin', () => {
+  it('renders the popup without error when user is provided', () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [pr1], lastPollAt: null });
     render(
       <PRListView
@@ -116,8 +116,7 @@ describe('PRListView', () => {
         onSignOut={vi.fn()}
       />
     );
-    // sign-out button renders only when user is provided (proves prop flowed through).
-    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
+    expect(screen.getByText('auto-rebaser')).toBeInTheDocument();
   });
 
   // Story 5.5 — keyboard shortcuts
