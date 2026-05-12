@@ -37,11 +37,14 @@ interface Props {
     myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED';
     autoMergeArmed: boolean;
   };
+  /** Per-row attention indicator — true when the PR is in an actionable state
+   *  per `isPRActionable`. Renders a small dot at the start of the row. */
+  actionable?: boolean;
 }
 
 const APP_NOT_INSTALLED_HINT = 'Auto Rebaser App not installed for this repo';
 
-export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rerequestState, onRerequest, installRequestUrl, reviewerChip }: Props) {
+export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rerequestState, onRerequest, installRequestUrl, reviewerChip, actionable }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
   const directMergeFailure = extended.lastDirectMergeFailure;
@@ -64,6 +67,14 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
         data-focused={focused ? 'true' : undefined}
         title={pr.errorMessage}
       >
+        {actionable && (
+          <span
+            className="pr-row__attention-dot"
+            data-testid="pr-row-attention-dot"
+            aria-label="needs attention"
+            title="Needs attention"
+          />
+        )}
         <StatusBadge state={pr.state} />
         <span className="pr-row__num" aria-hidden>#{pr.number}</span>
         <div className="pr-row__title-wrap">

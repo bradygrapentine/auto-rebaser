@@ -741,6 +741,15 @@ code, .mono {
   margin-left: auto;
   font-size: 10px;
 }
+.pr-row__attention-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--term-yellow);
+  margin-right: 6px;
+  flex-shrink: 0;
+}
 
 /* ─── Settings (dotfile look) ──────────────────────────────────────────── */
 .settings { padding: 14px; }

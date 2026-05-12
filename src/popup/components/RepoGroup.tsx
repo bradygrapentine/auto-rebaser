@@ -31,11 +31,14 @@ interface Props {
   installRequestUrl?: string;
   /** REVIEWER-AUTOMATIONS — when provided, each row renders the reviewer chip. */
   reviewerChipFor?: (pr: PRRecord) => { myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED'; autoMergeArmed: boolean } | null;
+  /** When provided, returns whether a PR is in an actionable state (per
+   *  isPRActionable). PRRow renders a small attention dot when true. */
+  actionableFor?: (pr: PRRecord) => boolean;
 }
 
 export function RepoGroup({
   group, expanded, onToggle, userLogin, focusedPRId,
-  showStaleBadges, pingStateFor, onPing, rerequestStateFor, onRerequest, coverage, installRequestUrl, reviewerChipFor,
+  showStaleBadges, pingStateFor, onPing, rerequestStateFor, onRerequest, coverage, installRequestUrl, reviewerChipFor, actionableFor,
 }: Props) {
   const [owner, ...rest] = group.repo.split('/');
   const displayName =
@@ -91,6 +94,7 @@ export function RepoGroup({
               onRerequest={onRerequest}
               installRequestUrl={installRequestUrl}
               reviewerChip={reviewerChipFor?.(pr) ?? undefined}
+              actionable={actionableFor?.(pr)}
             />
           ))}
         </div>
