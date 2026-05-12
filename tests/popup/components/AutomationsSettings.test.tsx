@@ -158,6 +158,39 @@ describe('AutomationsSettings', () => {
     );
   });
 
+  it('re-checking a disabled method appends it back to preference', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoEnableAutoMerge: true,
+      mergeMethodPreference: ['REBASE', 'MERGE'],
+    });
+    render(<AutomationsSettings />);
+    await flush();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Enable squash'));
+    });
+    expect(saveAutomationSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ mergeMethodPreference: ['REBASE', 'MERGE', 'SQUASH'] })
+    );
+  });
+
+  it('turning a sub-toggle OFF persists with just the sub key (subToggle falsy branch)', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      enableStaleBadge: true,
+      staleCountsAsAttention: true,
+    });
+    render(<AutomationsSettings />);
+    await flush();
+    const cb = screen.getByLabelText(/stale counts as attention/i, { selector: 'input' });
+    await act(async () => {
+      fireEvent.click(cb);
+    });
+    expect(saveAutomationSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ staleCountsAsAttention: false })
+    );
+  });
+
   it('toggling 2.8 (resolve outdated threads) persists', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
       DEFAULT_AUTOMATION_SETTINGS
