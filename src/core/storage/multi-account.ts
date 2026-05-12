@@ -81,12 +81,29 @@ export type PerAccountSettings = Omit<
 
 // ── account-id helpers ────────────────────────────────────────────────────
 
+/**
+ * Branded account-id type. Producers (`buildAccountId`, `listAccountIds`,
+ * `getActiveAccountId`) emit `AccountId`. Raw strings entering the substrate
+ * from outside (tests, untyped storage reads) must go through `asAccountId`
+ * to land in branded code. The brand is type-only — zero runtime cost.
+ *
+ * Internal `*For(accountId: string, ...)` callees keep `string` to avoid
+ * rippling the brand through every per-store helper signature. `AccountScope`
+ * is the bounded surface where the brand is load-bearing.
+ */
+export type AccountId = string & { readonly __brand: 'AccountId' };
+
+/** Single chokepoint for unbranded → branded cast. Use sparingly. */
+export function asAccountId(s: string): AccountId {
+  return s as AccountId;
+}
+
 /** Build a stable account id. GHES hosts include the host; cloud is just `gh_<login>`. */
-export function buildAccountId(login: string, host?: string): string {
+export function buildAccountId(login: string, host?: string): AccountId {
   const normLogin = login.trim().toLowerCase();
-  if (!host) return `gh_${normLogin}`;
+  if (!host) return asAccountId(`gh_${normLogin}`);
   const normHost = host.trim().toLowerCase().replace(/\./g, '_');
-  return `gh_${normHost}_${normLogin}`;
+  return asAccountId(`gh_${normHost}_${normLogin}`);
 }
 
 function perAccountSettingsKey(id: string): string {
@@ -125,30 +142,30 @@ export async function setPollActiveAccountIdOverride(id: string | null): Promise
   else await session.set({ [POLL_OVERRIDE_KEY]: id });
 }
 
-export async function getActiveAccountId(): Promise<string | null> {
-  if (pollActiveAccountIdOverride !== null) return pollActiveAccountIdOverride;
+export async function getActiveAccountId(): Promise<AccountId | null> {
+  if (pollActiveAccountIdOverride !== null) return asAccountId(pollActiveAccountIdOverride);
   const session = (chrome.storage as { session?: chrome.storage.StorageArea }).session;
   if (session) {
     const sessSnap = await session.get(POLL_OVERRIDE_KEY);
     const sessId = (sessSnap ?? {})[POLL_OVERRIDE_KEY];
     if (typeof sessId === 'string') {
       pollActiveAccountIdOverride = sessId;
-      return sessId;
+      return asAccountId(sessId);
     }
   }
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.activeAccountId);
   const id = (result ?? {})[STORAGE_KEYS_V2.activeAccountId];
-  return typeof id === 'string' ? id : null;
+  return typeof id === 'string' ? asAccountId(id) : null;
 }
 
 export async function setActiveAccountId(id: string): Promise<void> {
   await chrome.storage.local.set({ [STORAGE_KEYS_V2.activeAccountId]: id });
 }
 
-export async function listAccountIds(): Promise<string[]> {
+export async function listAccountIds(): Promise<AccountId[]> {
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
   const accounts = ((result ?? {})[STORAGE_KEYS_V2.accounts] ?? {}) as Record<string, unknown>;
-  return Object.keys(accounts);
+  return Object.keys(accounts).map(asAccountId);
 }
 
 // ── per-account state ─────────────────────────────────────────────────────
