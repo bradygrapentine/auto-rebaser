@@ -139,7 +139,9 @@ async function runPollCycleInner(): Promise<number> {
   let staleSettings: AutomationSettings | null = null;
   try {
     staleSettings = await getAutomationSettings();
-    ignoredRepos = new Set(staleSettings.ignoredRepos ?? []);
+    ignoredRepos = staleSettings.enableIgnoredRepos === false
+      ? new Set<string>()
+      : new Set(staleSettings.ignoredRepos ?? []);
   } catch (err) {
     console.warn('[poll-cycle] could not read automation settings; ignoring repo-ignore list', err);
   }

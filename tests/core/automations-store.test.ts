@@ -94,6 +94,7 @@ describe('automations-store', () => {
   it('returns stored values for fields that are present', async () => {
     const stored: AutomationSettings = {
       ignoredRepos: ['org/repo-ignored'],
+      enableIgnoredRepos: true,
       autoRebaseEnabled: false,
       autoRebaseOptOutRepos: ['org/repo-skip-rebase'],
       autoDeleteMergedBranch: false,

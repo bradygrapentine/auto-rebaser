@@ -385,22 +385,6 @@ describe('App', () => {
     expect(screen.getByText(/no open prs found/i)).toBeInTheDocument();
   });
 
-  it('sign-out returns to signed-out state', async () => {
-    const mockSignOut = vi.fn();
-    // start signed-in
-    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
-      status: 'signed-in',
-      user: { login: 'testuser', avatarUrl: '' },
-      signInWithPAT: vi.fn(),
-      signOut: mockSignOut,
-      refresh: vi.fn(),
-    });
-    render(<App />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
-    });
-    expect(mockSignOut).toHaveBeenCalledOnce();
-  });
 
   // Covers the App.tsx async () => { await auth.signOut(); setView('list') }
   // wrapper passed to SettingsView. After signing out from Settings, the user

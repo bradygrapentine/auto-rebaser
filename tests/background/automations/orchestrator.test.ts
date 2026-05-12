@@ -62,6 +62,7 @@ function makeDetail(overrides: Partial<PullRequestDetail> = {}): PullRequestDeta
 
 const ALL_ON_SETTINGS: AutomationSettings = {
   ignoredRepos: [],
+  enableIgnoredRepos: true,
   autoRebaseEnabled: true,
   autoRebaseOptOutRepos: [],
   autoDeleteMergedBranch: true,

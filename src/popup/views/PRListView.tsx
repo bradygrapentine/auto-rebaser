@@ -60,7 +60,9 @@ export function PRListView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const { settings } = useAutomationSettings();
-  const ignored = new Set(settings.ignoredRepos);
+  const ignored = settings.enableIgnoredRepos === false
+    ? new Set<string>()
+    : new Set(settings.ignoredRepos);
   const repoFilter = settings.repoFilter ?? [];
   const repoFilterSet = useMemo(() => new Set(repoFilter), [repoFilter]);
   const visiblePRs = prs.filter((pr) => {
@@ -195,13 +197,12 @@ export function PRListView({
   return (
     <div className="popup-root">
       <Header
-        user={user}
-        onSignOut={onSignOut}
         onSettings={onSettings}
         onPollNow={handlePollNow}
         polling={pollInProgress === true}
         accounts={accounts}
         activeId={activeId}
+        authMethod={authMethod}
         onSwitchAccount={switchTo}
         onAddAccount={onAddAccount}
         onSignOutAccount={async (id) => {
