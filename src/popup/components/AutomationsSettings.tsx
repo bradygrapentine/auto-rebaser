@@ -510,7 +510,7 @@ export function AutomationsSettings() {
         {expanded.reviewerTab && (
           <>
             <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
-              <span>Auto-enable auto-merge after I approve (when I&apos;m the last required gate)</span>
+              <span>Auto-enable auto-merge after I approval if last required gate</span>
               <input
                 type="checkbox"
                 checked={settings.enableReviewerAutoMerge}
