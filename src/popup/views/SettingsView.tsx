@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useAccounts } from '../hooks/useAccounts';
 import { Select } from '../components/Select';
 import { validateHost } from '../../core/host-config';
+import { removeAccountKey } from '../../core/storage/multi-account';
 import type { IntervalMinutes } from '../../core/types';
 
 interface Props {
@@ -153,6 +154,30 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
                 </button>
               </div>
             )}
+            <div className="settings-row settings-row--action">
+              <button
+                type="button"
+                className="btn"
+                onClick={async () => {
+                  await removeAccountKey('pr_store');
+                  await removeAccountKey('activity');
+                  await removeAccountKey('pingedPRs');
+                  await removeAccountKey('resolved_threads');
+                  await removeAccountKey('rerequestedPRs');
+                  await removeAccountKey('reviewerPRs');
+                  await removeAccountKey('notif_throttle');
+                  await removeAccountKey('knownRepos');
+                  await removeAccountKey('actionable_count');
+                  // Force a re-poll so the popup repopulates with fresh data.
+                  void chrome.runtime.sendMessage({ type: 'pollNow' });
+                  onBack();
+                }}
+                data-testid="reset-account-cache"
+                title="Clear cached PRs, activity, and per-PR state for the active account. Auth is preserved."
+              >
+                reset cached data
+              </button>
+            </div>
           </section>
         )}
 
