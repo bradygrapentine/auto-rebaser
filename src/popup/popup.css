@@ -356,7 +356,13 @@ code, .mono {
 .help code { color: var(--term-yellow); }
 
 /* ─── Layout ───────────────────────────────────────────────────────────── */
-.view-body { padding: 4px 0; }
+.view-body { padding: 4px 0; display: flex; flex-direction: column; }
+.view-body > .empty-state {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .empty-state {
   padding: 28px 14px;
