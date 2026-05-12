@@ -169,7 +169,7 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
                   await removeAccountKey('knownRepos');
                   await removeAccountKey('actionable_count');
                   // Force a re-poll so the popup repopulates with fresh data.
-                  void chrome.runtime.sendMessage({ type: 'pollNow' });
+                  void chrome.runtime.sendMessage({ type: 'POLL_NOW' });
                   onBack();
                 }}
                 data-testid="reset-account-cache"

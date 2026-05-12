@@ -37,14 +37,14 @@ interface Props {
 }
 
 export function RepoGroup({
-  group, expanded, onToggle, userLogin, focusedPRId,
+  group, expanded, onToggle, userLogin: _userLogin, focusedPRId,
   showStaleBadges, pingStateFor, onPing, rerequestStateFor, onRerequest, coverage, installRequestUrl, reviewerChipFor, actionableFor,
 }: Props) {
-  const [owner, ...rest] = group.repo.split('/');
-  const displayName =
-    userLogin && owner.toLowerCase() === userLogin.toLowerCase()
-      ? rest.join('/')
-      : group.repo;
+  // Always show just the repo name on the main popup. The owner appears
+  // in the activity log where cross-account / cross-owner attribution
+  // matters; in the PR list, the active account scopes everything.
+  const [, ...rest] = group.repo.split('/');
+  const displayName = rest.join('/') || group.repo;
 
   return (
     <div className="repo-group">
