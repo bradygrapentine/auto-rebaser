@@ -66,7 +66,7 @@ import * as known from '../../src/core/known-repos-store';
 
 const ID = asAccountId('gh_test');
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); });
 
 describe('AccountScope — 1-line delegation contract', () => {
   it('PRStore methods route through *For with this.id', async () => {

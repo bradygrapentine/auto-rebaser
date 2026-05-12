@@ -1,7 +1,8 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
 import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
 import { computeIdleDays, resolveThreshold } from '../core/staleness';
-import { getAuth, getAuthFor, setInstallations, setInstallationsFor } from '../core/auth-store';
+import { getAuth, setInstallations } from '../core/auth-store';
+import { AccountScope } from '../core/account-scope';
 import { suspendedOwners } from '../core/installations-helpers';
 import { getUserInstallations } from '../github/endpoints/installations';
 import {
@@ -12,22 +13,12 @@ import {
   stampPollTime,
   loadReviewerStore,
   upsertReviewerPRs,
-  loadStoreFor,
-  saveStoreFor,
-  upsertPRsFor,
-  pruneStaleFor,
-  stampPollTimeFor,
-  loadReviewerStoreFor,
-  upsertReviewerPRsFor,
 } from '../core/pr-store';
 import {
   getAutomationSettings,
   getResolvedThreads,
   saveResolvedThreads,
   saveAutomationSettings,
-  getAutomationSettingsFor,
-  getResolvedThreadsFor,
-  saveResolvedThreadsFor,
 } from '../core/automations-store';
 import { searchAuthoredPRs, getPR, updateBranch, getAuthenticatedUser } from '../github/endpoints';
 import { searchReviewerPRs } from '../github/endpoints/reviewer-search';
@@ -42,16 +33,13 @@ import { runAllAutomations, type OrchestratorDeps } from './automations/orchestr
 import type { PullRequestDetail } from './automations/adapters';
 import { clearBadge, setBadgeCount } from './badge';
 import { deriveStateFromMergeable, mapUpdateBranchError, parseRepoUrl } from './state-machine';
-import { appendActivity, appendActivityFor } from '../core/activity-log';
+import { appendActivity } from '../core/activity-log';
 import type { ActivityEntry } from '../core/activity-log-types';
 import { notify, type NotifEvent } from './notifications';
 import { listReviews } from '../github/endpoints/reviews';
 import { detectStaleApproval, type StaleApprovalResult } from '../core/stale-approval';
-import { recordKnownRepos, recordKnownReposFor } from '../core/known-repos-store';
-import {
-  listAccountIds,
-  setAccountState,
-} from '../core/storage/multi-account';
+import { recordKnownRepos } from '../core/known-repos-store';
+import { listAccountIds } from '../core/storage/multi-account';
 import { isPRActionable } from '../core/actionable-pr';
 
 const ABORT_ERRORS = new Set(['AUTH_ERROR', 'NOT_AUTHENTICATED', 'RATE_LIMITED']);
@@ -87,11 +75,11 @@ function computeStalenessPatch(
 }
 
 /** Flips PRStore.pollInProgress without going through upsert (avoids racing the store).
- *  Threads accountId explicitly — no override consulted. */
-async function setPollInProgress(value: boolean, accountId?: string): Promise<void> {
-  const store = accountId ? await loadStoreFor(accountId) : await loadStore();
-  if (accountId) {
-    await saveStoreFor(accountId, { ...store, pollInProgress: value });
+ *  Threads AccountScope explicitly — no override consulted. */
+async function setPollInProgress(value: boolean, scope?: AccountScope): Promise<void> {
+  const store = scope ? await scope.loadStore() : await loadStore();
+  if (scope) {
+    await scope.saveStore({ ...store, pollInProgress: value });
   } else {
     await saveStore({ ...store, pollInProgress: value });
   }
@@ -102,10 +90,10 @@ export async function runPollCycle(): Promise<void> {
   // each in turn, with per-account error isolation so one account's 401 /
   // rate-limit doesn't take down siblings.
   //
-  // accountId is threaded EXPLICITLY into runPollCycleInner. No global
-  // override is consulted — that pattern is fragile under Chrome MV3 SW
-  // eviction, which resets module state and chrome.storage.session reads
-  // race with the iteration loop.
+  // An AccountScope is constructed per iteration and passed into
+  // runPollCycleInner. The Scope owns the per-account routing — no
+  // module-level override is consulted, so SW eviction can't desync the
+  // loop's account binding mid-cycle.
   const ids = await listAccountIds();
 
   // Fresh-install / pre-migration path — no accounts namespace yet. Run once
@@ -125,13 +113,14 @@ export async function runPollCycle(): Promise<void> {
   clearBadge();
   let totalRebased = 0;
   for (const id of ids) {
+    const scope = new AccountScope(id);
     try {
-      await setPollInProgress(true, id);
+      await setPollInProgress(true, scope);
       try {
-        const rebasedThisAccount = await runPollCycleInner(id);
+        const rebasedThisAccount = await runPollCycleInner(scope);
         totalRebased += rebasedThisAccount;
       } finally {
-        await setPollInProgress(false, id);
+        await setPollInProgress(false, scope);
       }
     } catch (err) {
       console.warn(`[poll-cycle] account ${id} failed:`, err);
@@ -141,20 +130,12 @@ export async function runPollCycle(): Promise<void> {
   if (totalRebased > 0) setBadgeCount(totalRebased);
 }
 
-async function runPollCycleInner(accountId?: string): Promise<number> {
-  // Tiny context helpers — branch on accountId once instead of at every call
-  // site. Explicit-id path is the SW poll cycle (cross-account isolation);
-  // implicit-id is the pre-migration fresh-install fallback.
-  const ctxLoadStore = () => accountId ? loadStoreFor(accountId) : loadStore();
-  const ctxUpsertPRs = (recs: PRRecord[]) => accountId ? upsertPRsFor(accountId, recs) : upsertPRs(recs);
-  const ctxPruneStale = (ids: number[]) => accountId ? pruneStaleFor(accountId, ids) : pruneStale(ids);
-  const ctxStampPollTime = () => accountId ? stampPollTimeFor(accountId) : stampPollTime();
-  const ctxGetAutomationSettings = () => accountId ? getAutomationSettingsFor(accountId) : getAutomationSettings();
-  const ctxRecordKnownRepos = (names: readonly string[]) =>
-    accountId ? recordKnownReposFor(accountId, names) : recordKnownRepos(names);
-  const ctxGetAuth = () => accountId ? getAuthFor(accountId) : getAuth();
-  const ctxSetInstallations = (insts: Awaited<ReturnType<typeof getUserInstallations>>) =>
-    accountId ? setInstallationsFor(accountId, insts) : setInstallations(insts);
+async function runPollCycleInner(scope?: AccountScope): Promise<number> {
+  // When `scope` is set, all per-account reads/writes route through it;
+  // when undefined (fresh-install path, before any account namespace exists)
+  // we fall through to the implicit-id helpers. `accountId` is the raw
+  // string form needed by GitHub endpoint fns (which aren't on AccountScope).
+  const accountId: string | undefined = scope?.id;
 
   // Load automation settings first — `ignoredRepos` filters BOTH the rebase
   // loop and the orchestrator pass, so it has to be available before either.
@@ -162,7 +143,7 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
   let ignoredRepos = new Set<string>();
   let staleSettings: AutomationSettings | null = null;
   try {
-    staleSettings = await ctxGetAutomationSettings();
+    staleSettings = await (scope ? scope.getAutomationSettings() : getAutomationSettings());
     ignoredRepos = staleSettings.enableIgnoredRepos === false
       ? new Set<string>()
       : new Set(staleSettings.ignoredRepos ?? []);
@@ -180,11 +161,11 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
   // as the current truth rather than blocking the cycle.
   let suspendedOwnerSet = new Set<string>();
   try {
-    const auth = await ctxGetAuth();
+    const auth = await (scope ? scope.getAuth() : getAuth());
     if (auth?.method === 'github_app') {
       try {
         const fresh = await getUserInstallations(accountId);
-        await ctxSetInstallations(fresh);
+        await (scope ? scope.setInstallations(fresh) : setInstallations(fresh));
         suspendedOwnerSet = suspendedOwners(fresh);
       } catch (err) {
         // Network / auth error — fall back to whatever we have stored.
@@ -206,7 +187,7 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
   }
 
   // Load store once before loop
-  const store = await ctxLoadStore();
+  const store = await (scope ? scope.loadStore() : loadStore());
   const storeMap = new Map(store.prs.map((pr) => [pr.id, pr]));
 
   const processedPRs: PRRecord[] = [];
@@ -472,7 +453,7 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
 
   // Best-effort: persist the set of repos we saw in this scan.
   try {
-    await ctxRecordKnownRepos([...seenFullNames]);
+    await (scope ? scope.recordKnownRepos([...seenFullNames]) : recordKnownRepos([...seenFullNames]));
   } catch (err) {
     console.warn('[auto-rebaser] failed to record known repos', err);
   }
@@ -561,19 +542,19 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
   }
 
   // Step 4: persist v1 rebase results
-  await ctxUpsertPRs(processedPRs);
-  await ctxPruneStale(processedPRs.map((p) => p.id));
-  await ctxStampPollTime();
+  await (scope ? scope.upsertPRs(processedPRs) : upsertPRs(processedPRs));
+  await (scope ? scope.pruneStale(processedPRs.map((p) => p.id)) : pruneStale(processedPRs.map((p) => p.id)));
+  await (scope ? scope.stampPollTime() : stampPollTime());
 
   // Step 4.4: cross-account action-dot — count actionable PRs and persist
   // under the iteration's accountId. Threaded explicitly, no override.
-  if (accountId) {
+  if (scope) {
     try {
-      const settings = staleSettings ?? (await ctxGetAutomationSettings());
+      const settings = staleSettings ?? (await scope.getAutomationSettings());
       const actionable = processedPRs.filter((p) =>
         isPRActionable(p as PRRecord & Partial<PRRecordPhaseTwo>, settings),
       ).length;
-      await setAccountState(accountId, 'actionable_count', actionable);
+      await scope.setActionableCount(actionable);
     } catch (err) {
       console.warn('[poll-cycle] actionable_count update failed', err);
     }
@@ -596,13 +577,13 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
     if (!prevStale && nextStale) newlyIdlePRIds.add(next.id);
   }
 
-  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries, newlyIdlePRIds, accountId);
+  await runAutomationsPass(automationCandidates, prDetails, updatedCount, rebaseActivityEntries, newlyIdlePRIds, scope);
 
   // REVIEWER-AUTOMATIONS — reviewer phase. Gated on the master toggle so
   // existing users stay on the authored-only experience by default.
   if (staleSettings?.enableReviewerTab) {
     try {
-      await runReviewerPhase(staleSettings, accountId);
+      await runReviewerPhase(staleSettings, scope);
     } catch (err) {
       console.warn('[poll-cycle] reviewer phase failed:', err);
     }
@@ -622,7 +603,8 @@ async function runPollCycleInner(accountId?: string): Promise<number> {
  * (including `reviewerAutoMergeArmed` and `lastSeenHeadSha`) so subsequent
  * cycles don't re-fire and so a new push correctly re-opens the gate.
  */
-async function runReviewerPhase(settings: AutomationSettings, accountId?: string): Promise<void> {
+async function runReviewerPhase(settings: AutomationSettings, scope?: AccountScope): Promise<void> {
+  const accountId: string | undefined = scope?.id;
   let me: { login: string };
   try {
     me = await getAuthenticatedUser(accountId);
@@ -639,9 +621,8 @@ async function runReviewerPhase(settings: AutomationSettings, accountId?: string
     return;
   }
 
-  const existing = (accountId
-    ? (await loadReviewerStoreFor(accountId))
-    : (await loadReviewerStore())).prs as Array<PRRecord & PRRecordPhaseTwo>;
+  const existing = (await (scope ? scope.loadReviewerStore() : loadReviewerStore()))
+    .prs as Array<PRRecord & PRRecordPhaseTwo>;
   const existingById = new Map(existing.map((p) => [p.id, p]));
   const processed: Array<PRRecord & PRRecordPhaseTwo> = [];
 
@@ -757,8 +738,7 @@ async function runReviewerPhase(settings: AutomationSettings, accountId?: string
           result: 'success',
           mergeMethod: method,
         };
-        if (accountId) await appendActivityFor(accountId, [entry]);
-        else await appendActivity([entry]);
+        await (scope ? scope.appendActivity([entry]) : appendActivity([entry]));
       } else if (result.unsupported && result.reason && /not allowed|not enabled|does not support/i.test(result.reason)) {
         // Repo doesn't allow auto-merge for this user — quietly revoke the
         // allowlist entry so we don't bang on the mutation each cycle.
@@ -779,8 +759,7 @@ async function runReviewerPhase(settings: AutomationSettings, accountId?: string
     });
   }
 
-  if (accountId) await upsertReviewerPRsFor(accountId, processed);
-  else await upsertReviewerPRs(processed);
+  await (scope ? scope.upsertReviewerPRs(processed) : upsertReviewerPRs(processed));
 }
 
 /**
@@ -794,15 +773,12 @@ async function runAutomationsPass(
   rebasedCount: number,
   rebaseActivityEntries: ActivityEntry[] = [],
   newlyIdlePRIds: Set<number> = new Set(),
-  accountId?: string,
+  scope?: AccountScope,
 ): Promise<void> {
+  const accountId: string | undefined = scope?.id;
   try {
-    const settings = accountId
-      ? await getAutomationSettingsFor(accountId)
-      : await getAutomationSettings();
-    const resolvedThreads = accountId
-      ? await getResolvedThreadsFor(accountId)
-      : await getResolvedThreads();
+    const settings = await (scope ? scope.getAutomationSettings() : getAutomationSettings());
+    const resolvedThreads = await (scope ? scope.getResolvedThreads() : getResolvedThreads());
 
     // Wrap each endpoint to inject accountId. When accountId is undefined,
     // the endpoints fall back to the implicit-id path via undefined.
@@ -836,14 +812,12 @@ async function runAutomationsPass(
         const patch = patches.get(pr.id);
         return patch ? ({ ...pr, ...patch } as PRRecord) : pr;
       });
-      if (accountId) await upsertPRsFor(accountId, patched);
-      else await upsertPRs(patched);
+      await (scope ? scope.upsertPRs(patched) : upsertPRs(patched));
     }
 
     // Persist resolvedThreads (only if changed — orchestrator returns same ref when untouched).
     if (result.resolvedThreads !== resolvedThreads) {
-      if (accountId) await saveResolvedThreadsFor(accountId, result.resolvedThreads);
-      else await saveResolvedThreads(result.resolvedThreads);
+      await (scope ? scope.saveResolvedThreads(result.resolvedThreads) : saveResolvedThreads(result.resolvedThreads));
     }
 
     // Capture the most-recently-deleted branch (if any) for the popup footer.
@@ -864,14 +838,13 @@ async function runAutomationsPass(
     }
 
     // Persist the summary, stamping in the rebase count from this cycle.
-    const store = accountId ? await loadStoreFor(accountId) : await loadStore();
+    const store = await (scope ? scope.loadStore() : loadStore());
     const next: PRStore = {
       ...store,
       lastPollSummary: { ...result.summary, rebased: rebasedCount },
       ...(lastDeletedBranch !== undefined ? { lastDeletedBranch } : {}),
     };
-    if (accountId) await saveStoreFor(accountId, next);
-    else await saveStore(next);
+    await (scope ? scope.saveStore(next) : saveStore(next));
 
     console.log('automations: ran', { ...next.lastPollSummary, errors: result.summary.errors });
 
@@ -1006,8 +979,7 @@ async function runAutomationsPass(
     }
 
     // Write all this cycle's entries in one storage call.
-    if (accountId) await appendActivityFor(accountId, cycleEntries);
-    else await appendActivity(cycleEntries);
+    await (scope ? scope.appendActivity(cycleEntries) : appendActivity(cycleEntries));
 
     // Story 2.4 — dispatch desktop notifications for the events the user
     // opted in to. Best-effort: failures are swallowed inside `notify`.
