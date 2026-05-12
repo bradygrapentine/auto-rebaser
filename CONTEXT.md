@@ -84,8 +84,32 @@ Stable id derived from host + login (`gh_<login>` for cloud, `gh_<host>_<login>`
 _Avoid_: account key, account name
 
 **Active Account**:
-The single Account currently surfaced in the popup. Stored at `chrome.storage.local.active_account_id`. Switched by the user via the **Account Switcher**; the background **Poll Cycle** iterates every Account regardless of which is active (using an in-memory override, never writing the active key mid-cycle).
+The single Account currently surfaced in the popup. Stored at `chrome.storage.local.active_account_id`. Switched by the user via the **Account Switcher**. The background **Poll Cycle** iterates every Account regardless of which is active — `accountId` is threaded explicitly into the loop, no override is consulted (post-#149).
 _Avoid_: current account, selected account (in code — fine in user-facing copy)
+
+**Account Namespace**:
+The storage region `chrome.storage.local.accounts.<Account Id>` containing every per-account key. Defined by `AccountState` (`src/core/storage/multi-account.ts:46`).
+_Avoid_: account bucket, account slot
+
+**Account Key**:
+One typed slot inside an **Account Namespace** — `auth`, `pr_store`, `activity`, `pingedPRs`, `rerequestedPRs`, `resolved_threads`, `notif_throttle`, `reviewerPRs`, `actionable_count`, `knownRepos`. The key set is exactly `keyof AccountState`.
+_Avoid_: account property, account field
+
+**Account Scope**:
+Runtime handle that binds an **Account Id** to per-account operations (`.loadStore()`, `.getAuth()`, `.upsertPRs()`, …). Replaces the previous implicit/explicit-id helper fork. The popup constructs one from the **Active Account**; the SW **Poll Cycle** constructs one per iteration.
+_Avoid_: account context, account session (overloaded with auth-session)
+
+**Reviewer PRStore**:
+A second **PRStore** parallel to the authored one, populated when the reviewer-automation tab is enabled. Lives under the `reviewerPRs` **Account Key**. Same shape as **PRStore**; different inhabitants (PRs the user is reviewing, not authoring).
+_Avoid_: reviewer store, review queue
+
+**Installation**:
+A GitHub App installation accessible to the signed-in **Account**, cached under `auth.installations` (only when `auth.method === 'github_app'`). One Account can have many Installations (one per org/user the App is installed on). See also **Suspended Installation**.
+_Avoid_: app install, app grant
+
+**Throttle Store**:
+Shared shape used by `pingedPRs`, `rerequestedPRs`, `notif_throttle` — `Record<key, { at: number }>` or a `Record<key, number>` of last-fire timestamps. Each gates one specific action against re-firing within a window.
+_Avoid_: rate limit, cooldown (those are GitHub-API server-side concepts)
 
 **Account Switcher**:
 Popup header dropdown listing every signed-in Account with `Switch`, `+ Add account`, `Sign out <login>`, `Sign out all`. The `+ Add account` row is hidden when the Active Account is PAT-authed (PAT and GitHub App accounts can't coexist).
@@ -101,6 +125,7 @@ _Avoid_: account picker, account menu
 - A **Globally Ignored Repo** suppresses everything; a **Per-Automation Skip List** entry suppresses one automation only.
 - A **Suspended Installation** forces every automation to no-op for that owner's PRs without changing **PR State**.
 - Every **Account** has an isolated **PRStore** and **Activity Log** namespace; the **Account Switcher** flips the **Active Account** which the popup reads against. The **Poll Cycle** iterates every **Account** each tick — the **Active Account** is only a UI surface, not a polling filter.
+- Every per-account operation flows through an **Account Scope**. Popup callers build one bound to the **Active Account**; the **Poll Cycle** builds one per **Account** per tick. The Scope owns the **Account Namespace** routing — callers never touch `accountId` strings directly.
 
 ## Example dialogue
 
