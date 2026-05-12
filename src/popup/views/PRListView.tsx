@@ -145,8 +145,15 @@ export function PRListView({
     && flatVisiblePRs.some((p) => p.id === focusedPRId);
   const effectiveFocusedId = focusStillVisible ? focusedPRId : null;
 
+  // Optimistic spinner — pollInProgress from storage can flip true→false
+  // faster than React renders when the cycle is short (cached 304s), so the
+  // spinner would never appear. Hold the spin locally for at least 500ms so
+  // the click is always visibly acknowledged.
+  const [optimisticPolling, setOptimisticPolling] = useState(false);
   const handlePollNow = () => {
-    chrome.runtime.sendMessage({ type: 'POLL_NOW' });
+    setOptimisticPolling(true);
+    setTimeout(() => setOptimisticPolling(false), 500);
+    void chrome.runtime.sendMessage({ type: 'POLL_NOW' });
   };
 
   const moveFocus = (delta: 1 | -1) => {
@@ -200,7 +207,7 @@ export function PRListView({
       <Header
         onSettings={onSettings}
         onPollNow={handlePollNow}
-        polling={pollInProgress === true}
+        polling={pollInProgress === true || optimisticPolling}
         accounts={accounts}
         activeId={activeId}
         authMethod={authMethod}
