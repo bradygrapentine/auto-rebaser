@@ -268,47 +268,82 @@ export async function setPerAccountSetting<K extends keyof PerAccountSettings>(
 // active account, otherwise to the v1 top-level key. The fallback path
 // disappears in production after migration runs once.
 
+/**
+ * Explicit-id variants. Use these inside any code path that iterates accounts
+ * (notably the SW poll cycle) — they read/write the named account's namespace
+ * directly and NEVER consult `getActiveAccountId` or the override. The
+ * implicit-id wrappers (`readAccountKey` etc.) delegate to these but resolve
+ * the active id first; that delegation is safe for popup-context callers
+ * which don't iterate accounts.
+ */
+
+export async function readAccountKeyFor<K extends keyof AccountState>(
+  accountId: string,
+  key: K,
+): Promise<AccountState[K] | undefined> {
+  return await getAccountState(accountId, key);
+}
+
+export async function writeAccountKeyFor<K extends keyof AccountState>(
+  accountId: string,
+  key: K,
+  value: AccountState[K],
+): Promise<void> {
+  await setAccountState(accountId, key, value);
+}
+
+export async function removeAccountKeyFor<K extends keyof AccountState>(
+  accountId: string,
+  key: K,
+): Promise<void> {
+  const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
+  const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
+    string,
+    Partial<AccountState>
+  >;
+  if (accounts[accountId]) {
+    const { [key]: _removed, ...rest } = accounts[accountId];
+    accounts[accountId] = rest;
+    await chrome.storage.local.set({ [STORAGE_KEYS_V2.accounts]: accounts });
+  }
+}
+
+/**
+ * @deprecated for SW-side use — call `readAccountKeyFor(id, key)` from any
+ * code path that runs inside the poll cycle or otherwise iterates accounts.
+ * The implicit-id resolution here can be defeated by Chrome MV3 SW eviction.
+ * Popup-context callers (single active account, no iteration) are fine.
+ */
 export async function readAccountKey<K extends keyof AccountState>(
   key: K,
 ): Promise<AccountState[K] | undefined> {
   const id = await getActiveAccountId();
   if (id) {
-    // v2 path — return the active account's value (or undefined). Do NOT
-    // fall back to the legacy global key here: a freshly-added account
-    // hasn't polled yet and would inherit the previously-active account's
-    // data (cross-account leak that surfaces as "I see both accounts' repos").
-    return await getAccountState(id, key);
+    return await readAccountKeyFor(id, key);
   }
   // No active account — true pre-migration shape, read from the v1 key.
   const legacy = await chrome.storage.local.get(key);
   return (legacy ?? {})[key] as AccountState[K] | undefined;
 }
 
+/** @deprecated for SW-side use — see `readAccountKey` jsdoc. */
 export async function writeAccountKey<K extends keyof AccountState>(
   key: K,
   value: AccountState[K],
 ): Promise<void> {
   const id = await getActiveAccountId();
   if (id) {
-    await setAccountState(id, key, value);
+    await writeAccountKeyFor(id, key, value);
     return;
   }
   await chrome.storage.local.set({ [key]: value });
 }
 
+/** @deprecated for SW-side use — see `readAccountKey` jsdoc. */
 export async function removeAccountKey<K extends keyof AccountState>(key: K): Promise<void> {
   const id = await getActiveAccountId();
   if (id) {
-    const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
-    const accounts = (result[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
-      string,
-      Partial<AccountState>
-    >;
-    if (accounts[id]) {
-      const { [key]: _removed, ...rest } = accounts[id];
-      accounts[id] = rest;
-      await chrome.storage.local.set({ [STORAGE_KEYS_V2.accounts]: accounts });
-    }
+    await removeAccountKeyFor(id, key);
   }
   await chrome.storage.local.remove(key);
 }
