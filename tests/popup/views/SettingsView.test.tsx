@@ -115,12 +115,10 @@ describe('SettingsView', () => {
     expect(screen.getByTestId('automations-settings')).toBeInTheDocument();
   });
 
-  it('shows global heading and "this account (login)" divider with active login', () => {
+  it('shows global heading and hides "this account" divider when only one account is signed in', () => {
     render(<SettingsView onBack={vi.fn()} />);
     expect(screen.getByRole('heading', { name: /^global$/i })).toBeInTheDocument();
-    const divider = screen.getByTestId('account-scoped-divider');
-    expect(divider).toHaveTextContent(/this account/i);
-    expect(divider).toHaveTextContent(/octocat/);
+    expect(screen.queryByTestId('account-scoped-divider')).not.toBeInTheDocument();
   });
 
   it('renders the account section when authMethod is provided', () => {

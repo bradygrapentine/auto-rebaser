@@ -37,14 +37,16 @@ describe('AutomationsSettings', () => {
     // 1 auto-rebase + 3 main automation toggles (2.6/2.7/2.8) + 1 stale-badge
     // toggle + 2 stale sub-toggles + 1 keyboard-shortcuts toggle + 3 merge-
     // method pref checkboxes + 1 merge-clean-PRs-immediately + 1 desktop-
-    // notifications master + 1 push-since-approval master (default ON) +
-    // 1 enable-request-rereview sub (renders because master is ON) +
-    // 1 reviewer-tab master (default OFF, sub-toggle + allowlist hidden) = 16.
+    // notifications master + 5 notification sub-toggles (visible by default,
+    // disabled when master off) + 1 push-since-approval master (default ON) +
+    // 1 enable-request-rereview sub (visible by default) + 1 reviewer-tab
+    // master (default OFF) + 1 reviewer-auto-merge sub (visible by default,
+    // disabled when master off) = 22.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(16);
+    expect(checkboxes).toHaveLength(22);
     expect(screen.getByLabelText(/Auto-rebase behind PRs/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
-    expect(screen.getByLabelText(/Auto-enable auto-merge/)).not.toBeChecked();
+    expect(screen.getByLabelText(/^Auto-enable auto-merge$/)).not.toBeChecked();
     expect(screen.getByLabelText(/Merge clean PRs immediately/)).not.toBeChecked();
     expect(screen.getByLabelText(/Auto-resolve outdated review threads/)).not.toBeChecked();
     expect(screen.getByLabelText(/Enable keyboard shortcuts/)).toBeChecked();
@@ -176,7 +178,7 @@ describe('AutomationsSettings', () => {
     render(<AutomationsSettings />);
     await flush();
     await act(async () => {
-      fireEvent.click(screen.getByLabelText(/Auto-enable auto-merge/));
+      fireEvent.click(screen.getByLabelText(/^Auto-enable auto-merge$/));
     });
     expect(saveAutomationSettings).toHaveBeenCalledWith(
       expect.objectContaining({ autoEnableAutoMerge: true })
@@ -359,14 +361,14 @@ describe('AutomationsSettings', () => {
   );
 
   describe('Story 2.4 — desktop notifications', () => {
-    it('master toggle is unchecked by default and subtoggles are not rendered', async () => {
+    it('master toggle is unchecked by default; subtoggles visible but disabled', async () => {
       (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
         DEFAULT_AUTOMATION_SETTINGS,
       );
       render(<AutomationsSettings />);
       await flush();
       expect(screen.getByTestId('notifications-master')).not.toBeChecked();
-      expect(screen.queryByTestId('notify-rebased')).not.toBeInTheDocument();
+      expect(screen.getByTestId('notify-rebased')).toBeDisabled();
     });
 
     it('flipping master ON requests permission and only saves on grant', async () => {

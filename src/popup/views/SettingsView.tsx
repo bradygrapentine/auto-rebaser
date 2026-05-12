@@ -116,15 +116,17 @@ export function SettingsView({ onBack, authMethod, onSignOut }: Props) {
           </div>
         </div>
 
-        <div className="settings-account-divider" data-testid="account-scoped-divider">
-          <h2 className="settings__heading">
-            this account
-            {activeAccountLogin && (
-              <span className="settings__heading-suffix"> ({activeAccountLogin})</span>
-            )}
-          </h2>
-          <p className="settings__section-hint">applies to the active account only</p>
-        </div>
+        {accounts.length > 1 && (
+          <div className="settings-account-divider" data-testid="account-scoped-divider">
+            <h2 className="settings__heading">
+              this account
+              {activeAccountLogin && (
+                <span className="settings__heading-suffix"> ({activeAccountLogin})</span>
+              )}
+            </h2>
+            <p className="settings__section-hint">applies to the active account only</p>
+          </div>
+        )}
 
         {authMethod && (
           <section className="settings-group" data-testid="account-section">

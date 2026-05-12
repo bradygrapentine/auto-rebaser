@@ -31,14 +31,15 @@ beforeEach(() => {
 });
 
 describe('AutomationsSettings — reviewer-automations section', () => {
-  it('renders master toggle off by default; sub-toggle and allowlist hidden', async () => {
+  it('renders master toggle off by default; sub-toggle visible but disabled, allowlist hidden', async () => {
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(DEFAULT_AUTOMATION_SETTINGS);
     render(<AutomationsSettings />);
     await flush();
 
     const master = screen.getByTestId('reviewer-tab-master');
     expect(master).not.toBeChecked();
-    expect(screen.queryByTestId('enable-reviewer-auto-merge')).not.toBeInTheDocument();
+    const sub = screen.getByTestId('enable-reviewer-auto-merge');
+    expect(sub).toBeDisabled();
     expect(screen.queryByTestId('reviewer-allowlist')).not.toBeInTheDocument();
   });
 

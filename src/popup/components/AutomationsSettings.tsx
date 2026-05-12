@@ -20,7 +20,18 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-type SubKey = 'ignored' | 'autoRebase' | 'autoDelete' | 'autoMerge' | 'mergeClean' | 'autoResolve' | 'shortcuts' | 'stale' | 'notifications';
+type SubKey =
+  | 'ignored'
+  | 'autoRebase'
+  | 'autoDelete'
+  | 'autoMerge'
+  | 'mergeClean'
+  | 'autoResolve'
+  | 'shortcuts'
+  | 'stale'
+  | 'notifications'
+  | 'pushSinceApproval'
+  | 'reviewerTab';
 
 async function requestNotificationsPermission(): Promise<boolean> {
   if (typeof chrome === 'undefined' || !chrome.permissions?.request) return true;
@@ -167,6 +178,8 @@ export function AutomationsSettings() {
     shortcuts: true,
     stale: true,
     notifications: true,
+    pushSinceApproval: true,
+    reviewerTab: true,
   });
 
   const toggle = (k: SubKey) =>
@@ -320,7 +333,6 @@ export function AutomationsSettings() {
             <input
               type="checkbox"
               checked={settings.mergeCleanPRsImmediately}
-              disabled={!settings.autoEnableAutoMerge}
               onChange={(e) => save({ mergeCleanPRsImmediately: e.target.checked })}
             />
           </label>
@@ -437,7 +449,12 @@ export function AutomationsSettings() {
           latest push post-dates every current approval. Sub-toggle promotes the
           chip from passive label to clickable action that re-requests review. */}
       <div className="automation-block" data-testid="push-since-approval-block">
-        <div className="automation-row automation-row--leaf">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.pushSinceApproval}
+            onClick={() => toggle('pushSinceApproval')}
+            label="push-since-approval section"
+          />
           <label className="toggle">
             <span className="toggle__name">Show push-since-approval badge</span>
             <input
@@ -448,12 +465,13 @@ export function AutomationsSettings() {
             />
           </label>
         </div>
-        {settings.enablePushSinceApproval && (
+        {expanded.pushSinceApproval && (
           <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
             <span>Allow click to re-request review</span>
             <input
               type="checkbox"
               checked={settings.enableRequestRereview}
+              disabled={!settings.enablePushSinceApproval}
               onChange={(e) => save({ enableRequestRereview: e.target.checked })}
               data-testid="enable-request-rereview"
             />
@@ -465,7 +483,12 @@ export function AutomationsSettings() {
           auto-merge for PRs the user reviews. Master toggle reveals the
           dashboard tab; sub-toggle + allowlist enable the auto-merge fire. */}
       <div className="automation-block" data-testid="reviewer-automations-block">
-        <div className="automation-row automation-row--leaf">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.reviewerTab}
+            onClick={() => toggle('reviewerTab')}
+            label="reviewer-tab section"
+          />
           <label className="toggle">
             <span className="toggle__name">Show reviewer dashboard tab</span>
             <input
@@ -476,13 +499,14 @@ export function AutomationsSettings() {
             />
           </label>
         </div>
-        {settings.enableReviewerTab && (
+        {expanded.reviewerTab && (
           <>
             <label className="toggle toggle-sub" style={{ display: 'grid', gridTemplateColumns: '1fr auto' }}>
               <span>Auto-enable auto-merge after I approve (when I&apos;m the last required gate)</span>
               <input
                 type="checkbox"
                 checked={settings.enableReviewerAutoMerge}
+                disabled={!settings.enableReviewerTab}
                 onChange={(e) => save({ enableReviewerAutoMerge: e.target.checked })}
                 data-testid="enable-reviewer-auto-merge"
               />
@@ -531,13 +555,14 @@ export function AutomationsSettings() {
             />
           </label>
         </div>
-        {expanded.notifications && settings.notificationsEnabled && (
+        {expanded.notifications && (
           <>
             <label className="toggle toggle-sub">
               <span>Rebased</span>
               <input
                 type="checkbox"
                 checked={settings.notifyOnRebased}
+                disabled={!settings.notificationsEnabled}
                 onChange={(e) => save({ notifyOnRebased: e.target.checked })}
                 data-testid="notify-rebased"
               />
@@ -547,6 +572,7 @@ export function AutomationsSettings() {
               <input
                 type="checkbox"
                 checked={settings.notifyOnConflicted}
+                disabled={!settings.notificationsEnabled}
                 onChange={(e) => save({ notifyOnConflicted: e.target.checked })}
                 data-testid="notify-conflicted"
               />
@@ -556,6 +582,7 @@ export function AutomationsSettings() {
               <input
                 type="checkbox"
                 checked={settings.notifyOnMerged}
+                disabled={!settings.notificationsEnabled}
                 onChange={(e) => save({ notifyOnMerged: e.target.checked })}
                 data-testid="notify-merged"
               />
@@ -565,6 +592,7 @@ export function AutomationsSettings() {
               <input
                 type="checkbox"
                 checked={settings.notifyOnIdle}
+                disabled={!settings.notificationsEnabled}
                 onChange={(e) => save({ notifyOnIdle: e.target.checked })}
                 data-testid="notify-idle"
               />
@@ -574,6 +602,7 @@ export function AutomationsSettings() {
               <input
                 type="checkbox"
                 checked={settings.notifyOnPingConfirmed}
+                disabled={!settings.notificationsEnabled}
                 onChange={(e) => save({ notifyOnPingConfirmed: e.target.checked })}
                 data-testid="notify-ping-confirmed"
               />

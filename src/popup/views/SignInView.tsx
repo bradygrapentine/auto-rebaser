@@ -234,7 +234,12 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error,
           </button>
         </form>
         {error && <div role="alert" className="alert">{error}</div>}
-        <button type="button" className="btn btn--block" onClick={() => setView('choice')}>
+        <button
+          type="button"
+          className="btn btn--block"
+          style={{ marginTop: 8 }}
+          onClick={() => setView('choice')}
+        >
           back
         </button>
       </div>
