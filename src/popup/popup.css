@@ -26,8 +26,8 @@ html, body, #root {
   margin: 0;
   padding: 0;
   background: var(--term-bg);
-  min-height: 200px;
 }
+html, body { height: var(--popup-h, 600px); }
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -47,8 +47,7 @@ html, body, #root {
      pinning the popup at whatever size it currently is. */
   display: flex;
   flex-direction: column;
-  min-height: 200px;
-  max-height: min(600px, var(--popup-max-h, 600px));
+  height: var(--popup-h, 600px);
   overflow: hidden;
 }
 .popup-root > .popup-header,
