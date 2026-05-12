@@ -26,6 +26,7 @@ import type { PRStore, Settings } from '../types';
 import type { ActivityEntry } from '../activity-log-types';
 import type { ResolvedThreadsStore, AutomationSettings } from '../automations-types';
 import type { PingedStore } from '../ping-throttle';
+import type { KnownRepo } from '../known-repos-store';
 
 export const STORAGE_KEYS_V2 = {
   storageVersion: 'storage_version',
@@ -58,6 +59,9 @@ export interface AccountState {
    * account, computed at the end of each poll cycle. Absent until first
    * poll; callers default to 0. Source of truth for the AccountSwitcher dot. */
   actionable_count?: number;
+  /** Recently-seen repos for this account, used to populate the Ignored repos
+   *  suggestion dropdown. Per-account so accounts don't bleed into each other. */
+  knownRepos?: KnownRepo[];
 }
 
 export interface GlobalSettings {
@@ -91,7 +95,22 @@ function perAccountSettingsKey(id: string): string {
 
 // ── active account ────────────────────────────────────────────────────────
 
+/**
+ * In-memory override used by the SW poll cycle to switch context across
+ * accounts WITHOUT writing to chrome.storage. The poll cycle iterates and
+ * mutates module state via setPollActiveAccountIdOverride; user-driven
+ * switches still go through setActiveAccountId (which persists). This breaks
+ * the race where the poll's per-account writes clobbered a mid-poll user
+ * switch.
+ */
+let pollActiveAccountIdOverride: string | null = null;
+
+export function setPollActiveAccountIdOverride(id: string | null): void {
+  pollActiveAccountIdOverride = id;
+}
+
 export async function getActiveAccountId(): Promise<string | null> {
+  if (pollActiveAccountIdOverride !== null) return pollActiveAccountIdOverride;
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.activeAccountId);
   const id = (result ?? {})[STORAGE_KEYS_V2.activeAccountId];
   return typeof id === 'string' ? id : null;

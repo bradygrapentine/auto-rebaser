@@ -41,8 +41,8 @@ import { recordKnownRepos } from '../core/known-repos-store';
 import {
   getActiveAccountId,
   listAccountIds,
-  setActiveAccountId,
   setAccountState,
+  setPollActiveAccountIdOverride,
 } from '../core/storage/multi-account';
 import { isPRActionable } from '../core/actionable-pr';
 
@@ -89,9 +89,9 @@ export async function runPollCycle(): Promise<void> {
   // each in turn, with per-account error isolation so one account's 401 /
   // rate-limit doesn't take down siblings.
   //
-  // The active accountId is briefly flipped to each id under the hood (every
-  // store helper resolves via getActiveAccountId). Restored at the end so
-  // the popup keeps focus on whichever account the user was looking at.
+  // The active accountId is briefly flipped to each id via an IN-MEMORY
+  // override (setPollActiveAccountIdOverride). chrome.storage is NOT touched,
+  // so a user switch mid-poll persists and isn't clobbered when the loop ends.
   const ids = await listAccountIds();
 
   // Fresh-install / pre-migration path — no accounts namespace yet. Run once
@@ -108,27 +108,30 @@ export async function runPollCycle(): Promise<void> {
     return;
   }
 
-  const original = await getActiveAccountId();
   clearBadge();
   let totalRebased = 0;
-  for (const id of ids) {
-    try {
-      await setActiveAccountId(id);
-      await setPollInProgress(true);
+  try {
+    for (const id of ids) {
       try {
-        const rebasedThisAccount = await runPollCycleInner();
-        totalRebased += rebasedThisAccount;
-      } finally {
-        await setPollInProgress(false);
+        // In-memory override — does NOT write to chrome.storage, so a user
+        // switch mid-poll won't get clobbered when this loop ends.
+        setPollActiveAccountIdOverride(id);
+        await setPollInProgress(true);
+        try {
+          const rebasedThisAccount = await runPollCycleInner();
+          totalRebased += rebasedThisAccount;
+        } finally {
+          await setPollInProgress(false);
+        }
+      } catch (err) {
+        console.warn(`[poll-cycle] account ${id} failed:`, err);
       }
-    } catch (err) {
-      console.warn(`[poll-cycle] account ${id} failed:`, err);
     }
+  } finally {
+    setPollActiveAccountIdOverride(null);
   }
   // Aggregate badge across accounts (B1: total rebased this cycle).
   if (totalRebased > 0) setBadgeCount(totalRebased);
-  // Restore active so the popup re-focuses where the user was looking.
-  if (original) await setActiveAccountId(original);
 }
 
 async function runPollCycleInner(): Promise<number> {
