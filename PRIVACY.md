@@ -61,7 +61,6 @@ Each request includes your access token in the `Authorization` header so GitHub 
 |---|---|
 | `storage` | Store the items in the table above. |
 | `alarms` | Schedule the periodic poll (default every 5 minutes). |
-| `identity` (Chrome only) | Reserved for browser-level identity APIs; not invoked at runtime in the current version. |
 | `host_permissions: api.github.com, github.com` | Talk to the GitHub API and complete the OAuth Device Flow. |
 | `optional_host_permissions: https://*/*` (Chrome) / `optional_permissions: https://*/*` (Firefox) | Requested **only** if you configure a GitHub Enterprise Server host in settings. The browser prompts you to grant access to that specific host before any request is made. |
 

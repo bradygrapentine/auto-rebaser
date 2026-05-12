@@ -75,7 +75,7 @@ Screenshot ideas (1280×800, take with the popup at 400px wide framed against a 
 1. Go to https://chrome.google.com/webstore/devconsole, pay $5 dev fee if first time.
 2. New Item → upload `auto-rebaser-chrome.zip`.
 3. Fill in description, screenshots, promo tile, privacy URL, category.
-4. Justify each permission in the form (`alarms` for polling, `storage` for settings/cache, `identity` for OAuth Device Flow, `optional_host_permissions` for custom GHES hosts).
+4. Justify each permission in the form (`alarms` for polling, `storage` for settings/cache, `optional_host_permissions` for custom GHES hosts). `identity` is NOT requested — OAuth Device Flow uses direct `fetch` against the GitHub API and does not need `launchWebAuthFlow`.
 5. Submit for review. Typical review time: <1 day for simple extensions.
 
 ### Firefox AMO

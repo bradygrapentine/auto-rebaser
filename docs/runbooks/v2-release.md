@@ -106,7 +106,7 @@ Open the [Chrome Web Store Developer Dashboard](https://chrome.google.com/websto
 2. Click **Upload new package** → select `auto-rebaser-chrome.zip` (from Step 2).
 3. The dashboard parses the manifest. Confirm:
    - Version: `2.0.0`
-   - Permissions: `alarms`, `storage`, `identity` (unchanged from v1.0.2)
+   - Permissions: `alarms`, `storage` (`identity` was removed post-v1.0.2 after Chrome Web Store rejected as unused — OAuth Device Flow doesn't need `launchWebAuthFlow`)
    - Optional permissions: `notifications` (new; requested at runtime when the user opts in)
    - Host permissions: `https://api.github.com/*`, `https://github.com/*` (unchanged)
 4. **Store listing** tab — paste the v2 short / long description from `docs/STORE_LISTING.md`. Re-upload screenshots if any have changed.

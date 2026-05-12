@@ -94,6 +94,46 @@ describe('useActivityLog', () => {
     expect(chrome.storage.local.onChanged.removeListener).toHaveBeenCalled();
   });
 
+  it('scope="all" merges entries from every account namespace', async () => {
+    (chrome.storage.local.get as ReturnType<typeof Object>).mockImplementation(async (key: unknown) => {
+      if (key === 'accounts') {
+        return {
+          accounts: {
+            gh_octocat: { activity: { entries: [e({ prNumber: 1, accountId: 'gh_octocat' })] } },
+            gh_acme:    { activity: { entries: [e({ prNumber: 2, accountId: 'gh_acme' })] } },
+          },
+        };
+      }
+      return {};
+    });
+    const { result } = renderHook(() => useActivityLog({ scope: 'all' }));
+    await act(async () => {});
+    expect(result.current.entries).toHaveLength(2);
+    const prNumbers = result.current.entries.map((row) => row.prNumber).sort();
+    expect(prNumbers).toEqual([1, 2]);
+  });
+
+  it('refresh() runs when v2 accounts key changes', async () => {
+    let listener: ((changes: Record<string, { newValue?: unknown }>) => void) | undefined;
+    (chrome.storage.local.onChanged.addListener as ReturnType<typeof Object>).mockImplementation(
+      (fn: typeof listener) => {
+        listener = fn;
+      },
+    );
+    let entries: ActivityEntry[] = [];
+    (chrome.storage.local.get as ReturnType<typeof Object>).mockImplementation(async () => ({
+      activity: { entries },
+    }));
+    const { result } = renderHook(() => useActivityLog());
+    await act(async () => {});
+    expect(result.current.entries).toEqual([]);
+    entries = [e({ prNumber: 7 })];
+    await act(async () => {
+      listener?.({ accounts: { newValue: {} } });
+    });
+    expect(result.current.entries[0].prNumber).toBe(7);
+  });
+
   it('ignores changes for unrelated keys', async () => {
     let listener: ((changes: Record<string, { newValue?: unknown }>) => void) | undefined;
     (chrome.storage.local.onChanged.addListener as ReturnType<typeof Object>).mockImplementation(

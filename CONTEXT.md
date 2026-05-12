@@ -73,6 +73,24 @@ _Avoid_: comment thread (drops the review-anchor distinction), discussion
 A GitHub App installation an owner has suspended. Persists in the installations cache until reinstated.
 _Avoid_: disabled, revoked
 
+### Multi-account
+
+**Account**:
+A signed-in GitHub identity. Each Account has its own auth token, **PRStore**, **Activity Log** entries, and per-account automation settings. Stored under `chrome.storage.local.accounts.<id>`.
+_Avoid_: user (overloaded — also means the GitHub login), profile
+
+**Account Id**:
+Stable id derived from host + login (`gh_<login>` for cloud, `gh_<host>_<login>` for GHES). Source of truth for routing reads/writes through `readAccountKey` / `writeAccountKey`.
+_Avoid_: account key, account name
+
+**Active Account**:
+The single Account currently surfaced in the popup. Stored at `chrome.storage.local.active_account_id`. Switched by the user via the **Account Switcher**; the background **Poll Cycle** iterates every Account regardless of which is active (using an in-memory override, never writing the active key mid-cycle).
+_Avoid_: current account, selected account (in code — fine in user-facing copy)
+
+**Account Switcher**:
+Popup header dropdown listing every signed-in Account with `Switch`, `+ Add account`, `Sign out <login>`, `Sign out all`. The `+ Add account` row is hidden when the Active Account is PAT-authed (PAT and GitHub App accounts can't coexist).
+_Avoid_: account picker, account menu
+
 ## Relationships
 
 - A **Poll Cycle** runs **Phase 1** then **Phase 2**; **Phase 2** contains the **Orchestrator**.
@@ -82,6 +100,7 @@ _Avoid_: disabled, revoked
 - A **Stale PR** is an **Authored PR** whose **Idle Days** ≥ its repo's stale threshold; this gates the ping-reviewer link and the repo group's "needs attention" badge.
 - A **Globally Ignored Repo** suppresses everything; a **Per-Automation Skip List** entry suppresses one automation only.
 - A **Suspended Installation** forces every automation to no-op for that owner's PRs without changing **PR State**.
+- Every **Account** has an isolated **PRStore** and **Activity Log** namespace; the **Account Switcher** flips the **Active Account** which the popup reads against. The **Poll Cycle** iterates every **Account** each tick — the **Active Account** is only a UI surface, not a polling filter.
 
 ## Example dialogue
 

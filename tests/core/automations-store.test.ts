@@ -202,6 +202,66 @@ describe('automations-store', () => {
     expect(result.mergeCleanPRsImmediately).toBe(true);
   });
 
+  // ── v2 path: active account ────────────────────────────────────────────────
+
+  it('v2 read: merges DEFAULTS + perAccount + global ignoredRepos/keyboard', async () => {
+    const syncStorage: Record<string, unknown> = {
+      global_settings: {
+        ignoredRepos: ['org/skip'],
+        enableKeyboardShortcuts: false,
+      },
+      'per_account_settings:gh_octocat': {
+        autoRebaseEnabled: false,
+        autoEnableAutoMerge: true,
+      },
+    };
+    chrome.storage.local.get = vi.fn().mockResolvedValue({
+      active_account_id: 'gh_octocat',
+    });
+    chrome.storage.sync.get = vi.fn(async (keys: unknown) => {
+      if (keys == null) return { ...syncStorage };
+      const want = Array.isArray(keys) ? (keys as string[]) : [keys as string];
+      const out: Record<string, unknown> = {};
+      for (const k of want) if (k in syncStorage) out[k] = syncStorage[k];
+      return out;
+    }) as typeof chrome.storage.sync.get;
+
+    const result = await getAutomationSettings();
+    expect(result.ignoredRepos).toEqual(['org/skip']);
+    expect(result.enableKeyboardShortcuts).toBe(false);
+    expect(result.autoRebaseEnabled).toBe(false);
+    expect(result.autoEnableAutoMerge).toBe(true);
+    // unknown fields fall back to defaults
+    expect(result.autoDeleteMergedBranch).toBe(DEFAULT_AUTOMATION_SETTINGS.autoDeleteMergedBranch);
+  });
+
+  it('v2 save: writes global_settings + per-account split', async () => {
+    chrome.storage.local.get = vi.fn().mockResolvedValue({
+      active_account_id: 'gh_octocat',
+    });
+    const setSync = vi.fn().mockResolvedValue(undefined);
+    chrome.storage.sync.set = setSync as unknown as typeof chrome.storage.sync.set;
+    chrome.storage.sync.get = vi.fn().mockResolvedValue({});
+
+    const next: AutomationSettings = {
+      ...DEFAULT_AUTOMATION_SETTINGS,
+      autoRebaseEnabled: false,
+      ignoredRepos: ['org/a', 'org/b'],
+    };
+    await saveAutomationSettings(next);
+
+    const patches = setSync.mock.calls.map((c) => c[0]);
+    const globalPatches = patches.filter((p) => 'global_settings' in p);
+    expect(globalPatches.length).toBeGreaterThan(0);
+    const perAccountPatch = patches.find((p) => 'per_account_settings:gh_octocat' in p);
+    expect(perAccountPatch).toBeTruthy();
+    expect(
+      (perAccountPatch as Record<string, { autoRebaseEnabled: boolean }>)[
+        'per_account_settings:gh_octocat'
+      ].autoRebaseEnabled,
+    ).toBe(false);
+  });
+
   // ── getResolvedThreads ─────────────────────────────────────────────────────
 
   it('returns {} when nothing stored', async () => {

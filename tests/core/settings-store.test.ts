@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { loadSettings, saveSettings } from '../../src/core/settings-store';
+import { loadSettings, saveSettings, getSettings } from '../../src/core/settings-store';
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../../src/core/constants';
 import { STORAGE_KEYS_V2 } from '../../src/core/storage/multi-account';
 import type { Settings } from '../../src/core/types';
@@ -42,6 +42,16 @@ describe('settings-store', () => {
       enterpriseHost: 'github.acme.corp',
       enterpriseClientId: 'Iv23',
     });
+  });
+
+  it('getSettings is an alias of loadSettings', async () => {
+    chrome.storage.sync.get = vi.fn().mockImplementation(async (key: string) => {
+      if (key === STORAGE_KEYS_V2.globalSettings) {
+        return { [STORAGE_KEYS_V2.globalSettings]: { intervalMinutes: 30 } };
+      }
+      return {};
+    });
+    await expect(getSettings()).resolves.toEqual({ intervalMinutes: 30 });
   });
 
   it('saveSettings writes via global_settings (v2)', async () => {
