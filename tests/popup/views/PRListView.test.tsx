@@ -39,7 +39,7 @@ describe('PRListView', () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [pr1], lastPollAt: null });
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
     // pr1 is state='current' so its group is collapsed by default.
-    fireEvent.click(screen.getByRole('button', { name: /org\/repo1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /repo1/ }));
     expect(screen.getByText(/First PR/)).toBeInTheDocument();
   });
 
@@ -50,7 +50,7 @@ describe('PRListView', () => {
     expect(screen.getByText(/Second PR/)).toBeInTheDocument();
     // pr1 group collapsed by default; row hidden until clicked.
     expect(screen.queryByText(/First PR/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /org\/repo1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /repo1/ }));
     expect(screen.getByText(/First PR/)).toBeInTheDocument();
   });
 
@@ -59,9 +59,11 @@ describe('PRListView', () => {
     const prB = { ...pr2, id: 100, repo: 'zzz/aaa', title: 'Z repo' };
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({ prs: [prB, prA], lastPollAt: null });
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
-    const headers = screen.getAllByRole('button', { name: /aaa\/zzz|zzz\/aaa/ });
-    expect(headers[0]).toHaveTextContent(/aaa\/zzz/);
-    expect(headers[1]).toHaveTextContent(/zzz\/aaa/);
+    // Groups sort by full owner/repo: aaa/zzz < zzz/aaa. Display name has owner
+    // stripped → headers show 'zzz' first, then 'aaa'.
+    const headers = screen.getAllByRole('button', { name: /zzz|aaa/ });
+    expect(headers[0]).toHaveTextContent(/zzz/);
+    expect(headers[1]).toHaveTextContent(/aaa/);
   });
 
   it('renders Support link in the footer pointing at GitHub Sponsors', () => {

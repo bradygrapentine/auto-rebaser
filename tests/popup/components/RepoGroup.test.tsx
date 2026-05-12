@@ -49,24 +49,17 @@ function makeGroup(opts: {
 }
 
 describe('RepoGroup', () => {
-  it('strips owner prefix when it matches userLogin (case-insensitive)', () => {
+  it('always shows just the repo name (owner stripped) regardless of userLogin', () => {
     const group = makeGroup({});
-    render(<StatefulRepoGroup group={group} userLogin="ORG" />);
-    const name = screen.getByText('repo', { selector: '.repo-group__name' });
-    expect(name).toBeInTheDocument();
+    render(<StatefulRepoGroup group={group} userLogin="someone-else" />);
+    expect(screen.getByText('repo', { selector: '.repo-group__name' })).toBeInTheDocument();
     expect(screen.queryByText('org/repo', { selector: '.repo-group__name' })).not.toBeInTheDocument();
   });
 
-  it('keeps owner prefix when it differs from userLogin', () => {
-    const group = makeGroup({});
-    render(<StatefulRepoGroup group={group} userLogin="someone-else" />);
-    expect(screen.getByText('org/repo', { selector: '.repo-group__name' })).toBeInTheDocument();
-  });
-
-  it('keeps owner prefix when userLogin is omitted', () => {
+  it('strips owner prefix when userLogin is omitted', () => {
     const group = makeGroup({});
     render(<StatefulRepoGroup group={group} />);
-    expect(screen.getByText('org/repo', { selector: '.repo-group__name' })).toBeInTheDocument();
+    expect(screen.getByText('repo', { selector: '.repo-group__name' })).toBeInTheDocument();
   });
 
   it('shows the repo name and PR count', () => {
@@ -74,8 +67,7 @@ describe('RepoGroup', () => {
       prs: [makePR({ id: 1, number: 1 }), makePR({ id: 2, number: 2 }), makePR({ id: 3, number: 3 })],
     });
     render(<StatefulRepoGroup group={group} />);
-    expect(screen.getByRole('button', { name: /org\/repo/ })).toBeInTheDocument();
-    // Count rendered as text node "3" with parentheses applied via CSS pseudo-elements.
+    expect(screen.getByRole('button', { name: /repo/ })).toBeInTheDocument();
     expect(screen.getByText('3', { selector: '.repo-group__count' })).toBeInTheDocument();
   });
 
@@ -95,9 +87,9 @@ describe('RepoGroup', () => {
     const group = makeGroup({ prs: [makePR({ id: 1, number: 42, title: 'Toggle PR' })] });
     render(<StatefulRepoGroup group={group} />);
     expect(screen.queryByText(/Toggle PR/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /org\/repo/ }));
+    fireEvent.click(screen.getByRole('button', { name: /repo/ }));
     expect(screen.getByText(/Toggle PR/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /org\/repo/ }));
+    fireEvent.click(screen.getByRole('button', { name: /repo/ }));
     expect(screen.queryByText(/Toggle PR/)).not.toBeInTheDocument();
   });
 
@@ -122,7 +114,7 @@ describe('RepoGroup', () => {
   it('toggles aria-expanded correctly', () => {
     const group = makeGroup({});
     render(<StatefulRepoGroup group={group} />);
-    const btn = screen.getByRole('button', { name: /org\/repo/ });
+    const btn = screen.getByRole('button', { name: /repo/ });
     expect(btn).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(btn);
     expect(btn).toHaveAttribute('aria-expanded', 'true');
