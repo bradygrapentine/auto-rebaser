@@ -113,9 +113,10 @@ export async function runPollCycle(): Promise<void> {
   try {
     for (const id of ids) {
       try {
-        // In-memory override — does NOT write to chrome.storage, so a user
-        // switch mid-poll won't get clobbered when this loop ends.
-        setPollActiveAccountIdOverride(id);
+        // Override persisted to chrome.storage.session so it survives SW
+        // eviction mid-poll. User-switch (chrome.storage.local) is on a
+        // separate key, so a user switch mid-poll isn't clobbered.
+        await setPollActiveAccountIdOverride(id);
         await setPollInProgress(true);
         try {
           const rebasedThisAccount = await runPollCycleInner();
@@ -128,7 +129,7 @@ export async function runPollCycle(): Promise<void> {
       }
     }
   } finally {
-    setPollActiveAccountIdOverride(null);
+    await setPollActiveAccountIdOverride(null);
   }
   // Aggregate badge across accounts (B1: total rebased this cycle).
   if (totalRebased > 0) setBadgeCount(totalRebased);

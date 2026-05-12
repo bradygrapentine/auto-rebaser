@@ -201,7 +201,7 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
 
         {!loading && filtered.length === 0 && (
           <p className="empty-state" data-testid="activity-empty">
-            No activity yet — the extension logs every automated action here
+            No activity yet
           </p>
         )}
 
