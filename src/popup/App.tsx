@@ -24,18 +24,28 @@ export function App() {
   // self-pins (resolves to the popup's own window, which sizes to body), so
   // read window.innerHeight via JS and expose as a CSS custom property.
   useEffect(() => {
-    const apply = () => {
-      const h = window.innerHeight;
-      // Guard against tiny/zero readings during the initial layout pass —
-      // a 0px cap would collapse the popup entirely (rendered behind the
-      // web page). Only apply if the reading looks like a real viewport.
-      if (h >= 200) {
-        document.documentElement.style.setProperty('--popup-max-h', `${h}px`);
+    // `window.innerHeight` self-pins inside an MV3 popup (it reflects the
+    // popup window's own current size, not the browser window). Read the
+    // parent browser window's height via chrome.windows.getCurrent instead
+    // — that gives us a real number to size the popup against.
+    let cancelled = false;
+    const apply = async () => {
+      try {
+        const win = await chrome.windows.getCurrent();
+        const browserH = win?.height;
+        if (cancelled || !browserH || browserH < 200) return;
+        // Subtract a conservative slice for browser chrome (omnibox, tabs,
+        // OS chrome) so the popup doesn't bump against the bottom of the
+        // screen, and cap at 800px so it never gets absurdly tall.
+        const popupH = Math.min(800, Math.max(300, browserH - 120));
+        document.documentElement.style.setProperty('--popup-h', `${popupH}px`);
+      } catch {
+        // chrome.windows unavailable (tests, edge cases) — leave the
+        // default fallback in CSS.
       }
     };
     apply();
-    window.addEventListener('resize', apply);
-    return () => window.removeEventListener('resize', apply);
+    return () => { cancelled = true; };
   }, []);
 
   if (auth.status === 'loading') {
