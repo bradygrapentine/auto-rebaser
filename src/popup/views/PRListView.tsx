@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { PRRecord } from '../../core/types';
+import { isPRActionable } from '../../core/actionable-pr';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { Header } from '../components/Header';
 import { RepoGroup } from '../components/RepoGroup';
@@ -286,6 +287,7 @@ export function PRListView({
                 }
                 installRequestUrl={installRequestUrl}
                 reviewerChipFor={reviewerChipFor}
+                actionableFor={(pr) => isPRActionable(pr as PRRecord & PRRecordPhaseTwo, settings)}
               />
             );
           })
