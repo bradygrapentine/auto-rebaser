@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import type { PRRecord } from '../../core/types';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { Header } from '../components/Header';
-import { RepoFilter } from '../components/RepoFilter';
 import { RepoGroup } from '../components/RepoGroup';
 import { PollSummaryFooter } from '../components/PollSummaryFooter';
 import { MigrationBanner } from '../components/MigrationBanner';
@@ -60,16 +59,10 @@ export function PRListView({
     // by the service-worker alarm.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const { settings, save } = useAutomationSettings();
+  const { settings } = useAutomationSettings();
   const ignored = new Set(settings.ignoredRepos);
   const repoFilter = settings.repoFilter ?? [];
   const repoFilterSet = useMemo(() => new Set(repoFilter), [repoFilter]);
-  const allKnownRepos = useMemo(() => {
-    const set = new Set<string>();
-    for (const pr of prs) if (!ignored.has(pr.repo)) set.add(pr.repo);
-    return Array.from(set);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prs, settings.ignoredRepos]);
   const visiblePRs = prs.filter((pr) => {
     if (ignored.has(pr.repo)) return false;
     if (repoFilterSet.size > 0 && !repoFilterSet.has(pr.repo)) return false;
@@ -221,13 +214,6 @@ export function PRListView({
           await signOutAll();
           onSignOut();
         }}
-        extras={
-          <RepoFilter
-            repos={allKnownRepos}
-            selected={repoFilter}
-            onChange={(next) => { void save({ repoFilter: next }); }}
-          />
-        }
       />
       <div className="view-body">
         {authMethod === 'pat' && (

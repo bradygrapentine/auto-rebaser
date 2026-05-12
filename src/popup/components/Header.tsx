@@ -63,6 +63,18 @@ export function Header({
       >
         <span aria-hidden>⚙</span>
       </button>
+      {onAddAccount && (
+        <button
+          type="button"
+          aria-label="Add account"
+          onClick={onAddAccount}
+          className="ar-icon-button ar-icon-button--lg"
+          title="Add account"
+          data-testid="header-add-account"
+        >
+          <span aria-hidden>+</span>
+        </button>
+      )}
       {extras}
       {showSwitcher ? (
         <AccountSwitcher
