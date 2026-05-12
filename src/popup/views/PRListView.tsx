@@ -262,7 +262,7 @@ export function PRListView({
           </div>
         )}
         {groups.length === 0 ? (
-          <p className="empty-state">no open prs found</p>
+          <p className="empty-state">no open PRs found</p>
         ) : (
           groups.map((g) => {
             const defaultExpanded = activeTab === 'reviewer' ? true : g.hasAttention;

@@ -50,6 +50,12 @@ html, body { height: var(--popup-h, 600px); }
   height: var(--popup-h, 600px);
   overflow: hidden;
 }
+/* Short views (sign-in, loading) — auto-size so the popup doesn't reserve
+ * the full --popup-h of empty space below their tiny content. */
+.popup-root.popup-root--auto {
+  height: auto;
+  max-height: var(--popup-h, 600px);
+}
 .popup-root > .popup-header,
 .popup-root > .popup-footer { flex: 0 0 auto; }
 .popup-root > .view-body,
@@ -371,9 +377,10 @@ code, .mono {
   text-align: center;
 }
 .empty-state::before {
-  content: "$ ";
+  content: "$";
   color: var(--term-prompt);
   font-weight: 700;
+  margin-right: 6px;
 }
 
 .cmd-line {

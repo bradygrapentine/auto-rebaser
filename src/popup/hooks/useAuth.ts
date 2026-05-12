@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getAuth } from '../../core/auth-store';
+import { getAuth, setPATLogin } from '../../core/auth-store';
 import { signOut as coreSignOut, setTokenFromPAT } from '../../core/auth';
 import { getAuthenticatedUser } from '../../github/endpoints';
 import type { Installation } from '../../github/endpoints/installations';
@@ -41,7 +41,9 @@ export function useAuth(): UseAuthResult {
     // tokenSet.
     const fallbackLogin = auth.method === 'github_app' && auth.installations?.[0]
       ? auth.installations[0].account.login
-      : undefined;
+      : auth.method === 'pat'
+        ? auth.login
+        : undefined;
 
     let ghUser: Awaited<ReturnType<typeof getAuthenticatedUser>> | null = null;
     try {
@@ -53,6 +55,12 @@ export function useAuth(): UseAuthResult {
         setState({ status: 'signed-out' });
         return;
       }
+    }
+
+    // Cache the resolved login on PAT auth so the switcher pill shows the
+    // username on subsequent loads (even if /user is temporarily unreachable).
+    if (auth.method === 'pat' && ghUser && ghUser.login !== auth.login) {
+      void setPATLogin(ghUser.login);
     }
 
     setState({
