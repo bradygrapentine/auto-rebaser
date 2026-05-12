@@ -37,7 +37,11 @@ export function App() {
         // Subtract a conservative slice for browser chrome (omnibox, tabs,
         // OS chrome) so the popup doesn't bump against the bottom of the
         // screen, and cap at 800px so it never gets absurdly tall.
-        const popupH = Math.min(800, Math.max(300, browserH - 120));
+        // Chrome's popup window has a hard cap around 600px regardless of
+        // what we set — anything taller overflows and the whole popup
+        // scrolls at the window level, pushing the footer off-screen. Cap
+        // at 600 to stay within Chrome's allowance.
+        const popupH = Math.min(600, Math.max(300, browserH - 120));
         document.documentElement.style.setProperty('--popup-h', `${popupH}px`);
       } catch {
         // chrome.windows unavailable (tests, edge cases) — leave the
