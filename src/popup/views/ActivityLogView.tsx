@@ -6,8 +6,6 @@ import { useAccounts } from '../hooks/useAccounts';
 import { Select } from '../components/Select';
 import type { ActivityAction, ActivityEntry } from '../../core/activity-log-types';
 
-type AccountFilter = 'this' | 'all';
-
 interface Props {
   onBack: () => void;
   initialFilter?: { todayOnly?: boolean };
@@ -62,10 +60,7 @@ function entryDetails(e: ActivityEntry): string {
 export function ActivityLogView({ onBack, initialFilter }: Props) {
   const { accounts, activeId } = useAccounts();
   const showAccountChip = accounts.length > 1;
-  const [accountFilter, setAccountFilter] = useState<AccountFilter>('this');
-  const { entries, loading, clear } = useActivityLog({
-    scope: showAccountChip && accountFilter === 'all' ? 'all' : 'account',
-  });
+  const { entries, loading, clear } = useActivityLog({ scope: 'all' });
   const loginById = useMemo(() => {
     const m: Record<string, string> = {};
     for (const a of accounts) m[a.id] = a.login;
@@ -126,17 +121,6 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
       <div className="view-body activity-view">
         <div className="activity-toolbar">
           <div className="activity-toolbar__filters">
-            {showAccountChip && (
-              <Select
-                ariaLabel="Filter by account"
-                value={accountFilter}
-                onChange={(v) => setAccountFilter(v as AccountFilter)}
-                options={[
-                  { value: 'this', label: 'this account' },
-                  { value: 'all', label: 'all accounts' },
-                ]}
-              />
-            )}
             <Select
               ariaLabel="Filter by action"
               value={actionFilter}
@@ -236,7 +220,7 @@ export function ActivityLogView({ onBack, initialFilter }: Props) {
                   className="activity-entry__link"
                 >
                   <span className="activity-entry__time">{formatTime(e.at)}</span>
-                  {showAccountChip && accountFilter === 'all' && e.accountId && e.accountId !== activeId && (
+                  {showAccountChip && e.accountId && e.accountId !== activeId && (
                     <span className="activity-entry__account-tag" data-testid="activity-account-tag">
                       [{loginById[e.accountId] ?? e.accountId}]
                     </span>

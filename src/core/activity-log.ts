@@ -79,6 +79,10 @@ export async function loadActivity(): Promise<ActivityEntry[]> {
 export async function loadActivityAll(): Promise<ActivityEntry[]> {
   try {
     const ids = await listAccountIds();
+    if (ids.length === 0) {
+      // Pre-migration / v1 shape — single global activity key.
+      return await loadActivity();
+    }
     const merged: ActivityEntry[] = [];
     for (const id of ids) {
       const store = (await getAccountState(id, 'activity')) as { entries?: ActivityEntry[] } | undefined;

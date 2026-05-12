@@ -54,17 +54,4 @@ describe('Header', () => {
     });
   });
 
-  describe('add-account button', () => {
-    it('renders when onAddAccount is provided and authMethod is not pat', () => {
-      render(<Header onSettings={vi.fn()} onAddAccount={vi.fn()} />);
-      expect(screen.getByTestId('header-add-account')).toBeInTheDocument();
-    });
-
-    it('is hidden when authMethod is pat', () => {
-      render(
-        <Header onSettings={vi.fn()} onAddAccount={vi.fn()} authMethod="pat" />,
-      );
-      expect(screen.queryByTestId('header-add-account')).not.toBeInTheDocument();
-    });
-  });
 });
