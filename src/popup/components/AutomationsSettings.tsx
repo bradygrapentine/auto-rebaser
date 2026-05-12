@@ -438,7 +438,7 @@ export function AutomationsSettings() {
                 className="toggle-sub"
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 4 }}
               >
-                <span>ping comment template</span>
+                <span>Ping comment template</span>
                 <textarea
                   className="ping-template"
                   value={settings.pingTemplate}
