@@ -434,8 +434,11 @@ export function AutomationsSettings() {
               />
             </label>
             {settings.enablePingReviewers && (
-              <div className="toggle-sub" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                <span style={{ marginBottom: 4 }}>ping comment template</span>
+              <div
+                className="toggle-sub"
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 4 }}
+              >
+                <span>ping comment template</span>
                 <textarea
                   className="ping-template"
                   value={settings.pingTemplate}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { SignInView } from './views/SignInView';
@@ -19,6 +19,18 @@ export function App() {
   const [pingTarget, setPingTarget] = useState<PRRecord | null>(null);
   const [rerequestTarget, setRerequestTarget] = useState<{ pr: PRRecord; approvers: string[] } | null>(null);
   const { settings: automation } = useAutomationSettings();
+
+  // Cap popup height to the actual browser viewport. `100vh` in an MV3 popup
+  // self-pins (resolves to the popup's own window, which sizes to body), so
+  // read window.innerHeight via JS and expose as a CSS custom property.
+  useEffect(() => {
+    const apply = () => {
+      document.documentElement.style.setProperty('--popup-max-h', `${window.innerHeight}px`);
+    };
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, []);
 
   if (auth.status === 'loading') {
     return (
