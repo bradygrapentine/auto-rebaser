@@ -362,4 +362,89 @@ describe('poll-cycle — reviewer phase', () => {
 
     expect(enablePullRequestAutoMerge).not.toHaveBeenCalled();
   });
+
+  // T2 — push-since-approval cover.
+  describe('pushSinceApproval', () => {
+    it('sets pushSinceApproval=true when my latest APPROVED review.commitId differs from pr.head.sha', async () => {
+      withSettings({ enableReviewerTab: true });
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-NEW' }));
+      (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { login: 'alice', state: 'APPROVED', submittedAt: 1000, commitId: 'sha-OLD' },
+      ]);
+
+      await runPollCycle();
+
+      expect(upsertReviewerPRs).toHaveBeenCalled();
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+      expect(written[0].pushSinceApproval).toBe(true);
+    });
+
+    it('omits pushSinceApproval when commitId matches pr.head.sha', async () => {
+      withSettings({ enableReviewerTab: true });
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-SAME' }));
+      (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { login: 'alice', state: 'APPROVED', submittedAt: 1000, commitId: 'sha-SAME' },
+      ]);
+
+      await runPollCycle();
+
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+      expect(written[0].pushSinceApproval).toBeUndefined();
+    });
+
+    it('omits pushSinceApproval when myReviewState is not APPROVED', async () => {
+      withSettings({ enableReviewerTab: true });
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-NEW' }));
+      (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { login: 'alice', state: 'CHANGES_REQUESTED', submittedAt: 1000, commitId: 'sha-OLD' },
+      ]);
+
+      await runPollCycle();
+
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+      expect(written[0].pushSinceApproval).toBeUndefined();
+    });
+
+    it('omits pushSinceApproval when listReviews returns an APPROVED review without commitId (older GHE / missing field)', async () => {
+      withSettings({ enableReviewerTab: true });
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-NEW' }));
+      (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { login: 'alice', state: 'APPROVED', submittedAt: 1000 /* no commitId */ },
+      ]);
+
+      await runPollCycle();
+
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+      expect(written[0].myReviewState).toBe('APPROVED');
+      expect(written[0].pushSinceApproval).toBeUndefined();
+    });
+
+    it('clears pushSinceApproval after re-approval at the new head sha', async () => {
+      // Cycle 1: approved at OLD, head now NEW → flag should be true.
+      withSettings({ enableReviewerTab: true });
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ headSha: 'sha-NEW' }));
+      (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { login: 'alice', state: 'APPROVED', submittedAt: 1000, commitId: 'sha-OLD' },
+      ]);
+
+      await runPollCycle();
+      const cycle1 = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<PRRecord & PRRecordPhaseTwo>;
+      expect(cycle1[0].pushSinceApproval).toBe(true);
+
+      // Cycle 2: user re-approved at NEW → commitId moves to current head → flag clears.
+      (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { login: 'alice', state: 'APPROVED', submittedAt: 1000, commitId: 'sha-OLD' },
+        { login: 'alice', state: 'APPROVED', submittedAt: 2000, commitId: 'sha-NEW' },
+      ]);
+
+      await runPollCycle();
+      const cycle2 = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as Array<PRRecord & PRRecordPhaseTwo>;
+      expect(cycle2[0].pushSinceApproval).toBeUndefined();
+    });
+  });
 });

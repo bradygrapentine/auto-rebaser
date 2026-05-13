@@ -30,7 +30,7 @@ interface Props {
   /** Forwarded to PRRow so error rows can offer an "install" link. */
   installRequestUrl?: string;
   /** REVIEWER-AUTOMATIONS — when provided, each row renders the reviewer chip. */
-  reviewerChipFor?: (pr: PRRecord) => { myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED'; autoMergeArmed: boolean } | null;
+  reviewerChipFor?: (pr: PRRecord) => { myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED'; autoMergeArmed: boolean; pushSinceApproval?: boolean } | null;
   /** When provided, returns whether a PR is in an actionable state (per
    *  isPRActionable). PRRow renders a small attention dot when true. */
   actionableFor?: (pr: PRRecord) => boolean;

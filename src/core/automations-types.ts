@@ -237,6 +237,17 @@ export interface PRRecordPhaseTwo {
   myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED';
 
   /**
+   * True when the signed-in user has APPROVED this PR but the author has
+   * since pushed new commits. Derived per-poll in the reviewer phase by
+   * comparing `pr.head.sha` to the `commit_id` of the user's latest
+   * APPROVED review (sourced from listReviews — not from any cached value,
+   * so re-approve cycles clear naturally). Surfaces a stale-push chip on
+   * the Reviewer tab row. Omitted when not applicable so absence/false are
+   * indistinguishable to the renderer.
+   */
+  pushSinceApproval?: boolean;
+
+  /**
    * Set when the most recent `getPR` for this PR returned a malformed/empty
    * detail (e.g. GitHub search-1000-cap soft dropout). Prior state is
    * preserved on the record; next poll retries. Cleared on the next

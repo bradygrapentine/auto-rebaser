@@ -7,12 +7,19 @@ interface RawReview {
   user?: { login?: string } | null;
   state?: string;
   submitted_at?: string | null;
+  /** SHA of the commit the user reviewed. GitHub returns `null` for
+   *  pending reviews; we drop those upstream. */
+  commit_id?: string | null;
 }
 
 export interface ReviewSummary {
   login: string;
   state: ReviewState;
   submittedAt: number;
+  /** SHA the user's review anchored to. Compared against `pr.head.sha`
+   *  to surface push-since-approval on the reviewer-tab row. Absent when
+   *  GitHub doesn't return one (pending reviews, etc.). */
+  commitId?: string;
 }
 
 /**
@@ -42,7 +49,12 @@ export async function listReviews(
     if (Number.isNaN(ts)) continue;
     const state = r.state as ReviewState | undefined;
     if (!state) continue;
-    out.push({ login, state, submittedAt: ts });
+    out.push({
+      login,
+      state,
+      submittedAt: ts,
+      ...(r.commit_id ? { commitId: r.commit_id } : {}),
+    });
   }
   return out;
 }

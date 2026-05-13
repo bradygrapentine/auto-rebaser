@@ -199,6 +199,7 @@ export function PRListView({
     return {
       myReviewState: extended.myReviewState ?? 'AWAITING',
       autoMergeArmed: !!extended.reviewerAutoMergeArmed,
+      pushSinceApproval: !!extended.pushSinceApproval,
     };
   };
 

@@ -651,6 +651,7 @@ async function runReviewerPhase(settings: AutomationSettings, scope?: AccountSco
     // Compute my latest decisive review for the chip + gate input.
     let reviewsForGate: Array<{ login: string; state: 'APPROVED' | 'CHANGES_REQUESTED' | 'DISMISSED' | 'COMMENTED' | 'PENDING'; submittedAt: string }> = [];
     let myReviewState: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED' = 'AWAITING';
+    let myApprovedCommitId: string | undefined;
     try {
       const reviews = await listReviews(owner, repo, item.number, accountId);
       reviewsForGate = reviews.map((r) => ({
@@ -658,14 +659,33 @@ async function runReviewerPhase(settings: AutomationSettings, scope?: AccountSco
         state: r.state,
         submittedAt: new Date(r.submittedAt).toISOString(),
       }));
+      // Decisive reviews only. Comparator includes a stable tiebreak on
+      // commitId so two reviews with identical submittedAt resolve
+      // deterministically across runtimes (GitHub returns reviews in
+      // chronological order but Array.prototype.sort's stability is
+      // implementation-defined in older runtimes).
       const myLatest = reviews
         .filter((r) => r.login === me.login && r.state !== 'COMMENTED' && r.state !== 'PENDING')
-        .sort((a, b) => b.submittedAt - a.submittedAt)[0];
-      if (myLatest?.state === 'APPROVED') myReviewState = 'APPROVED';
-      else if (myLatest?.state === 'CHANGES_REQUESTED') myReviewState = 'CHANGES_REQUESTED';
+        .sort((a, b) => (b.submittedAt - a.submittedAt) || ((b.commitId ?? '') > (a.commitId ?? '') ? 1 : -1))[0];
+      if (myLatest?.state === 'APPROVED') {
+        myReviewState = 'APPROVED';
+        myApprovedCommitId = myLatest.commitId;
+      } else if (myLatest?.state === 'CHANGES_REQUESTED') {
+        myReviewState = 'CHANGES_REQUESTED';
+      }
     } catch (err) {
       console.warn(`[reviewer-phase] listReviews ${fullName}#${item.number} failed; proceeding without review data`, err);
     }
+
+    // T2 — push-since-approval: derived per-poll from GitHub's review.commit_id
+    // (the SHA the user actually approved). NOT persisted; re-approve cycles
+    // naturally clear the flag because the latest APPROVED review's commit_id
+    // moves to the new head sha. Omit when false so absence == no-op.
+    const pushSinceApproval =
+      myReviewState === 'APPROVED'
+      && myApprovedCommitId != null
+      && headSha != null
+      && myApprovedCommitId !== headSha;
 
     // Build base PR record (without arm metadata — added below if we fire or carry).
     const baseRecord: PRRecord & PRRecordPhaseTwo = {
@@ -678,6 +698,7 @@ async function runReviewerPhase(settings: AutomationSettings, scope?: AccountSco
       lastUpdated: Date.now(),
       ...(headSha ? { lastSeenHeadSha: headSha } : {}),
       myReviewState,
+      ...(pushSinceApproval ? { pushSinceApproval: true } : {}),
     };
 
     // Skip the gate evaluation when arming cache is still valid — covers both

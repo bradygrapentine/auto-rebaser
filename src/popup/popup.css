@@ -491,6 +491,10 @@ code, .mono {
 .pr-row__reviewer-chip--approved { color: var(--term-green, #5ec27a); border-color: rgba(94, 194, 122, 0.45); }
 .pr-row__reviewer-chip--changes { color: var(--term-red, #d96565); border-color: rgba(217, 101, 101, 0.45); }
 .pr-row__reviewer-chip--armed { color: var(--term-cyan, #56d4dd); border-color: rgba(86, 212, 221, 0.45); }
+/* T2 — push-since-approval secondary chip. Yellow to signal "still
+ * approved but staleness emerging" without contradicting the adjacent
+ * `i approved` green chip. */
+.pr-row__reviewer-chip--stale-push { color: var(--term-yellow, #c79a3a); border-color: rgba(199, 154, 58, 0.45); }
 
 .pr-tabs { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--term-border); }
 .pr-tabs__tab {
