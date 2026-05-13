@@ -112,47 +112,7 @@ function perAccountSettingsKey(id: string): string {
 
 // ── active account ────────────────────────────────────────────────────────
 
-/**
- * Override used by the SW poll cycle to switch context across accounts
- * without touching the user's persisted active account. Persisted in
- * chrome.storage.session (in-memory, scoped to the browser session) so
- * the SW can be evicted mid-poll and resume with the override intact —
- * a plain module variable resets on eviction and routes writes to the
- * wrong account, surfacing as a cross-account PR leak.
- *
- * User-driven switches still go through setActiveAccountId, which writes
- * to chrome.storage.local; the two keys are independent so a user switch
- * mid-poll persists and isn't clobbered when the loop ends.
- */
-const POLL_OVERRIDE_KEY = 'poll_active_account_override';
-
-// In-memory mirror — keeps reads sync-ish when we already know it; falls
-// back to chrome.storage.session.get for the post-eviction case.
-let pollActiveAccountIdOverride: string | null = null;
-
-export async function setPollActiveAccountIdOverride(id: string | null): Promise<void> {
-  pollActiveAccountIdOverride = id;
-  // chrome.storage.session is available in Chrome 102+ and Firefox 115+;
-  // both meet our manifest minimums. Fall back silently if it's missing
-  // (older test mocks, edge cases) — the in-memory mirror still works
-  // for the common path.
-  const session = (chrome.storage as { session?: chrome.storage.StorageArea }).session;
-  if (!session) return;
-  if (id === null) await session.remove(POLL_OVERRIDE_KEY);
-  else await session.set({ [POLL_OVERRIDE_KEY]: id });
-}
-
 export async function getActiveAccountId(): Promise<AccountId | null> {
-  if (pollActiveAccountIdOverride !== null) return asAccountId(pollActiveAccountIdOverride);
-  const session = (chrome.storage as { session?: chrome.storage.StorageArea }).session;
-  if (session) {
-    const sessSnap = await session.get(POLL_OVERRIDE_KEY);
-    const sessId = (sessSnap ?? {})[POLL_OVERRIDE_KEY];
-    if (typeof sessId === 'string') {
-      pollActiveAccountIdOverride = sessId;
-      return asAccountId(sessId);
-    }
-  }
   const result = await chrome.storage.local.get(STORAGE_KEYS_V2.activeAccountId);
   const id = (result ?? {})[STORAGE_KEYS_V2.activeAccountId];
   return typeof id === 'string' ? asAccountId(id) : null;
