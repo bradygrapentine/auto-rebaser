@@ -1305,7 +1305,7 @@ code, .mono {
 
 /* ─── Sign in (auth prompt) ────────────────────────────────────────────── */
 .signin {
-  padding: 24px 18px;
+  padding: 24px 32px;
   /* Center the title + lede + buttons vertically within the popup window
    * (matters when Chrome doesn't shrink the popup to match content). */
   display: flex;
@@ -1314,17 +1314,28 @@ code, .mono {
   flex: 1 1 auto;
   min-height: 0;
 }
+/* Constrain + space the signin children so buttons hug a comfortable
+ * column width instead of stretching edge-to-edge, and the title/lede/
+ * buttons get consistent vertical rhythm. */
+.signin > * {
+  width: 100%;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.signin .btn--block { margin-top: 14px; }
+.signin form { margin: 0; }
 .signin__title {
   color: var(--term-prompt);
   font-size: 14px;
   font-weight: 700;
-  margin: 0 0 4px;
+  margin: 0 auto 6px;
 }
 .signin__title::before { content: "$ "; color: var(--term-fg-dim); font-weight: 400; }
 .signin__lede {
   font-size: 12px;
   color: var(--term-fg-dim);
-  margin: 0 0 18px;
+  margin: 0 auto 28px;
 }
 
 /* ─── Spinner ──────────────────────────────────────────────────────────── */
