@@ -79,4 +79,97 @@ describe('useAutomationSettings', () => {
     });
     expect(result.current.settings.ignoredRepos).toEqual(['o/r']);
   });
+
+  // T1 regression cover — pre-fix, the hook only loaded settings on mount,
+  // so a cross-context write to chrome.storage.sync (e.g. from another
+  // popup mount or the SettingsView round-trip that surfaced live in the
+  // reviewer-flow smoke) wouldn't refresh state. Stale flag values could
+  // then overwrite real ones on the next save({...settings, ...patch}).
+  it('refreshes state when chrome.storage.onChanged fires for the automations key', async () => {
+    const initial = { ...DEFAULT_AUTOMATION_SETTINGS, enableReviewerTab: false };
+    const updated = { ...DEFAULT_AUTOMATION_SETTINGS, enableReviewerTab: true };
+
+    (getAutomationSettings as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+
+    const { result } = renderHook(() => useAutomationSettings());
+    await act(async () => {});
+    expect(result.current.settings.enableReviewerTab).toBe(false);
+
+    // Fire the storage event as another context would.
+    const listener = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>)
+      .mock.calls.at(-1)?.[0];
+    expect(listener).toBeDefined();
+    await act(async () => {
+      listener!(
+        { automation_settings: { oldValue: initial, newValue: updated } },
+        'sync',
+      );
+    });
+
+    expect(result.current.settings.enableReviewerTab).toBe(true);
+  });
+
+  it('echo-guards onChanged events where newValue equals oldValue', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+      DEFAULT_AUTOMATION_SETTINGS,
+    );
+    renderHook(() => useAutomationSettings());
+    await act(async () => {});
+
+    const callCountBefore = (getAutomationSettings as ReturnType<typeof vi.fn>).mock.calls.length;
+    const listener = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>)
+      .mock.calls.at(-1)?.[0];
+    await act(async () => {
+      listener!(
+        { automation_settings: { oldValue: DEFAULT_AUTOMATION_SETTINGS, newValue: DEFAULT_AUTOMATION_SETTINGS } },
+        'sync',
+      );
+    });
+    // No additional fetch — the echo guard skipped the reload.
+    const callCountAfter = (getAutomationSettings as ReturnType<typeof vi.fn>).mock.calls.length;
+    expect(callCountAfter).toBe(callCountBefore);
+  });
+
+  it('ignores onChanged events for other storage keys or areas', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+      DEFAULT_AUTOMATION_SETTINGS,
+    );
+    renderHook(() => useAutomationSettings());
+    await act(async () => {});
+    const callCountBefore = (getAutomationSettings as ReturnType<typeof vi.fn>).mock.calls.length;
+    const listener = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>)
+      .mock.calls.at(-1)?.[0];
+
+    // Wrong area.
+    await act(async () => {
+      listener!(
+        { automation_settings: { oldValue: {}, newValue: { foo: 1 } } },
+        'local',
+      );
+    });
+    // Different key.
+    await act(async () => {
+      listener!(
+        { some_other_key: { oldValue: 1, newValue: 2 } },
+        'sync',
+      );
+    });
+    expect((getAutomationSettings as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
+      callCountBefore,
+    );
+  });
+
+  it('removes the storage listener on unmount', async () => {
+    (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue(
+      DEFAULT_AUTOMATION_SETTINGS,
+    );
+    const { unmount } = renderHook(() => useAutomationSettings());
+    await act(async () => {});
+    const addedListener = (chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>)
+      .mock.calls.at(-1)?.[0];
+    unmount();
+    expect(chrome.storage.onChanged.removeListener).toHaveBeenCalledWith(addedListener);
+  });
 });
