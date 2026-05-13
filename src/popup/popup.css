@@ -661,12 +661,18 @@ code, .mono {
   font-family: inherit;
 }
 
-.help-view { padding: 14px; }
+.help-view {
+  padding: 14px;
+  /* Center the shortcut list vertically below the header. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 .help-shortcuts {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
   font-size: 12px;
 }
 .help-shortcuts__row {
@@ -674,7 +680,7 @@ code, .mono {
   grid-template-columns: 80px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 4px 0;
+  padding: 6px 0;
   border-bottom: 1px dashed var(--term-border);
 }
 .help-shortcuts__row:last-child { border-bottom: none; }
@@ -1299,19 +1305,37 @@ code, .mono {
 
 /* ─── Sign in (auth prompt) ────────────────────────────────────────────── */
 .signin {
-  padding: 24px 18px;
+  padding: 24px 32px;
+  /* Center the title + lede + buttons vertically within the popup window
+   * (matters when Chrome doesn't shrink the popup to match content). */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-height: 0;
 }
+/* Constrain + space the signin children so buttons hug a comfortable
+ * column width instead of stretching edge-to-edge, and the title/lede/
+ * buttons get consistent vertical rhythm. */
+.signin > * {
+  width: 100%;
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.signin .btn--block { margin-top: 14px; }
+.signin form { margin: 0; }
 .signin__title {
   color: var(--term-prompt);
   font-size: 14px;
   font-weight: 700;
-  margin: 0 0 4px;
+  margin: 0 auto 6px;
 }
 .signin__title::before { content: "$ "; color: var(--term-fg-dim); font-weight: 400; }
 .signin__lede {
   font-size: 12px;
   color: var(--term-fg-dim);
-  margin: 0 0 18px;
+  margin: 0 auto 28px;
 }
 
 /* ─── Spinner ──────────────────────────────────────────────────────────── */
