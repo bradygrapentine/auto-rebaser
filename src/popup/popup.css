@@ -27,7 +27,11 @@ html, body, #root {
   padding: 0;
   background: var(--term-bg);
 }
-html, body { height: var(--popup-h, 600px); }
+/* Let html/body size to content so short views (sign-in, loading) can shrink
+ * the popup window. The `.popup-root` and `.popup-root--auto` rules below
+ * pin the actual height per route (600px for signed-in views; auto for the
+ * sign-in / loading screens). */
+html, body { height: auto; }
 
 *, *::before, *::after { box-sizing: border-box; }
 
