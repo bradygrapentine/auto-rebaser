@@ -117,9 +117,10 @@ test('signed-in: PR with mergeable_state=blocked renders as Pending, not Updated
   await popupPage.waitForLoadState('domcontentloaded');
 
   // 'pending' isn't an attention state so the repo group is collapsed by
-  // default. Click the header to expand it. Locating by the repo name
-  // text inside the header button.
-  await popupPage.getByRole('button', { name: /org\/repo-a/i }).click();
+  // default. Click the header to expand it. The popup strips the owner
+  // prefix (PR #145) so the button's accessible name is `repo-a`, not
+  // `org/repo-a`.
+  await popupPage.getByRole('button', { name: /repo-a/i }).click();
 
   // The regression assertion: 'blocked' must map to 'pending', not 'updated'.
   await expect(popupPage.locator('[data-state="pending"]')).toBeVisible({ timeout: 10_000 });
