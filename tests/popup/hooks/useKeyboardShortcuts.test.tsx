@@ -89,4 +89,27 @@ describe('useKeyboardShortcuts', () => {
     press('Escape');
     expect(esc).toHaveBeenCalledTimes(1);
   });
+
+  // Firefox-popup regression cover (Cowork v2 smoke): bubble-phase window
+  // listener was being swallowed by Firefox. We now register on both
+  // `document` and `window` in capture phase, deduped per event.
+  it('registers in capture phase on both document and window', () => {
+    const docAdd = vi.spyOn(document, 'addEventListener');
+    const winAdd = vi.spyOn(window, 'addEventListener');
+    const r = vi.fn();
+    render(<Harness enabled bindings={{ r }} />);
+    expect(docAdd).toHaveBeenCalledWith('keydown', expect.any(Function), { capture: true });
+    expect(winAdd).toHaveBeenCalledWith('keydown', expect.any(Function), { capture: true });
+    docAdd.mockRestore();
+    winAdd.mockRestore();
+  });
+
+  it('fires the binding exactly once even though listeners are on both targets', () => {
+    const r = vi.fn();
+    render(<Harness enabled bindings={{ r }} />);
+    // Dispatch a real KeyboardEvent so both document+window observe it.
+    const ev = new KeyboardEvent('keydown', { key: 'r', bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    expect(r).toHaveBeenCalledTimes(1);
+  });
 });
