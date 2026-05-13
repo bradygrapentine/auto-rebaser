@@ -26,11 +26,6 @@ html, body, #root {
   margin: 0;
   padding: 0;
   background: var(--term-bg);
-  /* Chrome's MV3 popup chrome on macOS has near-flush corners while
-   * Firefox's popup chrome rounds heavily. Apply an 8px radius to the
-   * root so the two browsers match visually; Firefox's outer rounding
-   * still sits flush against this rounded fill. */
-  border-radius: 8px;
 }
 /* Let html/body size to content so short views (sign-in, loading) can shrink
  * the popup window. The `.popup-root` and `.popup-root--auto` rules below
@@ -61,7 +56,6 @@ html, body { height: auto; }
   min-height: var(--popup-min-h, 360px);
   max-height: var(--popup-h, 600px);
   overflow: hidden;
-  border-radius: 8px;
 }
 /* Tiny views (sign-in, loading, shortcuts) — opt out of the floor and
  * size purely to content. */
