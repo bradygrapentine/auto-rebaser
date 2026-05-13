@@ -518,16 +518,25 @@ code, .mono {
 .pr-tabs__tab--active { color: var(--term-cyan); border-color: var(--term-cyan); }
 
 /* Story 5.2-A — push-since-approval re-review button.
- * Uses the `.btn` chassis so it picks up the bracket-frame aesthetic
- * (auto-injected `[` and `]`) consistent with every other action in
- * the popup. The modifier just recolors to red and shrinks padding so
- * it fits the PR row's compact baseline. */
+ * Uses the `.btn` chassis for the bracket-frame aesthetic, but with
+ * the TIGHT bracket spacing of state-badge (1px) instead of .btn's
+ * default loose 4px — so [re-review] sits next to [pending] without
+ * looking like a different alphabet.
+ *
+ * `flex-shrink: 0` and explicit `position: relative` + `z-index: 1`
+ * defend the button against being squeezed inside the .pr-row flex
+ * row and against the anchor wrapper consuming the click. The bracket
+ * pseudo-elements get `pointer-events: none` so the click always
+ * lands on the <button> itself. */
 .btn--rerequest {
   color: var(--term-red);
   border-color: rgba(255, 100, 100, 0.45);
   font-size: 10px;
   line-height: 14px;
   padding: 1px 6px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 .btn--rerequest:hover:not(:disabled) {
   color: var(--term-red);
@@ -537,6 +546,9 @@ code, .mono {
 .btn--rerequest::before,
 .btn--rerequest::after {
   color: rgba(255, 100, 100, 0.55);
+  margin-right: 1px;
+  margin-left: 1px;
+  pointer-events: none;
 }
 .btn--rerequest-passive {
   cursor: default;
