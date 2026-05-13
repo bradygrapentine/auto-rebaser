@@ -10,6 +10,7 @@ import {
   clearToken,
   AUTH_KEY,
   type AuthGitHubApp,
+  type AuthPAT,
 } from '../../src/core/auth-store';
 import { STORAGE_KEYS } from '../../src/core/constants';
 
@@ -81,25 +82,42 @@ describe('auth-store', () => {
   });
 
   describe('setAuthGitHubApp', () => {
-    it('persists the github_app union shape to local', async () => {
-      chrome.storage.local.get = vi.fn().mockResolvedValue({});
-      chrome.storage.sync.get = vi.fn().mockResolvedValue({});
-      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+    it('persists the github_app union shape under accounts.<id> on first sign-in', async () => {
+      // First sign-in: no active account, no legacy auth. setAuthGitHubApp
+      // fetches /user, derives the id, writes under accounts.<id>.
+      const store: Record<string, unknown> = {};
+      chrome.storage.local.get = vi.fn().mockImplementation(async (k: string | string[]) => {
+        const want = Array.isArray(k) ? k : [k];
+        const out: Record<string, unknown> = {};
+        for (const key of want) if (key in store) out[key] = store[key];
+        return out;
+      });
+      chrome.storage.local.set = vi.fn().mockImplementation(async (patch: Record<string, unknown>) => {
+        Object.assign(store, patch);
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ login: 'octocat' }), { status: 200 }),
+      );
+
       await setAuthGitHubApp({
         accessToken: 'gho',
         refreshToken: 'ghr',
         accessTokenExpiresAt: 100,
         refreshTokenExpiresAt: 200,
       });
-      expect(chrome.storage.local.set).toHaveBeenCalledWith({
-        [AUTH_KEY]: {
-          method: 'github_app',
-          accessToken: 'gho',
-          refreshToken: 'ghr',
-          accessTokenExpiresAt: 100,
-          refreshTokenExpiresAt: 200,
-        },
+
+      expect(store.active_account_id).toBe('gh_octocat');
+      const accounts = store.accounts as Record<string, { auth: AuthGitHubApp }>;
+      expect(accounts.gh_octocat.auth).toEqual({
+        method: 'github_app',
+        accessToken: 'gho',
+        refreshToken: 'ghr',
+        accessTokenExpiresAt: 100,
+        refreshTokenExpiresAt: 200,
+        login: 'octocat',
       });
+      // Critical: top-level `auth` key is NOT written.
+      expect(store.auth).toBeUndefined();
     });
 
     it('preserves previously-fetched installations across token rotations', async () => {
@@ -109,47 +127,92 @@ describe('auth-store', () => {
         repository_selection: 'all',
         target_type: 'User',
       }];
-      chrome.storage.local.get = vi.fn().mockResolvedValue({
-        [AUTH_KEY]: {
-          method: 'github_app',
-          accessToken: 'old',
-          refreshToken: 'old',
-          accessTokenExpiresAt: 0,
-          refreshTokenExpiresAt: 0,
-          installations: prevInstalls,
+      // Token rotation path: active id exists, prev auth has installations.
+      const store: Record<string, unknown> = {
+        active_account_id: 'gh_octocat',
+        accounts: {
+          gh_octocat: {
+            auth: {
+              method: 'github_app',
+              accessToken: 'old',
+              refreshToken: 'old',
+              accessTokenExpiresAt: 0,
+              refreshTokenExpiresAt: 0,
+              login: 'octocat',
+              installations: prevInstalls,
+            },
+          },
         },
+      };
+      chrome.storage.local.get = vi.fn().mockImplementation(async (k: string | string[]) => {
+        const want = Array.isArray(k) ? k : [k];
+        const out: Record<string, unknown> = {};
+        for (const key of want) if (key in store) out[key] = store[key];
+        return out;
       });
-      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+      chrome.storage.local.set = vi.fn().mockImplementation(async (patch: Record<string, unknown>) => {
+        Object.assign(store, patch);
+      });
+
       await setAuthGitHubApp({
         accessToken: 'new',
         refreshToken: 'new',
         accessTokenExpiresAt: 100,
         refreshTokenExpiresAt: 200,
       });
-      expect(chrome.storage.local.set).toHaveBeenCalledWith({
-        [AUTH_KEY]: expect.objectContaining({
+
+      const accounts = store.accounts as Record<string, { auth: AuthGitHubApp }>;
+      expect(accounts.gh_octocat.auth).toEqual(
+        expect.objectContaining({
           accessToken: 'new',
           installations: prevInstalls,
+          login: 'octocat',
         }),
-      });
+      );
     });
   });
 
   describe('setAuthPAT / setToken', () => {
-    it('setAuthPAT writes the pat shape to local', async () => {
-      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
-      await setAuthPAT('ghp_pat');
-      expect(chrome.storage.local.set).toHaveBeenCalledWith({
-        [AUTH_KEY]: { method: 'pat', token: 'ghp_pat' },
+    it('setAuthPAT writes under accounts.<id> on first sign-in using knownLogin', async () => {
+      const store: Record<string, unknown> = {};
+      chrome.storage.local.get = vi.fn().mockImplementation(async (k: string | string[]) => {
+        const want = Array.isArray(k) ? k : [k];
+        const out: Record<string, unknown> = {};
+        for (const key of want) if (key in store) out[key] = store[key];
+        return out;
       });
+      chrome.storage.local.set = vi.fn().mockImplementation(async (patch: Record<string, unknown>) => {
+        Object.assign(store, patch);
+      });
+
+      // knownLogin passed → no /user fetch should occur.
+      await setAuthPAT('ghp_pat', 'octocat');
+
+      expect(store.active_account_id).toBe('gh_octocat');
+      const accounts = store.accounts as Record<string, { auth: AuthPAT }>;
+      expect(accounts.gh_octocat.auth).toEqual({ method: 'pat', token: 'ghp_pat', login: 'octocat' });
+      expect(store.auth).toBeUndefined();
     });
 
-    it('setToken is an alias for setAuthPAT', async () => {
-      chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
-      await setToken('ghp_pat');
-      expect(chrome.storage.local.set).toHaveBeenCalledWith({
-        [AUTH_KEY]: { method: 'pat', token: 'ghp_pat' },
+    it('setToken is an alias for setAuthPAT (fetches /user when no knownLogin)', async () => {
+      const store: Record<string, unknown> = {};
+      chrome.storage.local.get = vi.fn().mockImplementation(async (k: string | string[]) => {
+        const want = Array.isArray(k) ? k : [k];
+        const out: Record<string, unknown> = {};
+        for (const key of want) if (key in store) out[key] = store[key];
+        return out;
       });
+      chrome.storage.local.set = vi.fn().mockImplementation(async (patch: Record<string, unknown>) => {
+        Object.assign(store, patch);
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ login: 'octocat' }), { status: 200 }),
+      );
+
+      await setToken('ghp_pat');
+
+      const accounts = store.accounts as Record<string, { auth: AuthPAT }>;
+      expect(accounts.gh_octocat.auth.token).toBe('ghp_pat');
     });
   });
 

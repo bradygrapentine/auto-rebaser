@@ -1,4 +1,4 @@
-import { setToken, clearToken } from './auth-store';
+import { setAuthPAT, clearToken } from './auth-store';
 import { BASE_SCOPES } from './constants';
 
 export async function composeOAuthScope(): Promise<string> {
@@ -38,7 +38,9 @@ export async function setTokenFromPAT(pat: string): Promise<{ login: string; sco
   const user = (await response.json()) as { login?: string };
   if (!user.login) throw new Error('PAT_INVALID: no login');
 
-  await setToken(trimmed);
+  // Pass the login through so setAuthPAT can derive the accountId without
+  // a duplicate /user fetch and write directly under accounts.<id>.
+  await setAuthPAT(trimmed, user.login);
 
   const scopesHeader = response.headers.get('x-oauth-scopes') ?? '';
   const scopes = scopesHeader.split(',').map((s) => s.trim()).filter(Boolean);

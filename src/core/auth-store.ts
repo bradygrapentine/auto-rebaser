@@ -16,12 +16,21 @@ import {
   removeAccountKey,
   readAccountKeyFor,
   writeAccountKeyFor,
+  getActiveAccountId,
+  buildAccountId,
+  migrateAndWriteAuth,
 } from './storage/multi-account';
+import { getApiBase } from './host-config';
 
 export const AUTH_KEY = 'auth';
 
 export interface AuthGitHubApp extends TokenSet {
   method: 'github_app';
+  /** GitHub user login for this auth blob — populated synchronously by
+   *  setAuthGitHubApp's /user fetch (T1). Used to seed inline legacy
+   *  migrations and avoid `gh_unknown` fallbacks. Optional only because
+   *  older stored auth values pre-T1 may lack it. */
+  login?: string;
   /**
    * Story 4.5 — installations the user can access. Populated after sign-in,
    * refreshed on demand. Optional so older stored auth values keep loading
@@ -57,17 +66,57 @@ export async function getAuth(): Promise<Auth | null> {
   return null;
 }
 
+async function fetchLoginForToken(accessToken: string): Promise<string> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/user`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!res.ok) throw new Error(`AUTH_USER_FETCH_FAILED: HTTP_${res.status}`);
+  const user = (await res.json()) as { login?: string };
+  if (!user.login) throw new Error('AUTH_USER_FETCH_FAILED: no login');
+  return user.login;
+}
+
 export async function setAuthGitHubApp(tokenSet: TokenSet): Promise<void> {
-  // Preserve any previously-fetched installations across token rotations.
-  const prev = await getAuth();
-  const installations =
-    prev && prev.method === 'github_app' ? prev.installations : undefined;
-  const auth: AuthGitHubApp = {
-    method: 'github_app',
-    ...tokenSet,
-    ...(installations ? { installations } : {}),
-  };
-  await writeAccountKey('auth', auth);
+  const activeId = await getActiveAccountId();
+
+  if (activeId) {
+    // Preserve any previously-fetched installations + login across token rotations.
+    const prev = await readAccountKeyFor(activeId, 'auth');
+    const installations =
+      prev && prev.method === 'github_app' ? prev.installations : undefined;
+    const login =
+      prev && prev.method === 'github_app' ? prev.login : undefined;
+    const auth: AuthGitHubApp = {
+      method: 'github_app',
+      ...tokenSet,
+      ...(login ? { login } : {}),
+      ...(installations ? { installations } : {}),
+    };
+    await writeAccountKeyFor(activeId, 'auth', auth);
+    return;
+  }
+
+  // First sign-in (no active account). Fetch /user synchronously to derive
+  // the accountId — never write to a `gh_unknown` namespace. If /user
+  // fails, throw and let the popup surface the retry. Legacy top-level
+  // `auth` (if any) is migrated separately by readAccountKey's inline
+  // migration or by the add-account flow's resolver — NOT here, because
+  // we don't have the legacy account's login at this entry point.
+  const login = await fetchLoginForToken(tokenSet.accessToken);
+  const newId = buildAccountId(login);
+  const auth: AuthGitHubApp = { method: 'github_app', ...tokenSet, login };
+
+  await migrateAndWriteAuth({
+    legacyAuth: null,
+    legacyId: null,
+    newId,
+    newAuth: auth,
+  });
 }
 
 /**
@@ -81,9 +130,31 @@ export async function setInstallations(installations: Installation[]): Promise<v
   await writeAccountKey('auth', next);
 }
 
-export async function setAuthPAT(token: string): Promise<void> {
-  const auth: AuthPAT = { method: 'pat', token };
-  await writeAccountKey('auth', auth);
+export async function setAuthPAT(token: string, knownLogin?: string): Promise<void> {
+  const activeId = await getActiveAccountId();
+
+  if (activeId) {
+    const prev = await readAccountKeyFor(activeId, 'auth');
+    const login =
+      knownLogin ?? (prev && prev.method === 'pat' ? prev.login : undefined);
+    const auth: AuthPAT = { method: 'pat', token, ...(login ? { login } : {}) };
+    await writeAccountKeyFor(activeId, 'auth', auth);
+    return;
+  }
+
+  // First sign-in (no active account). Fetch /user synchronously unless the
+  // caller already did and passed `knownLogin`. Never write `gh_unknown`.
+  // Legacy migration is owned by readAccountKey/add-account path — not here.
+  const login = knownLogin ?? (await fetchLoginForToken(token));
+  const newId = buildAccountId(login);
+  const auth: AuthPAT = { method: 'pat', token, login };
+
+  await migrateAndWriteAuth({
+    legacyAuth: null,
+    legacyId: null,
+    newId,
+    newAuth: auth,
+  });
 }
 
 /** Cache the GitHub login on the current PAT auth blob. No-op for other methods. */

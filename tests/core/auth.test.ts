@@ -3,7 +3,7 @@ import { signOut, composeOAuthScope, setTokenFromPAT } from '../../src/core/auth
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
 
 vi.mock('../../src/core/auth-store', () => ({
-  setToken: vi.fn(),
+  setAuthPAT: vi.fn(),
   clearToken: vi.fn(),
 }));
 
@@ -22,7 +22,7 @@ global.fetch = mockFetch;
 describe('auth', () => {
   beforeEach(() => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('fixed-state' as `${string}-${string}-${string}-${string}-${string}`);
-    vi.mocked(authStore.setToken).mockResolvedValue(undefined);
+    vi.mocked(authStore.setAuthPAT).mockResolvedValue(undefined);
     vi.mocked(authStore.clearToken).mockResolvedValue(undefined);
     vi.mocked(automationsStore.getAutomationSettings).mockResolvedValue({ ...DEFAULT_AUTOMATION_SETTINGS });
     vi.mocked(automationsStore.saveAutomationSettings).mockResolvedValue(undefined);
@@ -63,7 +63,7 @@ describe('auth', () => {
     it('throws PAT_INVALID on 401', async () => {
       mockUserResponse({ ok: false, status: 401 });
       await expect(setTokenFromPAT('ghp_x')).rejects.toThrow('PAT_INVALID: HTTP_401');
-      expect(authStore.setToken).not.toHaveBeenCalled();
+      expect(authStore.setAuthPAT).not.toHaveBeenCalled();
     });
 
     it('throws PAT_INVALID when /user returns no login', async () => {
@@ -77,7 +77,7 @@ describe('auth', () => {
       const result = await setTokenFromPAT('  ghp_validtoken  ');
 
       expect(result).toEqual({ login: 'brady', scopes: ['repo'] });
-      expect(authStore.setToken).toHaveBeenCalledWith('ghp_validtoken');
+      expect(authStore.setAuthPAT).toHaveBeenCalledWith('ghp_validtoken', 'brady');
       // notificationsScopeGranted stays false (default).
       expect(automationsStore.saveAutomationSettings).not.toHaveBeenCalled();
     });

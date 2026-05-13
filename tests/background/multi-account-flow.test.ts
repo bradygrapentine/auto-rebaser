@@ -26,8 +26,7 @@ vi.mock('../../src/github/endpoints/installations', () => ({
 
 vi.mock('../../src/core/storage/multi-account', () => ({
   buildAccountId: vi.fn(),
-  setAccountState: vi.fn(),
-  setActiveAccountId: vi.fn(),
+  migrateAndWriteAuth: vi.fn(),
   listAccountIds: vi.fn().mockResolvedValue([]),
 }));
 
@@ -56,8 +55,7 @@ import {
 import { getUserInstallations } from '../../src/github/endpoints/installations';
 import {
   buildAccountId,
-  setAccountState,
-  setActiveAccountId,
+  migrateAndWriteAuth,
 } from '../../src/core/storage/multi-account';
 import { getSettings } from '../../src/core/settings-store';
 import { getApiBase } from '../../src/core/host-config';
@@ -97,10 +95,7 @@ beforeEach(() => {
     (login: string) => `gh_${login}`,
   );
 
-  (setAccountState as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-  (setActiveAccountId as ReturnType<typeof vi.fn>).mockResolvedValue(
-    undefined,
-  );
+  (migrateAndWriteAuth as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (setInstallationsFor as ReturnType<typeof vi.fn>).mockResolvedValue(
     undefined,
   );
@@ -143,17 +138,17 @@ describe('multi-account flow — end-to-end add-account', () => {
     // Let the polling loop settle.
     await new Promise((r) => setTimeout(r, 10));
 
-    // Verify the new account received the auth.
-    expect(setAccountState).toHaveBeenCalledWith('gh_newuser', 'auth', {
-      method: 'github_app',
-      ...stubTokenSet,
+    // Verify migrateAndWriteAuth was called with the new account's auth
+    // and that legacy fields are null (no legacy auth in storage).
+    expect(migrateAndWriteAuth).toHaveBeenCalledWith({
+      legacyAuth: null,
+      legacyId: null,
+      newId: 'gh_newuser',
+      newAuth: { method: 'github_app', ...stubTokenSet, login: 'newuser' },
     });
 
     // Verify installations were written to the new account.
     expect(setInstallationsFor).toHaveBeenCalledWith('gh_newuser', []);
-
-    // Verify active account was flipped.
-    expect(setActiveAccountId).toHaveBeenCalledWith('gh_newuser');
 
     // Verify the status reflects success.
     const status = getStatus();
@@ -190,10 +185,12 @@ describe('multi-account flow — end-to-end add-account', () => {
     // Verify the old account setAuthGitHubApp was NOT called (that's legacy path).
     expect(setAuthGitHubApp).not.toHaveBeenCalled();
 
-    // Verify new account got the new token.
-    expect(setAccountState).toHaveBeenCalledWith('gh_seconduser', 'auth', {
-      method: 'github_app',
-      ...newTokenSet,
+    // Verify new account got the new token via migrateAndWriteAuth.
+    expect(migrateAndWriteAuth).toHaveBeenCalledWith({
+      legacyAuth: null,
+      legacyId: null,
+      newId: 'gh_seconduser',
+      newAuth: { method: 'github_app', ...newTokenSet, login: 'seconduser' },
     });
   });
 
@@ -232,9 +229,11 @@ describe('multi-account flow — end-to-end add-account', () => {
     // If the code was reading state.addingAccount after the resetStatus() above,
     // it would take the legacy single-account path. Instead, the closure-captured
     // flag should force the add-account path, writing to the new account.
-    expect(setAccountState).toHaveBeenCalledWith('gh_protected', 'auth', {
-      method: 'github_app',
-      ...tokenSet,
+    expect(migrateAndWriteAuth).toHaveBeenCalledWith({
+      legacyAuth: null,
+      legacyId: null,
+      newId: 'gh_protected',
+      newAuth: { method: 'github_app', ...tokenSet, login: 'protected' },
     });
 
     // The legacy path would have called setAuthGitHubApp; it must not be called.

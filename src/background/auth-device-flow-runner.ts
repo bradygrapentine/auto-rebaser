@@ -18,9 +18,9 @@ import { setAuthGitHubApp, setInstallations, setInstallationsFor } from '../core
 import { getUserInstallations } from '../github/endpoints/installations';
 import {
   buildAccountId,
-  setAccountState,
-  setActiveAccountId,
+  migrateAndWriteAuth,
 } from '../core/storage/multi-account';
+import type { Auth } from '../core/auth-store';
 import { getSettings } from '../core/settings-store';
 import { getApiBase } from '../core/host-config';
 
@@ -84,9 +84,56 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
           const me = (await userRes.json()) as { login: string };
           const settings = await getSettings();
           const newId = buildAccountId(me.login, settings.enterpriseHost);
-          await setAccountState(newId, 'auth', { method: 'github_app', ...tokenSet });
-          // Best-effort installations fetch + store under the new account.
-          await setActiveAccountId(newId);
+          const newAuth: Auth = { method: 'github_app', ...tokenSet, login: me.login };
+
+          // Detect legacy top-level auth from a pre-T1 first sign-in. If
+          // present, migrate it under accounts.<derivedId> atomically with
+          // the new account's write — otherwise the first account
+          // becomes invisible to listAccountIds(). Plan T1 step 2 + 4.
+          const legacySnap = (await chrome.storage.local.get('auth')) ?? {};
+          const legacyAuth = (legacySnap['auth'] as Auth | undefined) ?? null;
+          let legacyId: string | null = null;
+          if (legacyAuth) {
+            const legacyLogin =
+              legacyAuth.method === 'pat'
+                ? legacyAuth.login
+                : (legacyAuth as { login?: string }).login;
+            if (legacyLogin && legacyLogin !== me.login) {
+              legacyId = buildAccountId(legacyLogin, settings.enterpriseHost);
+            } else if (!legacyLogin) {
+              // No login on legacy — fetch /user with the legacy token to
+              // derive the original account's id.
+              const legacyToken =
+                legacyAuth.method === 'github_app'
+                  ? legacyAuth.accessToken
+                  : legacyAuth.token;
+              try {
+                const legacyUserRes = await fetch(`${apiBase}/user`, {
+                  headers: {
+                    Authorization: `Bearer ${legacyToken}`,
+                    Accept: 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                  },
+                });
+                if (legacyUserRes.ok) {
+                  const legacyMe = (await legacyUserRes.json()) as { login: string };
+                  if (legacyMe.login && legacyMe.login !== me.login) {
+                    legacyId = buildAccountId(legacyMe.login, settings.enterpriseHost);
+                  }
+                }
+              } catch (e) {
+                console.warn('[device-flow] could not resolve legacy account login:', e);
+              }
+            }
+          }
+
+          await migrateAndWriteAuth({
+            legacyAuth: legacyId ? legacyAuth : null,
+            legacyId,
+            newId,
+            newAuth,
+          });
+          // migrateAndWriteAuth flips active_account_id atomically.
           try {
             const installations = await getUserInstallations(newId);
             await setInstallationsFor(newId, installations);
