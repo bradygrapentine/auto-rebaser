@@ -291,6 +291,38 @@ export async function removeAccountKeyFor<K extends keyof AccountState>(
  * The implicit-id resolution here can be defeated by Chrome MV3 SW eviction.
  * Popup-context callers (single active account, no iteration) are fine.
  */
+// Module-scoped lock so concurrent first-callers don't race two parallel
+// inline migrations of the legacy `auth` key. Cleared once resolved.
+let authMigrationPromise: Promise<void> | null = null;
+
+/**
+ * Inline migration for the legacy top-level `auth` key. Only attempts the
+ * migration when the legacy auth has a derivable login (PAT.login set, or
+ * AuthGitHubApp.login set after T1's setAuthGitHubApp refactor). Users on
+ * older legacy shapes without a login get migrated by the add-account flow
+ * via `migrateAndWriteAuth`.
+ */
+async function maybeMigrateLegacyAuth(): Promise<void> {
+  const snap = await chrome.storage.local.get(['auth', STORAGE_KEYS_V2.activeAccountId]);
+  const legacyAuth = snap['auth'] as Auth | undefined;
+  if (!legacyAuth) return;
+  if (snap[STORAGE_KEYS_V2.activeAccountId]) return; // Already migrated.
+
+  const login =
+    legacyAuth.method === 'pat'
+      ? legacyAuth.login
+      : (legacyAuth as { login?: string }).login;
+  if (!login) return; // No derivable id; defer to add-account flow.
+
+  const newId = buildAccountId(login);
+  await migrateAndWriteAuth({
+    legacyAuth,
+    legacyId: newId,
+    newId,
+    newAuth: legacyAuth,
+  });
+}
+
 export async function readAccountKey<K extends keyof AccountState>(
   key: K,
 ): Promise<AccountState[K] | undefined> {
@@ -298,7 +330,21 @@ export async function readAccountKey<K extends keyof AccountState>(
   if (id) {
     return await readAccountKeyFor(id, key);
   }
-  // No active account — true pre-migration shape, read from the v1 key.
+
+  if (key === 'auth') {
+    if (!authMigrationPromise) {
+      authMigrationPromise = maybeMigrateLegacyAuth().finally(() => {
+        authMigrationPromise = null;
+      });
+    }
+    await authMigrationPromise;
+    const migrated = await getActiveAccountId();
+    if (migrated) {
+      return await readAccountKeyFor(migrated, key);
+    }
+  }
+
+  // No active account and no migratable legacy — read top-level (pre-migration shape).
   const legacy = await chrome.storage.local.get(key);
   return (legacy ?? {})[key] as AccountState[K] | undefined;
 }
@@ -325,7 +371,55 @@ export async function removeAccountKey<K extends keyof AccountState>(key: K): Pr
   await chrome.storage.local.remove(key);
 }
 
+/**
+ * Atomic auth migration + write. Used when transitioning from legacy
+ * top-level `auth` to the per-account namespace, and as the single
+ * write-point for first sign-ins (call with `legacyAuth: null`,
+ * `legacyId: null` for a fresh install).
+ *
+ * Bundles the per-account writes + active-account flip into ONE
+ * `chrome.storage.local.set` call. The legacy top-level `auth` key is
+ * removed afterward with a separate `remove`; if SW eviction lands
+ * between the set and remove, the read path's inline migration plus the
+ * active id presence guarantees we never observe a half-migrated state.
+ */
+export async function migrateAndWriteAuth(opts: {
+  legacyAuth: Auth | null;
+  legacyId: string | null;
+  newId: string;
+  newAuth: Auth;
+}): Promise<void> {
+  const result = await chrome.storage.local.get(STORAGE_KEYS_V2.accounts);
+  const accounts = ((result ?? {})[STORAGE_KEYS_V2.accounts] ?? {}) as Record<
+    string,
+    Partial<AccountState>
+  >;
+
+  if (opts.legacyAuth && opts.legacyId) {
+    accounts[opts.legacyId] = {
+      ...(accounts[opts.legacyId] ?? {}),
+      auth: opts.legacyAuth,
+    };
+  }
+  accounts[opts.newId] = {
+    ...(accounts[opts.newId] ?? {}),
+    auth: opts.newAuth,
+  };
+
+  await chrome.storage.local.set({
+    [STORAGE_KEYS_V2.accounts]: accounts,
+    [STORAGE_KEYS_V2.activeAccountId]: opts.newId,
+  });
+
+  if (opts.legacyAuth) {
+    await chrome.storage.local.remove('auth');
+  }
+}
+
 /** Test/migration-only — do not import in app code. */
 export const __testing = {
   perAccountSettingsKey,
+  _resetAuthMigrationLock: () => {
+    authMigrationPromise = null;
+  },
 };
