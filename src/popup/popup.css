@@ -1319,7 +1319,7 @@ code, .mono {
  * buttons get consistent vertical rhythm. */
 .signin > * {
   width: 100%;
-  max-width: 280px;
+  max-width: 340px;
   margin-left: auto;
   margin-right: auto;
 }
