@@ -1305,7 +1305,8 @@ code, .mono {
 
 /* ─── Sign in (auth prompt) ────────────────────────────────────────────── */
 .signin {
-  padding: 24px 32px;
+  /* Wider side padding so the buttons sit ≥30px from the popup edge. */
+  padding: 24px 36px;
   /* Center the title + lede + buttons vertically within the popup window
    * (matters when Chrome doesn't shrink the popup to match content). */
   display: flex;
@@ -1323,19 +1324,25 @@ code, .mono {
   margin-left: auto;
   margin-right: auto;
 }
-.signin .btn--block { margin-top: 14px; }
+/* Default sibling rhythm: 28px between adjacent signin children
+ * (lede→button1 is the most-visible instance of this gap). */
+.signin > * + * { margin-top: 28px; }
+/* Title→lede sits tighter than the default sibling rhythm. */
+.signin__title + .signin__lede { margin-top: 6px; }
+/* Button↔button stays at the tighter 14px (overrides the 28px default). */
+.signin .btn--block + .btn--block { margin-top: 14px; }
 .signin form { margin: 0; }
 .signin__title {
   color: var(--term-prompt);
   font-size: 14px;
   font-weight: 700;
-  margin: 0 auto 6px;
+  margin: 0 auto;
 }
 .signin__title::before { content: "$ "; color: var(--term-fg-dim); font-weight: 400; }
 .signin__lede {
   font-size: 12px;
   color: var(--term-fg-dim);
-  margin: 0 auto 28px;
+  margin: 0 auto;
 }
 
 /* ─── Spinner ──────────────────────────────────────────────────────────── */
