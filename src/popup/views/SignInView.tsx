@@ -237,8 +237,7 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error,
         <button
           type="button"
           className="btn btn--block"
-          style={{ marginTop: 8 }}
-          onClick={() => setView('choice')}
+            onClick={() => setView('choice')}
         >
           back
         </button>
@@ -270,7 +269,6 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error,
         className="btn btn--block"
         onClick={() => setView('pat')}
         data-testid="signin-pat"
-        style={{ marginTop: 8 }}
       >
         use a personal access token (legacy)
       </button>
@@ -280,8 +278,7 @@ export function SignInView({ onSubmit, onDeviceFlowSuccess, busy = false, error,
           type="button"
           className="btn btn--block"
           onClick={onCancel}
-          style={{ marginTop: 8 }}
-          data-testid="signin-cancel"
+            data-testid="signin-cancel"
         >
           cancel
         </button>
