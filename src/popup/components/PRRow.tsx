@@ -145,7 +145,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
       {showRerequestBadge && rerequestState!.actionable && onRerequest ? (
         <button
           type="button"
-          className="btn btn--rerequest"
+          className="pr-row__rerequest"
           data-testid="rerequest-badge"
           onClick={(e) => {
             e.preventDefault();
@@ -156,7 +156,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
           re-review
         </button>
       ) : showRerequestBadge ? (
-        <span className="btn btn--rerequest btn--rerequest-passive" data-testid="rerequest-badge" aria-disabled="true">
+        <span className="pr-row__rerequest pr-row__rerequest--passive" data-testid="rerequest-badge" aria-disabled="true">
           re-review
         </span>
       ) : null}
