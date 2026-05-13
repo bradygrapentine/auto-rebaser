@@ -44,21 +44,23 @@ html, body { height: auto; }
   background: var(--term-bg);
   font-feature-settings: "calt" 1, "liga" 1;
   position: relative;
-  /* Chrome MV3 popup auto-sizes to body content. Cap at 600px so very long
-     content scrolls inside view-body instead of growing the popup window
-     past Chrome's natural max. Do NOT use `100vh` here — in a popup, vh
-     resolves to the popup window's own height (chicken-and-egg) and ends up
-     pinning the popup at whatever size it currently is. */
+  /* Chrome MV3 popup auto-sizes to body content. Default: shrink-to-fit
+     with a 360px floor (so empty PR list / few activity entries don't
+     collapse to a tiny header+footer strip) and a 600px cap (so long
+     content scrolls inside view-body instead of growing past Chrome's
+     natural max). Do NOT use `100vh` here — in a popup, vh resolves to
+     the popup window's own height (chicken-and-egg) and pins it. */
   display: flex;
   flex-direction: column;
-  height: var(--popup-h, 600px);
+  height: auto;
+  min-height: var(--popup-min-h, 360px);
+  max-height: var(--popup-h, 600px);
   overflow: hidden;
 }
-/* Short views (sign-in, loading) — auto-size so the popup doesn't reserve
- * the full --popup-h of empty space below their tiny content. */
+/* Tiny views (sign-in, loading, shortcuts) — opt out of the floor and
+ * size purely to content. */
 .popup-root.popup-root--auto {
-  height: auto;
-  max-height: var(--popup-h, 600px);
+  min-height: 0;
 }
 .popup-root > .popup-header,
 .popup-root > .popup-footer { flex: 0 0 auto; }
