@@ -662,16 +662,17 @@ code, .mono {
 }
 
 .help-view {
-  padding: 10px 14px;
-  /* Stop view-body from greedily filling vertical space when popup
-   * window is taller than content. Let the dl size to its content. */
-  flex: 0 0 auto;
+  padding: 14px;
+  /* Center the shortcut list vertically below the header. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .help-shortcuts {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
   font-size: 12px;
 }
 .help-shortcuts__row {
@@ -679,7 +680,7 @@ code, .mono {
   grid-template-columns: 80px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 2px 0;
+  padding: 6px 0;
   border-bottom: 1px dashed var(--term-border);
 }
 .help-shortcuts__row:last-child { border-bottom: none; }
