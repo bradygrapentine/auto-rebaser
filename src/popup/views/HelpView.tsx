@@ -21,7 +21,7 @@ export function HelpView({ onBack }: Props) {
   });
 
   return (
-    <div className="popup-root" data-testid="help-view">
+    <div className="popup-root popup-root--auto" data-testid="help-view">
       <header className="popup-header">
         <button type="button" aria-label="Back" onClick={onBack} className="btn">
           ← back
