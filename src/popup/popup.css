@@ -661,12 +661,17 @@ code, .mono {
   font-family: inherit;
 }
 
-.help-view { padding: 14px; }
+.help-view {
+  padding: 10px 14px;
+  /* Stop view-body from greedily filling vertical space when popup
+   * window is taller than content. Let the dl size to its content. */
+  flex: 0 0 auto;
+}
 .help-shortcuts {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   font-size: 12px;
 }
 .help-shortcuts__row {
@@ -674,7 +679,7 @@ code, .mono {
   grid-template-columns: 80px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 4px 0;
+  padding: 2px 0;
   border-bottom: 1px dashed var(--term-border);
 }
 .help-shortcuts__row:last-child { border-bottom: none; }
@@ -1300,6 +1305,13 @@ code, .mono {
 /* ─── Sign in (auth prompt) ────────────────────────────────────────────── */
 .signin {
   padding: 24px 18px;
+  /* Center the title + lede + buttons vertically within the popup window
+   * (matters when Chrome doesn't shrink the popup to match content). */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .signin__title {
   color: var(--term-prompt);
