@@ -517,24 +517,30 @@ code, .mono {
 }
 .pr-tabs__tab--active { color: var(--term-cyan); border-color: var(--term-cyan); }
 
-/* Story 5.2-A — push-since-approval re-review badge. */
-.pr-row__rerequest-badge {
-  font-size: 10px;
+/* Story 5.2-A — push-since-approval re-review button.
+ * Uses the `.btn` chassis so it picks up the bracket-frame aesthetic
+ * (auto-injected `[` and `]`) consistent with every other action in
+ * the popup. The modifier just recolors to red and shrinks padding so
+ * it fits the PR row's compact baseline. */
+.btn--rerequest {
   color: var(--term-red);
-  background: transparent;
-  border: 1px solid rgba(255, 100, 100, 0.45);
-  padding: 1px 4px;
-  margin-right: 4px;
-  white-space: nowrap;
-  font-family: inherit;
-  cursor: pointer;
+  border-color: rgba(255, 100, 100, 0.45);
+  font-size: 10px;
+  line-height: 14px;
+  padding: 1px 6px;
 }
-.pr-row__rerequest-badge:hover:not(:disabled) {
+.btn--rerequest:hover:not(:disabled) {
+  color: var(--term-red);
   border-color: var(--term-red);
+  background: rgba(255, 100, 100, 0.08);
 }
-.pr-row__rerequest-badge--passive {
+.btn--rerequest::before,
+.btn--rerequest::after {
+  color: rgba(255, 100, 100, 0.55);
+}
+.btn--rerequest-passive {
   cursor: default;
-  opacity: 0.75;
+  opacity: 0.6;
 }
 
 .pr-row__ping {
@@ -779,6 +785,10 @@ code, .mono {
   border-radius: 50%;
   background: var(--term-yellow);
   margin-right: 6px;
+  /* Drop down so the dot's vertical center aligns with the chip text
+   * baseline instead of sitting at the row's flex-start top. Tuned
+   * against [pending] / [conflict] StatusBadge metrics. */
+  margin-top: 7px;
   flex-shrink: 0;
 }
 
