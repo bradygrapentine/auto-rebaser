@@ -36,6 +36,9 @@ interface Props {
   reviewerChip?: {
     myReviewState?: 'AWAITING' | 'APPROVED' | 'CHANGES_REQUESTED';
     autoMergeArmed: boolean;
+    /** T2 — author pushed new commits after my latest APPROVED review.
+     *  Renders an extra yellow chip alongside `i approved`. */
+    pushSinceApproval?: boolean;
   };
   /** Per-row attention indicator — true when the PR is in an actionable state
    *  per `isPRActionable`. Renders a small dot at the start of the row. */
@@ -119,9 +122,20 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
               auto-merge armed
             </span>
           ) : reviewerChip.myReviewState === 'APPROVED' ? (
-            <span className="pr-row__reviewer-chip pr-row__reviewer-chip--approved" data-testid="reviewer-chip-approved">
-              i approved
-            </span>
+            <>
+              <span className="pr-row__reviewer-chip pr-row__reviewer-chip--approved" data-testid="reviewer-chip-approved">
+                i approved
+              </span>
+              {reviewerChip.pushSinceApproval && (
+                <span
+                  className="pr-row__reviewer-chip pr-row__reviewer-chip--stale-push"
+                  data-testid="reviewer-chip-stale-push"
+                  title="The author pushed new commits since your approval."
+                >
+                  stale push
+                </span>
+              )}
+            </>
           ) : reviewerChip.myReviewState === 'CHANGES_REQUESTED' ? (
             <span className="pr-row__reviewer-chip pr-row__reviewer-chip--changes" data-testid="reviewer-chip-changes">
               i requested changes
