@@ -302,6 +302,16 @@ export function PRListView({
       </div>
       <footer className="popup-footer">
         <div className="popup-footer__main">
+          {authMethod === 'github_app' ? (
+            <span className="popup-footer__via" data-testid="footer-via">
+              via app · {installations?.length ?? 0} installation
+              {(installations?.length ?? 0) === 1 ? '' : 's'}
+            </span>
+          ) : authMethod === 'pat' && user?.login ? (
+            <span className="popup-footer__via" data-testid="footer-via">
+              via @{user.login}
+            </span>
+          ) : null}
           <PollSummaryFooter onOpenActivity={onOpenActivity} />
           <a
             href="https://github.com/sponsors/bradygrapentine"
