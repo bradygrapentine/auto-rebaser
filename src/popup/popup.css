@@ -26,9 +26,6 @@ html, body, #root {
   margin: 0;
   padding: 0;
   background: var(--term-bg);
-  /* Match Chrome / Firefox popup chrome's outer corner radius so our
-   * dark content doesn't bleed into the browser's rounded frame. */
-  border-radius: 8px;
 }
 /* Let html/body size to content so short views (sign-in, loading) can shrink
  * the popup window. The `.popup-root` and `.popup-root--auto` rules below
@@ -59,7 +56,6 @@ html, body { height: auto; }
   min-height: var(--popup-min-h, 360px);
   max-height: var(--popup-h, 600px);
   overflow: hidden;
-  border-radius: 8px;
 }
 /* Tiny views (sign-in, loading, shortcuts) — opt out of the floor and
  * size purely to content. */
