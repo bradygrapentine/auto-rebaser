@@ -1,62 +1,98 @@
 # Auto Rebaser — Privacy Policy
 
-**Last updated:** 2026-05-06
-**Contact:** grapentineb@gmail.com
+_Last updated: 2026-05-14 (v2.0.0)_
 
-Auto Rebaser ("the extension") is a browser extension that automatically rebases your open GitHub pull requests when they fall behind their base branch. This policy explains what the extension stores, where it sends data, and what it does not do.
+Auto Rebaser is a browser extension that automatically rebases your open GitHub pull requests when they fall behind their base branch and runs a small set of opt-in housekeeping automations. v2 adds multi-account support and an opt-in desktop-notifications path. This document describes what data the extension handles and how.
 
-## Data the extension stores
+## Summary
 
-All data is stored locally in the browser via the standard `chrome.storage` API. Nothing is sent to any server operated by us — there is no Auto Rebaser backend.
+- The extension stores your GitHub credentials **locally on your machine** — never on a remote server.
+- It makes API calls **only** to `api.github.com` and `github.com` (or your GitHub Enterprise Server host, if you've configured one).
+- It does **not** send any data to the extension author, to analytics services, or to any third party.
+- It does **not** track your browsing.
+- There is no backend server. Everything runs locally in your browser.
+- Multiple GitHub accounts on one install are kept fully scoped — each account's auth, settings, PR cache, ETag cache, and throttle state live in its own per-account namespace and never cross.
 
-The extension stores:
+## Authentication
 
-- **Authentication credential.** Either a GitHub App user-to-server access token (acquired via the GitHub App OAuth Device Flow) or a Personal Access Token (PAT) you paste in. Stored in `chrome.storage.local`.
-- **GitHub App refresh token** (App-auth only). Used to silently renew the access token before it expires. Stored in `chrome.storage.local`.
-- **List of pull requests** authored by the signed-in user, fetched fresh on every poll. Includes PR title, number, repository name, mergeable state, head branch reference, requested reviewers, last-updated timestamp, and a few derived fields. Stored in `chrome.storage.local`.
-- **Automation settings** (toggles + opt-out lists). Stored in `chrome.storage.sync` so they sync across signed-in browsers.
-- **Activity log.** A bounded log (200 most recent entries / 30 days) of automated actions the extension has taken: rebases, branch deletions, auto-merge enablements, thread resolutions, ping comments. Each entry contains action type, repo, PR number, timestamp, and result. Stored in `chrome.storage.local`.
-- **Throttle state.** A small map of `{ prId → last-pinged-timestamp }` to prevent re-pinging the same PR within 24 hours. Stored in `chrome.storage.local`.
+Two sign-in methods are supported:
 
-## Where data goes
+1. **GitHub App + OAuth Device Flow** (recommended). You authorize the official Auto Rebaser GitHub App on github.com. The extension receives a short-lived access token (~8h) and a refresh token (~6 months). Refresh happens automatically; you only re-authenticate when the refresh token expires or you sign out.
+2. **Personal Access Token (legacy)**. You paste a token with the `repo` scope.
+
+Both methods store credentials in `chrome.storage.local` (or `browser.storage.local` on Firefox). **No credentials are ever written to `chrome.storage.sync`** — they stay on the device that signed in.
+
+### Multi-account (v2)
+
+You can sign in with more than one GitHub account on a single install. Each account is identified by its GitHub login and stored under a per-account namespace inside `chrome.storage.local` (`accounts.<id>.*`). Every per-account data category below is keyed by that namespace — there is no shared global cache for auth, PR data, ETags, or throttles. Switching the active account in the popup only changes which namespace the UI reads from; nothing is exchanged between accounts.
+
+## What we store, where, and why
+
+| Data | Storage | Per-account? | Purpose |
+|---|---|---|---|
+| Auth credentials (GitHub App token set, OR personal access token) | `chrome.storage.local` | yes | Authenticates GitHub API calls. Required for the extension to function. |
+| List of GitHub App installations accessible to you | `chrome.storage.local` | yes | Display "via GitHub App on org-a, org-b" and gate writes against suspended installations. |
+| List of your open authored PRs (repo, number, title, state, etc.) | `chrome.storage.local` | yes | Display in the popup; detect when a PR falls behind. |
+| Reviewer PR cache (PRs where you're a requested reviewer or assignee, v2) | `chrome.storage.local` | yes | Render the reviewer dashboard tab. |
+| Per-URL ETags | `chrome.storage.local` | yes | Reduce GitHub API quota consumption via conditional requests. Per-account so no account ever echoes another's `If-None-Match`. |
+| Settings — global (poll interval, ignored repos, keyboard shortcuts, GHES host) | `chrome.storage.sync` | no — shared | Cross-account preferences synced by your browser vendor. |
+| Settings — per-account (automation toggles, opt-out lists, notification preferences, reviewer-tab toggle) | `chrome.storage.sync` | yes | Each signed-in account keeps its own opt-outs and toggles. |
+| Activity log (action, repo, PR number, PR title, result, timestamp) | `chrome.storage.local` | yes | Audit trail for automated actions. Capped at 200 entries / 30 days. Cleared on demand via "Clear log". Never synced. |
+| Ping throttle (PR id → last-pinged timestamp) | `chrome.storage.local` | yes | Prevents the popup's "ping reviewers" button from re-posting within 24 hours. Pruned automatically. |
+| Rerequest throttle (PR id → last-rerequested timestamp) | `chrome.storage.local` | yes | Same throttle pattern for the v2 push-since-approval re-review chip. |
+| Notification throttle (`(prId, event)` → last-notified timestamp, v2) | `chrome.storage.local` | yes | 1-hour throttle per (PR, event) so desktop notifications don't spam. Pruned automatically. |
+| Already-resolved review threads (thread id → timestamp) | `chrome.storage.local` | yes | Prevents re-resolving threads that a teammate manually un-resolved. |
+| Reviewer auto-merge arming cache (v2) | `chrome.storage.local` | yes | Records that the 4-gate reviewer auto-merge has fired for a given PR, so the gate is idempotent across polls. |
+
+`chrome.storage.sync` data is synced by your browser vendor (Google or Mozilla) to your other signed-in browser instances, encrypted in transit. Auto Rebaser does not control or have access to that sync channel.
+
+Sign-out for a single account clears that account's namespace (auth, PR caches, throttles). "Sign out all" wipes every account's namespace. Uninstall removes everything.
+
+## What we send, where
 
 The extension makes HTTPS requests **only** to:
 
-- `api.github.com` (or your configured GitHub Enterprise Server host).
-- `github.com` (for the OAuth Device Flow code-exchange and verification URL).
+- `https://api.github.com/*` (REST + GraphQL) and `https://github.com/*` (OAuth + Device Flow endpoints), OR
+- if you've configured a GitHub Enterprise Server host: `https://<your-ghes-host>/*` instead.
 
-Every request is authenticated with the credential you provided. No third-party analytics, telemetry, error reporting, or advertising services are loaded or contacted.
+Each request includes the active account's access token in the `Authorization` header so GitHub can authenticate you. No request goes anywhere else.
 
-## What the extension does on your behalf
+## Desktop notifications (v2, opt-in)
 
-When the conditions you configure are met, the extension calls these GitHub API endpoints:
+The `notifications` permission is **optional** and requested at runtime only when you toggle desktop notifications ON in settings. Default is OFF. If you grant the permission, the extension calls the browser's local `chrome.notifications.create` API to display a system notification — no notification content is ever transmitted off your device. Toggling notifications OFF in settings revokes the runtime permission grant.
 
-- `PUT /repos/{owner}/{repo}/pulls/{n}/update-branch` — rebases a PR onto its base branch (Story 2.5).
-- `DELETE /repos/{owner}/{repo}/git/refs/heads/{branch}` — deletes a merged branch (Story 2.6, opt-in).
-- `enablePullRequestAutoMerge` GraphQL mutation — flips per-PR auto-merge (Story 2.7, opt-in).
-- `resolveReviewThread` GraphQL mutation — resolves outdated review threads (Story 2.8, opt-in).
-- `POST /repos/{owner}/{repo}/issues/{n}/comments` — posts a ping comment when you click the ping link (Story 5.1, manual confirmation required).
+## What we do NOT do
 
-All of these are gated by explicit user toggles in the popup; defaults are conservative (read-only or local-only by default).
+- No analytics, telemetry, crash reporting, or usage tracking.
+- No advertising, no ad networks, no fingerprinting.
+- No data sold or shared with any third party.
+- No remote configuration server. The extension's behavior is fully determined by code shipped in the published version.
+- No content-script injection into github.com or any other site. The extension never reads page content.
+- No cross-account data sharing. Account A's auth token, ETags, PR cache, and throttles are never visible to account B.
 
-## What the extension does NOT do
+## Permissions
 
-- No tracking, analytics, or telemetry.
-- No data is sent anywhere other than github.com / your configured GHES host.
-- The credential never leaves your browser.
-- No advertising.
-- No personal data is collected, profiled, or shared.
+| Permission | Required? | Why |
+|---|---|---|
+| `storage` | install-time | Store the items in the table above. |
+| `alarms` | install-time | Schedule the periodic poll (default every 5 minutes). |
+| `host_permissions: api.github.com, github.com` | install-time | Talk to the GitHub API and complete the OAuth Device Flow. |
+| `optional_host_permissions: https://*/*` (Chrome) / `optional_permissions: https://*/*` (Firefox) | **runtime, opt-in** | Requested only if you configure a GitHub Enterprise Server host in settings. The browser prompts you to grant access to that specific host before any request is made. |
+| `notifications` (v2) | **runtime, opt-in** | Requested only when you toggle desktop notifications ON in settings. Used to display local system notifications via `chrome.notifications.create`. No data is transmitted. |
 
-## Removing your data
+## Your control
 
-Uninstalling the extension wipes `chrome.storage.local` (credentials, PR cache, activity log). `chrome.storage.sync` (settings) clears when you sign out of the browser profile or via Chrome's settings.
+- **Sign out** clears that account's stored credentials and per-account caches.
+- **Sign out all** wipes every signed-in account's namespace.
+- **Uninstalling the extension** removes all locally stored data.
+- **Revoke a Personal Access Token** at https://github.com/settings/tokens.
+- **Revoke the GitHub App** at https://github.com/settings/applications. Once revoked, the extension's tokens stop working immediately.
+- **Toggle notifications OFF** in settings → the browser revokes the `notifications` permission grant.
 
-You can also clear the activity log manually from the popup's activity page.
+## Source code
 
-## Open source
+Auto Rebaser is open source. You can read every line that handles your data: https://github.com/bradygrapentine/auto-rebaser
 
-The extension's full source is published at https://github.com/bradygrapentine/auto-rebaser. You can audit exactly what it does at any version.
+## Contact
 
-## Changes to this policy
-
-If we update this policy, we'll bump the date at the top and update the published URL. The extension's version is in `manifest.json` so you can correlate.
+Questions or concerns: grapentineb@gmail.com

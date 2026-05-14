@@ -1,57 +1,78 @@
 # Store Listing Copy — Auto Rebaser v2.0.0
 
+Reflects the SEO recommendations from `docs/STORE_LISTING_REWRITES.md` (2026-05-09 audit) plus the v2 surface area. Both the Chrome Web Store and AMO accept listing edits without a rebuild, so this copy can land independent of the v2 zip upload.
+
+## Title
+
+```
+Auto Rebaser — GitHub PR Auto-Rebase, Auto-Merge & Multi-Account
+```
+
+(63 chars. Under Chrome's 75-char limit and well under AMO's 50-char soft cap is preferable; for AMO use the fallback below.)
+
+AMO fallback (≤50 chars):
+
+```
+Auto Rebaser — GitHub PR Auto-Rebase & Merge
+```
+
+(44 chars)
+
 ## Short description (≤132 chars, both stores)
 
-> Multi-account GitHub PR housekeeping: auto-rebase, auto-merge, reviewer dashboard, push-since-approval alerts. No servers.
+```
+Auto-rebase GitHub pull requests, auto-merge, multi-account, reviewer dashboard — runs in your browser, no servers, no telemetry.
+```
 
-(126 chars)
+(127 chars. Front-loads three high-intent verb phrases + v2's multi-account angle, ends on the privacy hook that differentiates from server-based bots.)
 
 ### Alternative short descriptions
 
-> Keep your GitHub PRs rebased and merged automatically. Multi-account, reviewer dashboard, push-since-approval, no servers.
+```
+Multi-account GitHub PR housekeeping: auto-rebase, auto-merge, reviewer dashboard, push-since-approval alerts. No servers.
+```
 
 (124 chars)
 
-> Browser-side GitHub PR automation: auto-rebase, auto-merge, reviewer dashboard, multi-account, push-since-approval alerts.
+```
+Stop clicking "Update branch." Browser-side GitHub PR auto-rebase, auto-merge, reviewer dashboard. Multi-account, no servers.
+```
 
-(124 chars)
+(126 chars)
 
 ## Detailed description (Chrome / Firefox)
 
 ```
-Auto Rebaser keeps your open GitHub pull requests up to date without you ever clicking "Update branch."
+Stop clicking "Update branch." Auto Rebaser keeps your open GitHub pull requests rebased, auto-merged, and tidy — entirely from your browser. No servers, no third-party services, no telemetry.
 
-Sign in with one or more GitHub accounts (App auth recommended, or PAT) and the extension polls your authored PRs every few minutes. When a PR falls behind its base branch, it gets rebased automatically. When it merges, the branch can be deleted automatically. When auto-merge is allowed on the repo, it can be enabled automatically. When a review thread becomes outdated, it can be resolved automatically. When a PR sits idle, you can ping its reviewers with one click.
+Sign in with one or more GitHub accounts (App auth recommended, or PAT) and the extension polls your authored PRs every few minutes and acts on them automatically:
 
-v2 adds a second tab for PRs where you're a requested reviewer, with state chips for awaiting / approved / changes-requested / auto-merge-armed and an optional conservative auto-merge for repos you trust. PRs that received new commits after their last approval surface a "re-review" chip so nothing slips by. Settings split into global (shared across accounts) and per-account, so each login keeps its own opt-outs.
+• AUTO-REBASE pull requests whose base branch has moved ahead
+• AUTO-MERGE PRs once checks pass, with configurable squash / rebase / merge preference
+• AUTO-DELETE merged branches
+• AUTO-RESOLVE outdated review threads
+• PING idle reviewers with a one-click custom comment
+• STALE-PR badge with configurable thresholds (1 / 7 / 14 / 30 / 60 days)
 
-Every action is logged to the activity page so you can audit what the extension has done on your behalf. Every automation is opt-in (except auto-rebase and auto-delete, which are safe defaults). No telemetry, no third-party services — the extension only talks to github.com (or your configured GitHub Enterprise host) using your token.
+v2 adds the pieces I kept wanting after using v1 for a few months:
 
-WHAT'S NEW IN v2
-• Multi-account support — add multiple GitHub accounts to one install and switch from the popup header. Per-account error isolation (a 401 on one account doesn't take down the others).
-• Reviewer dashboard tab — PRs where you're a requested reviewer or assignee, with state chips and optional 4-gate auto-merge per allowlisted repo.
-• Push-since-approval badge — PRs that got new commits after your last approval get a one-click re-review-request chip.
-• Settings split — global (shared) vs this-account (per-login) settings. Each account keeps its own opt-out lists.
-• Header repo-filter chip — narrow the popup PR list to a subset of repos. Persists per-account.
-• Desktop notifications (opt-in) — per-event toggles for rebased / conflicted / merged / idle / ping-confirmed. 1-hour throttle per (PR, event).
-• Stale-PR ping with one-click @-mention of requested reviewers.
+• MULTI-ACCOUNT — add multiple GitHub accounts to one install and switch from the popup header. Per-account error isolation (a 401 on one account doesn't take down the others). Per-account settings, per-account PR cache.
+• REVIEWER DASHBOARD — second tab for PRs where you're a requested reviewer or assignee, with state chips for awaiting / approved / changes-requested / auto-merge-armed. Optional 4-gate conservative auto-merge per allowlisted repo.
+• PUSH-SINCE-APPROVAL — PRs that got new commits after your last approval surface a one-click "re-review" chip.
+• SETTINGS SPLIT — global (shared across accounts: ignored repos, keyboard shortcuts, GHES host) vs this-account (everything else). Switching accounts no longer trashes your per-repo opt-outs.
+• REPO FILTER CHIP — narrow the popup PR list to a subset of repos. Persists per-account.
+• DESKTOP NOTIFICATIONS (opt-in) — per-event toggles for rebased / conflicted / merged / idle / ping-confirmed. 1-hour throttle per (PR, event). Runtime-granted permission; default OFF.
 
-CORE FEATURES (from v1, still here)
-• Auto-rebase PRs whose base branch has moved ahead
-• Auto-delete merged branches
-• Auto-enable auto-merge with configurable method preference (squash / rebase / merge)
-• Auto-resolve review threads that no longer have an anchor line
-• Per-repo opt-out lists for every automation
-• Keyboard shortcuts: r=poll, s=settings, ?=help, j/k=navigate, Enter=open, Esc=back
-• Bounded activity log (200 entries / 30 days), entries link to their PR
-• GitHub App auth (recommended) or Personal Access Token
-• Works with GitHub Enterprise Server (configurable host)
-
-PRIVACY
-The extension stores your tokens, settings, and a list of your authored PRs in chrome.storage. It contacts only api.github.com (or your configured GHES host). No analytics, no third-party servers, no data leaves your browser. Notifications are opt-in and dispatched locally by the browser. Source is public at https://github.com/bradygrapentine/auto-rebaser.
+Every action is logged to an audit page (200 entries / 30 days, with entry links to the PR). Every automation is opt-in except auto-rebase and auto-delete (safe defaults). Per-repo opt-out lists for every automation. Keyboard shortcuts: r=poll, s=settings, ?=help, j/k=navigate, Enter=open, Esc=back.
 
 WHO IT'S FOR
-Engineers who maintain a steady stream of open PRs across one or more GitHub accounts (work + personal, multiple orgs) and want their housekeeping (rebase / merge / branch cleanup / reviewer nudges / re-review chips) to happen on its own without standing up a server-side bot.
+Engineers who maintain a steady stream of pull requests across one or more GitHub accounts (work + personal, multiple orgs) on GitHub or GitHub Enterprise, and want their housekeeping (rebase, merge, branch cleanup, reviewer nudges, re-review chips) to happen on its own.
+
+PRIVACY
+Your tokens, settings, and PR cache live in chrome.storage. The extension contacts only api.github.com (or your configured GHES host). No analytics, no third-party servers, no data leaves your browser. Notifications are opt-in and dispatched locally by the browser. Source is public at https://github.com/bradygrapentine/auto-rebaser.
+
+COMPARE TO
+Server-based GitHub bots (Mergify, Kodiak, Bulldozer) require organization admin install, repo configuration, and pay-per-seat pricing. Auto Rebaser runs as a browser extension under your account, costs nothing, and works on any repo where you have push access — including GitHub Enterprise. v2's multi-account support means one install covers your work GitHub, your personal GitHub, and any other accounts you maintain.
 ```
 
 ## Categories
@@ -59,9 +80,13 @@ Engineers who maintain a steady stream of open PRs across one or more GitHub acc
 - **Chrome Web Store**: Developer Tools (primary)
 - **Firefox AMO**: Other > Developer Tools
 
-## Tags / keywords
+## Tags / keywords (order matters — most relevant first)
 
-`github`, `pull request`, `rebase`, `auto-merge`, `code review`, `reviewer`, `multi-account`, `developer tools`
+```
+github, pull request, pr, rebase, auto-merge, auto-rebase, multi-account,
+code review, reviewer, git, merge, branch, developer tools,
+github automation, developer productivity, github enterprise, ghes
+```
 
 ## Required URLs
 
@@ -81,7 +106,7 @@ Required dimensions:
 | Large promo tile | 920×680 or 1400×560 (Chrome optional) | n/a |
 | Marquee promo tile | 1400×560 (Chrome optional, top-tier listings) | n/a |
 
-For the v2-specific screenshot shopping list see `docs/runbooks/v2-screenshots-checklist.md`.
+For the v2-specific screenshot shopping list see `docs/runbooks/v2-screenshots-checklist.md`. Captioned screenshots (overlay 6-8 words) rank better than uncaptioned — engagement signal feeds back into store search position.
 
 ## Permission justifications (Chrome Web Store form)
 
@@ -114,3 +139,14 @@ The Chrome Web Store form asks you to justify each permission. Suggested copy:
 3. Paste the v2 reviewer notes per `docs/runbooks/v2-release-firefox.md` Step 2 — call out the new opt-in `notifications` permission so reviewers don't flag it.
 4. Re-upload screenshots if any have changed.
 5. Submit. First v2 review: 1–7 days.
+
+## GitHub repo SEO (free, while you're at it)
+
+The repo's `About` block on GitHub gets indexed by GitHub's topic search. From the repo page → Settings (gear icon next to About) → add topics:
+
+```
+chrome-extension, firefox-extension, github-extension, pull-request, rebase,
+auto-merge, multi-account, developer-tools, github-automation
+```
+
+These show up under https://github.com/topics/* and bring incidental traffic.
