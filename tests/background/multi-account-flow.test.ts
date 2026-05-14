@@ -36,6 +36,7 @@ vi.mock('../../src/core/settings-store', () => ({
 
 vi.mock('../../src/core/host-config', () => ({
   getApiBase: vi.fn(),
+  assertGithubOrigin: vi.fn().mockResolvedValue(undefined),
 }));
 
 import {

@@ -22,7 +22,7 @@ import {
 } from '../core/storage/multi-account';
 import type { Auth } from '../core/auth-store';
 import { getSettings } from '../core/settings-store';
-import { getApiBase } from '../core/host-config';
+import { assertGithubOrigin, getApiBase } from '../core/host-config';
 
 export type DeviceFlowStatus =
   | { state: 'idle' }
@@ -73,7 +73,10 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
         // which would route to the currently active account's auth).
         try {
           const apiBase = await getApiBase();
-          const userRes = await fetch(`${apiBase}/user`, {
+          const userUrl = `${apiBase}/user`;
+          // SEC-6 — assert origin before fetch that attaches Authorization.
+          await assertGithubOrigin(userUrl);
+          const userRes = await fetch(userUrl, {
             headers: {
               Authorization: `Bearer ${tokenSet.accessToken}`,
               Accept: 'application/vnd.github+json',
@@ -108,7 +111,10 @@ export async function beginDeviceFlow(): Promise<DeviceFlowStart> {
                   ? legacyAuth.accessToken
                   : legacyAuth.token;
               try {
-                const legacyUserRes = await fetch(`${apiBase}/user`, {
+                const legacyUserUrl = `${apiBase}/user`;
+                // SEC-6 — assert origin before legacy token /user fetch.
+                await assertGithubOrigin(legacyUserUrl);
+                const legacyUserRes = await fetch(legacyUserUrl, {
                   headers: {
                     Authorization: `Bearer ${legacyToken}`,
                     Accept: 'application/vnd.github+json',
