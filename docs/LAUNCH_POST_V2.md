@@ -1,25 +1,33 @@
 # Launch Posts — v2.0.0
 
-Companion to `docs/LAUNCH_POST.md`. The v1 launch posts there describe the original auto-rebase MVP. This file frames v2 — multi-account + reviewer dashboard + push-since-approval — as the public debut, on the assumption v1 shipped to the stores but didn't get a public push.
-
-If v1 *did* get a public moment, swap "Show HN: Auto Rebaser" for "Show HN: Auto Rebaser v2 (multi-account, reviewer dashboard)".
+Companion to `docs/LAUNCH_POST.md`. v1 is already in the Chrome Web Store with install base; v2 is a substantial update push, not a debut. Posts here are framed accordingly — no "Show HN" prefix on HN (that's reserved for first-time launches; reusing it on a v2 is the kind of thing dang flags).
 
 ---
 
-## Hacker News — Show HN
+## Hacker News — regular submission (not Show HN)
 
 **Title (80-char limit):**
 
 ```
-Show HN: Auto Rebaser – browser-side GitHub PR housekeeping, now multi-account
+Auto Rebaser v2 – browser-side GitHub PR housekeeping, now multi-account
 ```
 
-(78 chars)
+(74 chars)
 
-**Body:**
+Alternative title (front-loads the differentiator):
 
 ```
-Auto Rebaser is a Chrome / Firefox extension that polls your open GitHub pull requests every few minutes and runs the housekeeping you'd otherwise do by hand: rebase when the base branch moves, enable auto-merge once it's allowed, delete merged branches, resolve outdated review threads, ping idle reviewers, and (new in v2) surface re-review chips when a PR gets new commits after your last approval.
+Multi-account GitHub PR housekeeping as a browser extension (no servers)
+```
+
+(72 chars)
+
+**Body (the first comment, posted by the submitter immediately after the URL post):**
+
+> HN doesn't have a formal "[Update]" prefix; the convention is to post the project URL as a regular link submission, then leave a top-comment with context. Keep the title descriptive, not promotional.
+
+```
+Author here. Auto Rebaser is a Chrome / Firefox extension I shipped to the Web Store last year for solo / small-team GitHub PR housekeeping — rebase when the base branch moves, enable auto-merge once it's allowed, delete merged branches, resolve outdated review threads, ping idle reviewers. v1 got a quiet ship; v2 is the version I actually wanted to use and figured was worth surfacing here.
 
 I built it because the existing options are server-based bots (Mergify, Kodiak, Bulldozer) that require org-admin install, repo config, and per-seat pricing. I wanted the same housekeeping for personal repos and side projects without standing up a service. A browser extension turned out to be a clean fit: runs under my account, talks only to api.github.com, no servers to host, works on GitHub Enterprise.
 
@@ -36,22 +44,30 @@ A few design notes that might be interesting:
 - Manifest V3 service worker for the polling loop. Alarms API survives the worker getting killed; storage round-trip on every wake is fine because the data is tiny.
 - GitHub App auth via OAuth Device Flow (no client secret leaks in a public extension), with a PAT fallback.
 - Every automation is opt-in, with per-repo skip lists. Reviewer auto-merge is the most conservative one — four gates have to align before it fires, and a unit + e2e test pair gates each one in CI.
-- The ETag cache, notification throttle, and pinged-PR throttle are all scoped per-account, so adding a second login doesn't leak request budget or nudge-throttle state across them. (This was a real regression I caught in v1.5-ish and ate one PR to fix.)
+- The ETag cache, notification throttle, and pinged-PR throttle are all scoped per-account, so adding a second login doesn't leak request budget or nudge-throttle state across them. (This was a real regression I caught between v1 and v2 and ate one PR to fix.)
 - E2E tests load the unpacked extension in headless Chromium via Playwright. 30 specs cover the popup → storage → render path and the SW poll-cycle → API surface, mocked at context.route.
 
 Source: https://github.com/bradygrapentine/auto-rebaser
-Chrome: <store URL once approved>
+Chrome: <store URL>
 Firefox: <AMO URL once approved>
 
 Happy to talk about MV3 quirks, Device Flow in extensions, multi-account scoping under chrome.storage, or why polling instead of webhooks (TL;DR: webhooks need a public endpoint, and a browser extension is a private client).
 ```
 
+**Submission shape:**
+
+- **URL**: post the GitHub repo `https://github.com/bradygrapentine/auto-rebaser` as the submission URL (not the Chrome Web Store link — HN downweights store links and the GitHub repo gives readers an immediate "is this real" signal).
+- **Title**: from above.
+- **First comment**: paste the body above as the top-level comment under your own submission. This is the standard pattern for project posts that aren't Show HN.
+
 **Posting notes:**
 
-- Post Tuesday/Wednesday morning Pacific (highest weekday traffic).
-- Don't link-bomb. One link to source, one each to the stores.
+- Post Tuesday or Wednesday morning Pacific (highest weekday traffic).
+- Don't link-bomb. One link in the title (the URL itself), one in the comment to source, one to the store.
 - Be present in the thread for the first 2–3 hours — engagement keeps it on the front page.
+- If a mod retags it `[Show HN]` because you described a project they think hasn't been on HN before, that's fine — let them; just don't self-prefix.
 - If asked "why not webhooks": polling is a deliberate choice. Webhooks need a public endpoint (server), which is exactly what this extension exists to avoid. The cost is a ~1–60 min freshness window, which is fine for housekeeping (rebase, auto-merge) where minutes don't matter.
+- If asked "wait, didn't this already exist?": yes, v1 shipped quietly last year. v2 is the version I wanted to use, and I'm only posting it now because the multi-account + reviewer-dashboard work felt worth surfacing here.
 
 ---
 
