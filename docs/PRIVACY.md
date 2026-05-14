@@ -80,6 +80,22 @@ The `notifications` permission is **optional** and requested at runtime only whe
 | `optional_host_permissions: https://*/*` (Chrome) / `optional_permissions: https://*/*` (Firefox) | **runtime, opt-in** | Requested only if you configure a GitHub Enterprise Server host in settings. The browser prompts you to grant access to that specific host before any request is made. |
 | `notifications` (v2) | **runtime, opt-in** | Requested only when you toggle desktop notifications ON in settings. Used to display local system notifications via `chrome.notifications.create`. No data is transmitted. |
 
+## Threat model & storage
+
+`chrome.storage.local` (and `browser.storage.local` on Firefox) is **unencrypted at rest**. If local malware runs with access to your browser profile, or if another extension has been granted the `storage` permission with broad host access, it could read the tokens stored there. This is an inherent limitation of the browser extension storage API; it is not specific to Auto Rebaser.
+
+**What this means in practice:**
+
+- **Tokens are device-scoped.** Access and refresh tokens are written only to the local device's storage. Nothing is sent to any Auto Rebaser server — there is no Auto Rebaser server.
+- **Refresh-token rotation is atomic.** When an access token expires the extension fetches a new token pair (access + refresh) before making any GitHub API call. The old pair is replaced in a single `chrome.storage.local.set` call, so there is no window where the extension holds two valid refresh tokens simultaneously.
+- **No server-side exposure.** The only parties that ever see your tokens are your local browser and GitHub's authentication servers (`github.com`). Auto Rebaser has no backend that receives, logs, or proxies credentials.
+- **Revocation path.** You can immediately invalidate all tokens without touching the extension:
+  - *GitHub App tokens:* GitHub → Settings → Applications → Authorized GitHub Apps → revoke Auto Rebaser.
+  - *Personal Access Tokens:* GitHub → Settings → Developer settings → Personal access tokens → delete the token.
+  - After revocation the extension's tokens stop working on the next API call.
+
+For the full vulnerability assessment and residual risk register that informed these design choices, see [`docs/security/2026-05-14-owasp-review.md`](security/2026-05-14-owasp-review.md).
+
 ## Your control
 
 - **Sign out** clears that account's stored credentials and per-account caches.

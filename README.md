@@ -89,7 +89,7 @@ Load the unpacked extension from `dist/` (Chrome) or `dist-firefox/` (Firefox).
 ## Docs
 
 - `docs/superpowers/RUNBOOK.md` — setup, troubleshooting, PAT scopes
-- `PRIVACY.md` — what gets stored where
+- `PRIVACY.md` — what gets stored where · [threat model & storage](PRIVACY.md#threat-model--storage)
 - `docs/LAUNCH_PLAN.md` — store submission tracks
 - `docs/runbooks/` — chrome / firefox smoke tests, store submission, icons, styling
 - `docs/superpowers/BACKLOG.md` — story-level acceptance criteria
