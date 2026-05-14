@@ -20,7 +20,7 @@ import {
   buildAccountId,
   migrateAndWriteAuth,
 } from './storage/multi-account';
-import { getApiBase } from './host-config';
+import { assertGithubOrigin, getApiBase } from './host-config';
 
 export const AUTH_KEY = 'auth';
 
@@ -68,7 +68,10 @@ export async function getAuth(): Promise<Auth | null> {
 
 async function fetchLoginForToken(accessToken: string): Promise<string> {
   const apiBase = await getApiBase();
-  const res = await fetch(`${apiBase}/user`, {
+  const url = `${apiBase}/user`;
+  // SEC-6 — assert origin before any fetch that attaches Authorization.
+  await assertGithubOrigin(url);
+  const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/vnd.github+json',

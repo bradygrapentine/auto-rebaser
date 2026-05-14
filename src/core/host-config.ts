@@ -55,5 +55,46 @@ export function validateHost(input: string): string | null {
   if (input.includes('/')) return 'no path — host only';
   if (input.includes(' ')) return 'no spaces in host';
   if (!/^[a-z0-9.-]+$/i.test(input)) return 'host must be a valid domain';
+  if (input.length > 253) return 'host too long (max 253 chars)';
+  if (input.includes('..')) return 'invalid host — consecutive dots not allowed';
+  if (input.startsWith('.') || input.endsWith('.')) return 'host must not start or end with a dot';
+  if (input.startsWith('-') || input.endsWith('-')) return 'host must not start or end with a hyphen';
+  const labels = input.split('.');
+  for (const label of labels) {
+    if (label.length === 0) return 'invalid host — empty label';
+    if (label.length > 63) return 'host label too long (max 63 chars)';
+  }
+  if (input !== 'localhost' && !input.includes('.')) return 'host must contain at least one dot (or be localhost)';
   return null;
+}
+
+/**
+ * SEC-6 — Assert that `url` targets a known-good GitHub origin before any
+ * fetch that attaches an Authorization header.
+ *
+ * Cheap path: `api.github.com` resolves immediately with no settings read.
+ * GHES path: reads settings and requires an EXACT hostname match against the
+ * configured `enterpriseHost`. Fail-closed: if settings are unavailable OR
+ * `enterpriseHost` is unset, throws Error('INVALID_HOST').
+ */
+export async function assertGithubOrigin(url: string): Promise<void> {
+  const hostname = new URL(url).hostname;
+  if (hostname === 'api.github.com') return;
+
+  // Not the cloud API — must be a configured GHES host.
+  let settings: Awaited<ReturnType<typeof getSettings>> | null;
+  try {
+    settings = await getSettings();
+  } catch {
+    throw new Error('INVALID_HOST');
+  }
+
+  if (!settings || !settings.enterpriseHost) {
+    throw new Error('INVALID_HOST');
+  }
+
+  // Exact match only — suffix attacks like api.github.com.evil.com must fail.
+  if (hostname !== settings.enterpriseHost) {
+    throw new Error('INVALID_HOST');
+  }
 }

@@ -1,7 +1,7 @@
 import { clearToken } from '../core/auth-store';
 import { ensureFreshToken, forceRefresh } from '../core/auth-refresh';
 import { getEntry, setEntry } from '../core/etag-cache';
-import { getApiBase, getGraphQLEndpoint } from '../core/host-config';
+import { assertGithubOrigin, getApiBase, getGraphQLEndpoint } from '../core/host-config';
 
 export interface RequestOptions extends RequestInit {
   useETag?: boolean;
@@ -51,6 +51,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
   }
 
+  // SEC-6 — assert origin before any fetch that attaches Authorization.
+  await assertGithubOrigin(url);
+
   let response = await fetch(url, { ...fetchOptions, headers: { ...baseHeaders, ...userHeaders } });
 
   // Story 4.3 — reactive refresh path: a 401 on a github_app token means the
@@ -59,6 +62,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (response.status === 401) {
     const refreshed = await forceRefresh(accountId).catch(() => null);
     if (refreshed) {
+      // Re-assert after token rotation to guard the retry path symmetrically.
+      await assertGithubOrigin(url);
       const retryHeaders = { ...baseHeaders, Authorization: `Bearer ${refreshed}`, ...userHeaders };
       response = await fetch(url, { ...fetchOptions, headers: retryHeaders });
     }

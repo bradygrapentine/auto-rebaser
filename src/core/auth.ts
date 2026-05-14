@@ -1,4 +1,5 @@
 import { setAuthPAT, clearToken } from './auth-store';
+import { assertGithubOrigin } from './host-config';
 import { BASE_SCOPES } from './constants';
 
 export async function composeOAuthScope(): Promise<string> {
@@ -18,9 +19,12 @@ export async function setTokenFromPAT(pat: string): Promise<{ login: string; sco
   const trimmed = pat.trim();
   if (!trimmed) throw new Error('PAT_EMPTY');
 
+  const patUserUrl = 'https://api.github.com/user';
+  // SEC-6 — assert origin for invariant consistency even though URL is a literal.
+  await assertGithubOrigin(patUserUrl);
   let response: Response;
   try {
-    response = await fetch('https://api.github.com/user', {
+    response = await fetch(patUserUrl, {
       headers: {
         Authorization: `Bearer ${trimmed}`,
         Accept: 'application/vnd.github+json',

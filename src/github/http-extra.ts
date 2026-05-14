@@ -1,6 +1,6 @@
 import { clearToken } from '../core/auth-store';
 import { ensureFreshToken, forceRefresh } from '../core/auth-refresh';
-import { getApiBase } from '../core/host-config';
+import { assertGithubOrigin, getApiBase } from '../core/host-config';
 
 // Companion to http.ts for endpoints with empty bodies (204 No Content, 205 Reset
 // Content) where calling response.json() would throw. At v1 merge time this can
@@ -27,6 +27,9 @@ export async function requestNoBody(
   };
   const userHeaders = (fetchOptions.headers as Record<string, string>) ?? {};
 
+  // SEC-6 — assert origin before any fetch that attaches Authorization.
+  await assertGithubOrigin(url);
+
   let response = await fetch(url, { ...fetchOptions, headers: { ...baseHeaders, ...userHeaders } });
 
   // Story 4.3 / audit B1 — same reactive refresh path as http.ts. A 401 on a
@@ -34,6 +37,7 @@ export async function requestNoBody(
   if (response.status === 401) {
     const refreshed = await forceRefresh(accountId).catch(() => null);
     if (refreshed) {
+      await assertGithubOrigin(url);
       const retryHeaders = {
         ...baseHeaders,
         Authorization: `Bearer ${refreshed}`,
