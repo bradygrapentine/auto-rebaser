@@ -9,7 +9,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 1 |
+| 🟢 Ready | 9 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
@@ -45,7 +45,57 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
-_(empty — FOLLOWUP-3 shipped 2026-05-11 via PR #109; CHORE-1 UTC-midnight test flake fixed via PR #108)_
+### SEC-1 — Validate `sender` on `chrome.runtime.onMessage` — Medium
+**Status:** 🟢 Ready
+**Why:** Defense in depth. Handler currently ignores `sender`; any future content script or externally-connectable extension could trigger device flow, poll, or sign-out. OWASP A01:2025.
+**How:** In `src/background/messages.ts`, assert `sender.id === chrome.runtime.id` and `sender.url?.startsWith(chrome.runtime.getURL(''))` before dispatching; return `{ok:false, error:'UNAUTHORIZED_SENDER'}` otherwise.
+**Done when:** Unit test covers a fake-sender rejection; manual popup→SW round-trip still works.
+**Ref:** `docs/security/2026-05-14-owasp-review.md` §SEC-1.
+
+### SEC-2 — Tighten `validateHost` + assert host at fetch sites — Medium
+**Status:** 🟢 Ready
+**Why:** Current regex `[a-z0-9.-]+` allows leading/trailing dots/hyphens, consecutive dots, and oversize labels. If storage is tampered with, the access token would be sent to an attacker-controlled origin. OWASP A05/A04, CWE-918.
+**How:** Tighten validation (max 253 chars, label rules, reject `..`, leading/trailing `.`/`-`, require ≥1 dot). Add an `assertGithubOrigin(url)` helper used in every `fetch` site that attaches `Authorization` (`src/github/http.ts`, `http-extra.ts`, `auth-store.ts:71`, `background/auth-device-flow-runner.ts:76`).
+**Done when:** Validator unit tests cover the new rejections; `assertGithubOrigin` throws when URL host is neither `api.github.com` nor the current `settings.enterpriseHost`.
+**Ref:** SEC-2 + SEC-6 in review doc.
+
+### SEC-3 — Add supply-chain & secret scanning workflow — Medium
+**Status:** 🟢 Ready
+**Why:** CI runs only typecheck/test/build/e2e. No `npm audit`, `osv-scanner`, `gitleaks`, or dependency-review. OWASP A03/A08/A06.
+**How:** New `.github/workflows/security.yml` running `npm audit --audit-level=high`, `osv-scanner`, `gitleaks detect --no-git`, and `actions/dependency-review-action@v4` on PRs. The `/harden-project` skill ships this scaffold.
+**Done when:** PRs surface security-tab findings; CI green on a clean main; one intentional fixture leak detected on a throwaway branch.
+
+### SEC-4 — Declare explicit CSP in manifest — Low
+**Status:** 🟢 Ready
+**Why:** MV3 default CSP is restrictive, but explicit declaration catches accidental relaxation and clarifies intent. OWASP A02.
+**How:** Add `"content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'" }` to `manifest.json` and the Firefox manifest. Verify popup, sign-in, and settings still render.
+**Done when:** Manifests carry CSP; e2e suite green; smoke pass in Chrome + Firefox.
+
+### SEC-5 — Move access token to `chrome.storage.session` — Low
+**Status:** 🟢 Ready
+**Why:** `chrome.storage.local` is unencrypted at rest. Persist only the refresh token; keep the short-lived access token in memory (session storage). OWASP A04/A07.
+**How:** Update `auth-store` to read/write `access_token` from `chrome.storage.session` and refresh on SW eviction (refresh path already exists). Persist `refresh_token` + metadata in local. Write an ADR (`docs/adr/`) capturing the trade-off (extra refresh roundtrip vs reduced disk exposure).
+**Done when:** Token survives popup close (refresh works), is cleared on browser restart, and ADR is merged.
+
+### SEC-6 — Inline allowlist check at every `Authorization`-bearing fetch — Low
+**Status:** 🟢 Ready
+**Why:** Layered on SEC-2 — guarantees no future fetch site forgets the check.
+**How:** Single helper `assertGithubOrigin(url)` invoked inside `request()`, `requestText()`, `fetchLoginForToken()`, and the device-flow user-fetch. Throws `INVALID_HOST` if origin is neither `api.github.com` nor the current `enterpriseHost`.
+**Done when:** All four call sites route through the helper; unit test asserts the throw.
+
+### SEC-7 — Wire `/security-gate` into PR CI for auth-touching diffs — Low
+**Status:** 🟢 Ready
+**Why:** Manual-only security review drifts. OWASP A06.
+**How:** GitHub Action triggers on PRs touching `src/core/auth*`, `src/github/http*`, `manifest*.json`, `.github/workflows/**`; runs `/security-gate` (or a thinner curated subset) and posts findings as a PR check.
+**Done when:** Test PR mutating `auth-refresh.ts` triggers the gate and posts a result comment.
+
+### SEC-8 — Document threat model in PRIVACY.md — Info
+**Status:** 🟢 Ready
+**Why:** Current PRIVACY describes WHAT is stored, not the trust boundary (local-only, browser-process owns it). Reduces inbound questions and pairs with SEC-5's ADR.
+**How:** Add a "Threat model & storage" subsection: chrome.storage.local is unencrypted; tokens are scoped to the current device; user revokes via GitHub settings; refresh token rotation; no server-side component.
+**Done when:** PRIVACY.md (root + `docs/`) updated; linked from README security note.
+
+_(SEC-1..SEC-8 added 2026-05-14 from `docs/security/2026-05-14-owasp-review.md`. Prior: FOLLOWUP-3 shipped 2026-05-11 via PR #109; CHORE-1 UTC-midnight test flake fixed via PR #108.)_
 
 ---
 
