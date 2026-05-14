@@ -13,6 +13,9 @@
   "optional_host_permissions": [
     "https://*/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'"
+  },
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
