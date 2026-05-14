@@ -11,10 +11,38 @@ import {
 
 const VALID_INTERVALS = new Set([1, 2, 5, 10, 15, 30, 60, 120, 240]);
 
+/**
+ * SEC-1: Validate that the message sender is the extension itself (popup / SW),
+ * not a foreign extension, content-script, or web page.
+ *
+ * Rejected if ANY of:
+ *   - sender.tab !== undefined  (content-script / web-page sender)
+ *   - sender.id !== chrome.runtime.id  (foreign extension or undefined)
+ *   - sender.url does not start with chrome.runtime.getURL('')  (not extension origin)
+ *
+ * Note: manifest.json and manifest.firefox.json deliberately have NO
+ * `externally_connectable` key — Chrome's default already restricts cross-origin
+ * messaging. This runtime check is defense-in-depth.
+ */
+function isAuthorizedSender(sender: chrome.runtime.MessageSender): boolean {
+  if (sender.tab !== undefined) return false;
+  if (sender.id !== chrome.runtime.id) return false;
+  const extensionOrigin = chrome.runtime.getURL('');
+  if (!sender.url || !sender.url.startsWith(extensionOrigin)) return false;
+  return true;
+}
+
 export function handleMessage(
   msg: RuntimeMessage,
+  sender: chrome.runtime.MessageSender,
   sendResponse: (r: RuntimeResponse) => void
 ): boolean {
+  // SEC-1: reject unauthorized senders before any handler dispatch
+  if (!isAuthorizedSender(sender)) {
+    sendResponse({ ok: false, error: 'UNAUTHORIZED_SENDER' });
+    return false;
+  }
+
   if (msg.type === 'POLL_NOW') {
     void runPollCycle().then(() => sendResponse({ ok: true }));
     return true;
@@ -76,7 +104,7 @@ export function handleMessage(
 
 export function registerMessageListener(): void {
   chrome.runtime.onMessage.addListener(
-    (msg: RuntimeMessage, _sender: chrome.runtime.MessageSender, sendResponse: (r: RuntimeResponse) => void) =>
-      handleMessage(msg, sendResponse)
+    (msg: RuntimeMessage, sender: chrome.runtime.MessageSender, sendResponse: (r: RuntimeResponse) => void) =>
+      handleMessage(msg, sender, sendResponse)
   );
 }
