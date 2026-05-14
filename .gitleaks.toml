@@ -1,0 +1,6 @@
+[allowlist]
+  description = "Allowlist for known non-secret values"
+
+  [[allowlist.paths]]
+    description = "Chrome extension public signing key in manifest.json is a public RSA key, not a private secret"
+    path = "manifest\\.json"
