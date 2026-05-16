@@ -10,10 +10,10 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | Status | Count |
 |---|---|
 | 🟢 Ready | 5 |
-| ⚡ In progress | 0 |
+| ⚡ In progress | 1 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ⏸ Held | 1 |
+| ⏸ Held | 0 |
 | ✅ Shipped | 52 |
 | 🧊 Deferred / dropped | 3 |
 
@@ -21,20 +21,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 ## §1 Ready
 
-### MKT-1 — Apply rewritten store listings (Chrome + AMO)
-**Status:** 🟢 Ready
-**Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. Listing edits don't require a version bump or rebuild.
-**How:** Apply the title, short description, long description, tag list, and screenshot captions from `docs/STORE_LISTING_REWRITES.md` to both store dashboards once the current reviews clear.
-**Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
-
-### MKT-3 — Show HN launch post
-**Status:** ⏸ Held (decided 2026-05-09: revisit after V2 ships so the launch leads with multi-account as the headline; Firefox AMO clears in the background in the meantime)
-**Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
-**How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
-**Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
+### MKT-3 — v2 launch announcement push (HN / Reddit / X / Mastodon / Bluesky / LinkedIn)
+**Status:** 🟢 Ready (unblocked: v2.0.0 live on both stores 2026-05-14; gated on MKT-1 AMO refresh so Firefox visitors see v2 copy).
+**Why:** Single biggest organic-install spike for a dev tool; drives initial install velocity which feeds back into store-search ranking. Multi-channel timing per `docs/LAUNCH_POST_V2.md` § Sequence (X/Mastodon/Bluesky Day 0 evening → HN Day 1 AM → Reddit Day 1 PM or Day 3 → LinkedIn Day 2).
+**How:** Follow `docs/runbooks/v2-store-submit-and-announce.md` §§7–10 — Cowork blocks pre-staged for per-channel post adaptation. HN is a **regular submission, not Show HN** (v1 has been on CWS at the same URL since last year — Show HN would invite mod retag).
+**Done when:** Posts are live on all six channels; install count + each thread URL recorded in `docs/LAUNCH_PLAN.md` history (Day-7 snapshot).
 
 ## §2 In progress
-_(none)_
+
+### MKT-1 — Apply rewritten store listings (Chrome + AMO)
+**Status:** ⚡ In progress — Chrome listing live with v2 copy + screenshots as of 2026-05-14. AMO listing still v1-era (Edit Product Page metadata refresh required, no version upload).
+**Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. AMO visitors arriving from launch posts currently see v1 copy.
+**How:** Follow `docs/runbooks/v2-store-submit-and-announce.md` §4 — paste-ready Summary, Description, 8 screenshot captions, and category guidance embedded. AMO Tags is a fixed consumer-category allowlist; skip.
+**Done when:** AMO listing renders v2 Summary + Description + 8 v2 screenshots (multi-account switcher first). `docs/STORE_LISTING.md` is the source of truth.
 
 ## §3 In review
 _(none)_
