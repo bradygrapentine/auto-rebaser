@@ -9,7 +9,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 4 |
+| 🟢 Ready | 5 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
@@ -20,7 +20,12 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 ---
 
 ## §1 Ready
-_(none — see §5 for upcoming SEC-* items not yet pulled forward)_
+
+### CONFLICT-1 — Surface rebase-conflict state on the PR chip
+**Status:** 🟢 Ready
+**Why:** Rebase failures currently land in the activity log as "Rebase rejected by GitHub" but the PR row in the popup looks unchanged. Users only notice if they happen to open the activity log. Promoting conflict to a visible chip means the next popup open catches it.
+**How:** When the poll cycle records a rebase rejection with a conflict signal from GitHub's response, set a per-(account, PR) `conflict_state: true` flag in the PR cache. Render a `! conflict` chip on the PR row (mirror the styling of the `! re-review` chip from push-since-approval, including the actionable-vs-passive distinction). Chip click opens `https://<host>/<owner>/<repo>/pull/<num>/conflicts` in a new tab. Clear the flag when the PR's base SHA advances, the PR closes, or a subsequent rebase attempt succeeds. Per-account scoped (cache key + clear path) so a conflict on account A's PR doesn't leak into account B's view.
+**Done when:** A PR that fails rebase with a conflict shows the `! conflict` chip in the popup on the next poll; clicking it opens the GitHub conflict-resolution UI in a new tab; a successful rebase or base-SHA advance clears the chip without manual intervention. Unit test asserts state transitions; e2e test asserts chip renders and click target is correct.
 
 ## §2 In progress
 _(none)_
