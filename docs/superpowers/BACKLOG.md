@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-14 (post-sec-hardening sprint — SEC-1/2/3/4/6/8 shipped via PRs #184, #185, #186, #187, #188, #189, #191)_
+_Last `/backlog-sync`: 2026-05-15 (post-v2-launch — MKT-1 AMO listing refresh + MKT-3 multi-channel announcement push both shipped)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -13,25 +13,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ⏸ Held | 1 |
-| ✅ Shipped | 52 |
+| ⏸ Held | 0 |
+| ✅ Shipped | 54 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-### MKT-1 — Apply rewritten store listings (Chrome + AMO)
+### CONFLICT-1 — Surface rebase-conflict state on the PR chip
 **Status:** 🟢 Ready
-**Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. Listing edits don't require a version bump or rebuild.
-**How:** Apply the title, short description, long description, tag list, and screenshot captions from `docs/STORE_LISTING_REWRITES.md` to both store dashboards once the current reviews clear.
-**Done when:** Both live listings show the new title and short description; expanded tag set is submitted; `docs/STORE_LISTING.md` is updated to reflect what's actually live.
-
-### MKT-3 — Show HN launch post
-**Status:** ⏸ Held (decided 2026-05-09: revisit after V2 ships so the launch leads with multi-account as the headline; Firefox AMO clears in the background in the meantime)
-**Why:** Single biggest organic-install spike for a dev tool; also drives initial install velocity which feeds back into store-search ranking.
-**How:** Use the draft in `docs/LAUNCH_POST.md`. Post Tuesday or Wednesday morning Pacific. Stay in the thread for 2–3 hours to engage commenters.
-**Done when:** Post is live; install count + thread URL recorded in `docs/LAUNCH_PLAN.md` history section.
+**Why:** Rebase failures currently land in the activity log as "Rebase rejected by GitHub" but the PR row in the popup looks unchanged. Users only notice if they happen to open the activity log. Promoting conflict to a visible chip means the next popup open catches it.
+**How:** When the poll cycle records a rebase rejection with a conflict signal from GitHub's response, set a per-(account, PR) `conflict_state: true` flag in the PR cache. Render a `! conflict` chip on the PR row (mirror the styling of the `! re-review` chip from push-since-approval, including the actionable-vs-passive distinction). Chip click opens `https://<host>/<owner>/<repo>/pull/<num>/conflicts` in a new tab. Clear the flag when the PR's base SHA advances, the PR closes, or a subsequent rebase attempt succeeds. Per-account scoped (cache key + clear path) so a conflict on account A's PR doesn't leak into account B's view.
+**Done when:** A PR that fails rebase with a conflict shows the `! conflict` chip in the popup on the next poll; clicking it opens the GitHub conflict-resolution UI in a new tab; a successful rebase or base-SHA advance clears the chip without manual intervention. Unit test asserts state transitions; e2e test asserts chip renders and click target is correct.
 
 ## §2 In progress
 _(none)_
@@ -151,6 +145,11 @@ OWASP review (`docs/security/2026-05-14-owasp-review.md`) flagged 8 SEC items. T
 - **SEC-3** Supply-chain + secret scanning workflow. `.github/workflows/security.yml` with audit (npm audit --omit=dev --audit-level=critical), OSV scanner (SHA-pinned `google/osv-scanner-action/osv-scanner-action@9a49870…`), gitleaks (SHA-pinned `gitleaks/gitleaks-action@ff98106…`), dependency-review. `.gitleaks.toml` allowlist for the Chrome extension public signing key. Initial PR + 2 follow-ups to land the OSV subpath fix, gitleaks toml shape, and `continue-on-error: true` on OSV (pending SEC-9) and dep-review (pending SEC-10) — PRs #184, #187, #191
 - **SEC-4** Explicit CSP in both manifests. Chrome gets the object form `extension_pages: "script-src 'self'; object-src 'self'; base-uri 'self'"`; Firefox falls back to the v2-compatible string form because `strict_min_version` is 115 < 121 (CSP object form support). Both bundles build clean, 972/972 unit + 30/30 e2e green — PR #186
 - **SEC-8** Threat model & storage section in `PRIVACY.md` (root + `docs/`). Covers unencrypted `chrome.storage.local`, refresh-token rotation, per-device scope, GitHub revocation path, no server-side component. README links to it — PR #185
+
+### V2 launch — store listings + announcement push (2026-05-15)
+
+- **MKT-1** Apply rewritten store listings (Chrome + AMO). Chrome listing went live with v2 copy + 6 v2 screenshots on 2026-05-14 alongside the v2.0.0 binary. AMO listing metadata (Summary, Description, 8 v2 screenshots with captions, categories) refreshed 2026-05-15 via "Edit Product Page" — no version upload needed since v2.0.0 binary was already approved. Runbook + paste-ready blocks: `docs/runbooks/v2-store-submit-and-announce.md` §3 (Chrome verify) + §4 (AMO refresh).
+- **MKT-3** v2 launch announcement push across HN / Reddit (r/github, r/webdev, r/programming) / X / Mastodon / Bluesky / LinkedIn. Regular HN submission (not Show HN — v1 had been on CWS at the same URL since last year). Source content + per-channel adaptation in `docs/LAUNCH_POST_V2.md`. Runbook §§7–10.
 
 ---
 

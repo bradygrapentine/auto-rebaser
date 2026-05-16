@@ -1,6 +1,6 @@
 # Launch Posts — v2.0.0
 
-Companion to `docs/LAUNCH_POST.md`. v1 is already in the Chrome Web Store with install base; v2 is a substantial update push, not a debut. Posts here are framed accordingly — no "Show HN" prefix on HN (that's reserved for first-time launches; reusing it on a v2 is the kind of thing dang flags).
+Companion to `docs/LAUNCH_POST.md`. v1 is already in the Chrome Web Store + Firefox AMO with install base; v2 is a substantial update push, not a debut. Posts here are framed accordingly — no "Show HN" prefix on HN (that's reserved for first-time launches; reusing it on a v2 is the kind of thing dang flags).
 
 ---
 
@@ -49,7 +49,7 @@ A few design notes that might be interesting:
 
 Source: https://github.com/bradygrapentine/auto-rebaser
 Chrome: <store URL>
-Firefox: <AMO URL once approved>
+Firefox: <AMO URL>
 
 Happy to talk about MV3 quirks, Device Flow in extensions, multi-account scoping under chrome.storage, or why polling instead of webhooks (TL;DR: webhooks need a public endpoint, and a browser extension is a private client).
 ```
@@ -163,9 +163,9 @@ https://github.com/bradygrapentine/auto-rebaser
 
 ## Sequence (suggested)
 
-1. **Day 0 (post-store-approval):** confirm both store URLs work in incognito; smoke-test fresh install of v2.
+1. **Day 0 (post-AMO-listing-refresh):** confirm both store URLs render v2 copy + screenshots in incognito; smoke-test fresh install of v2.
 2. **Day 0 evening:** post to X / Mastodon / Bluesky first (low-stakes, primes the install graph).
-3. **Day 1 morning Pacific:** Show HN. Stay in the thread for 2–3 hours.
+3. **Day 1 morning Pacific:** HN regular submission. Stay in the thread for 2–3 hours.
 4. **Day 1 afternoon:** if HN didn't catch, cross-post to r/github + r/programming. If HN did catch, hold Reddit for Day 3 to avoid splitting attention.
 5. **Day 2:** LinkedIn post.
 6. **Day 7:** capture install / review counts and append to `docs/LAUNCH_PLAN.md` history (or a new `docs/v2-launch-retro.md`).
@@ -178,8 +178,8 @@ https://github.com/bradygrapentine/auto-rebaser
 
 ## Pre-launch checklist
 
-- [ ] v2.0.0 live on Chrome Web Store (URL captured)
-- [ ] v2.0.0 live on Firefox AMO (URL captured)
-- [ ] Replace `<store URL once approved>` and `<AMO URL once approved>` in every post body above
+- [ ] v2.0.0 live on Chrome Web Store with v2 listing copy + screenshots (URL captured)
+- [ ] v2.0.0 live on Firefox AMO with v2 listing copy + screenshots (URL captured)
+- [ ] Replace `<store URL>` and `<AMO URL>` placeholders in every post body above
 - [ ] Confirm `docs/release-notes/v2.0.0.md` matches the GitHub release page
-- [ ] Verify the Show HN body doesn't exceed HN's ~2000-char effective ceiling (the dropoff point where readers stop scrolling)
+- [ ] Verify the HN body doesn't exceed HN's ~2000-char effective ceiling (the dropoff point where readers stop scrolling)
