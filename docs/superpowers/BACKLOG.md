@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-14 (post-sec-hardening sprint — SEC-1/2/3/4/6/8 shipped via PRs #184, #185, #186, #187, #188, #189, #191)_
+_Last `/backlog-sync`: 2026-05-15 (post-v2-launch — MKT-1 AMO listing refresh + MKT-3 multi-channel announcement push both shipped)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,31 +9,21 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 5 |
-| ⚡ In progress | 1 |
+| 🟢 Ready | 4 |
+| ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 52 |
+| ✅ Shipped | 54 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
-
-### MKT-3 — v2 launch announcement push (HN / Reddit / X / Mastodon / Bluesky / LinkedIn)
-**Status:** 🟢 Ready (unblocked: v2.0.0 live on both stores 2026-05-14; gated on MKT-1 AMO refresh so Firefox visitors see v2 copy).
-**Why:** Single biggest organic-install spike for a dev tool; drives initial install velocity which feeds back into store-search ranking. Multi-channel timing per `docs/LAUNCH_POST_V2.md` § Sequence (X/Mastodon/Bluesky Day 0 evening → HN Day 1 AM → Reddit Day 1 PM or Day 3 → LinkedIn Day 2).
-**How:** Follow `docs/runbooks/v2-store-submit-and-announce.md` §§7–10 — Cowork blocks pre-staged for per-channel post adaptation. HN is a **regular submission, not Show HN** (v1 has been on CWS at the same URL since last year — Show HN would invite mod retag).
-**Done when:** Posts are live on all six channels; install count + each thread URL recorded in `docs/LAUNCH_PLAN.md` history (Day-7 snapshot).
+_(none — see §5 for upcoming SEC-* items not yet pulled forward)_
 
 ## §2 In progress
-
-### MKT-1 — Apply rewritten store listings (Chrome + AMO)
-**Status:** ⚡ In progress — Chrome listing live with v2 copy + screenshots as of 2026-05-14. AMO listing still v1-era (Edit Product Page metadata refresh required, no version upload).
-**Why:** Front-loaded keywords in title + short desc are expected to lift in-store search ranking ~30–40% based on Chrome Web Store norms. AMO visitors arriving from launch posts currently see v1 copy.
-**How:** Follow `docs/runbooks/v2-store-submit-and-announce.md` §4 — paste-ready Summary, Description, 8 screenshot captions, and category guidance embedded. AMO Tags is a fixed consumer-category allowlist; skip.
-**Done when:** AMO listing renders v2 Summary + Description + 8 v2 screenshots (multi-account switcher first). `docs/STORE_LISTING.md` is the source of truth.
+_(none)_
 
 ## §3 In review
 _(none)_
@@ -150,6 +140,11 @@ OWASP review (`docs/security/2026-05-14-owasp-review.md`) flagged 8 SEC items. T
 - **SEC-3** Supply-chain + secret scanning workflow. `.github/workflows/security.yml` with audit (npm audit --omit=dev --audit-level=critical), OSV scanner (SHA-pinned `google/osv-scanner-action/osv-scanner-action@9a49870…`), gitleaks (SHA-pinned `gitleaks/gitleaks-action@ff98106…`), dependency-review. `.gitleaks.toml` allowlist for the Chrome extension public signing key. Initial PR + 2 follow-ups to land the OSV subpath fix, gitleaks toml shape, and `continue-on-error: true` on OSV (pending SEC-9) and dep-review (pending SEC-10) — PRs #184, #187, #191
 - **SEC-4** Explicit CSP in both manifests. Chrome gets the object form `extension_pages: "script-src 'self'; object-src 'self'; base-uri 'self'"`; Firefox falls back to the v2-compatible string form because `strict_min_version` is 115 < 121 (CSP object form support). Both bundles build clean, 972/972 unit + 30/30 e2e green — PR #186
 - **SEC-8** Threat model & storage section in `PRIVACY.md` (root + `docs/`). Covers unencrypted `chrome.storage.local`, refresh-token rotation, per-device scope, GitHub revocation path, no server-side component. README links to it — PR #185
+
+### V2 launch — store listings + announcement push (2026-05-15)
+
+- **MKT-1** Apply rewritten store listings (Chrome + AMO). Chrome listing went live with v2 copy + 6 v2 screenshots on 2026-05-14 alongside the v2.0.0 binary. AMO listing metadata (Summary, Description, 8 v2 screenshots with captions, categories) refreshed 2026-05-15 via "Edit Product Page" — no version upload needed since v2.0.0 binary was already approved. Runbook + paste-ready blocks: `docs/runbooks/v2-store-submit-and-announce.md` §3 (Chrome verify) + §4 (AMO refresh).
+- **MKT-3** v2 launch announcement push across HN / Reddit (r/github, r/webdev, r/programming) / X / Mastodon / Bluesky / LinkedIn. Regular HN submission (not Show HN — v1 had been on CWS at the same URL since last year). Source content + per-channel adaptation in `docs/LAUNCH_POST_V2.md`. Runbook §§7–10.
 
 ---
 
