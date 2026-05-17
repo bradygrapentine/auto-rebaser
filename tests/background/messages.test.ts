@@ -48,12 +48,24 @@ function foreignExtSender(): chrome.runtime.MessageSender {
   };
 }
 
-/** Content-script / web-page sender: has a tab object. */
+/** Content-script / web-page sender: `tab` present + `url` is the host page, not the extension origin. */
 function contentScriptSender(): chrome.runtime.MessageSender {
   return {
     id: chrome.runtime.id,
-    url: chrome.runtime.getURL('content.js'),
+    url: 'https://github.com/some/repo',
     tab: { id: 1, index: 0, pinned: false, highlighted: false, windowId: 1,
+           active: true, incognito: false, selected: false,
+           discarded: false, autoDiscardable: true, groupId: -1 },
+  };
+}
+
+/** Popup loaded as a regular tab (e.g. via Playwright `page.goto`).
+ *  `tab` is defined but `url` is on the extension origin — must be allowed. */
+function popupAsTabSender(): chrome.runtime.MessageSender {
+  return {
+    id: chrome.runtime.id,
+    url: chrome.runtime.getURL('src/popup/index.html'),
+    tab: { id: 2, index: 0, pinned: false, highlighted: false, windowId: 1,
            active: true, incognito: false, selected: false,
            discarded: false, autoDiscardable: true, groupId: -1 },
   };
@@ -89,13 +101,23 @@ describe('handleMessage', () => {
       expect(runPollCycle).not.toHaveBeenCalled();
     });
 
-    it('rejects content-script / web-page sender (tab != undefined) with UNAUTHORIZED_SENDER', () => {
+    it('rejects content-script / web-page sender (URL not on extension origin) with UNAUTHORIZED_SENDER', () => {
       const sendResponse = vi.fn();
       const msg: RuntimeMessage = { type: 'POLL_NOW' };
       const result = handleMessage(msg, contentScriptSender(), sendResponse);
       expect(result).toBe(false);
       expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: 'UNAUTHORIZED_SENDER' });
       expect(runPollCycle).not.toHaveBeenCalled();
+    });
+
+    it('allows extension page loaded as tab (popup-via-Playwright, options page)', async () => {
+      const sendResponse = vi.fn();
+      const msg: RuntimeMessage = { type: 'POLL_NOW' };
+      const result = handleMessage(msg, popupAsTabSender(), sendResponse);
+      expect(result).toBe(true);
+      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+      expect(sendResponse).toHaveBeenCalledWith({ ok: true });
+      expect(runPollCycle).toHaveBeenCalledTimes(1);
     });
 
     it('rejects sender with mismatched URL (right id, wrong URL)', () => {

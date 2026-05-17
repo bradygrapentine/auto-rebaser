@@ -16,16 +16,20 @@ const VALID_INTERVALS = new Set([1, 2, 5, 10, 15, 30, 60, 120, 240]);
  * not a foreign extension, content-script, or web page.
  *
  * Rejected if ANY of:
- *   - sender.tab !== undefined  (content-script / web-page sender)
  *   - sender.id !== chrome.runtime.id  (foreign extension or undefined)
  *   - sender.url does not start with chrome.runtime.getURL('')  (not extension origin)
+ *
+ * Content-scripts and web pages are rejected by the URL-origin check — they
+ * cannot spoof an extension-origin `sender.url`. The earlier `sender.tab !== undefined`
+ * gate was over-restrictive: it also rejected extension pages opened as tabs
+ * (e.g. the popup loaded via Playwright's `page.goto(chrome-extension://...)`,
+ * any future options/settings page). The URL-origin check is sufficient on its own.
  *
  * Note: manifest.json and manifest.firefox.json deliberately have NO
  * `externally_connectable` key — Chrome's default already restricts cross-origin
  * messaging. This runtime check is defense-in-depth.
  */
 function isAuthorizedSender(sender: chrome.runtime.MessageSender): boolean {
-  if (sender.tab !== undefined) return false;
   if (sender.id !== chrome.runtime.id) return false;
   const extensionOrigin = chrome.runtime.getURL('');
   if (!sender.url || !sender.url.startsWith(extensionOrigin)) return false;
