@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-15 (post-v2-launch — MKT-1 AMO listing refresh + MKT-3 multi-channel announcement push both shipped)_
+_Last `/backlog-sync`: 2026-05-17 (CONFLICT-1 shipped via PR #195; SEC-9 part 1 (dep bumps) shipped via PR #194; SEC-1 regression fix via PR #197 after CI was red on main 3 days; coverage-v8 hotfix via PR #196)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,23 +9,31 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 5 |
+| 🟢 Ready | 4 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 54 |
+| ✅ Shipped | 57 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-### CONFLICT-1 — Surface rebase-conflict state on the PR chip
+### OPS-1 — Configure branch-protection required checks on main — High
 **Status:** 🟢 Ready
-**Why:** Rebase failures currently land in the activity log as "Rebase rejected by GitHub" but the PR row in the popup looks unchanged. Users only notice if they happen to open the activity log. Promoting conflict to a visible chip means the next popup open catches it.
-**How:** When the poll cycle records a rebase rejection with a conflict signal from GitHub's response, set a per-(account, PR) `conflict_state: true` flag in the PR cache. Render a `! conflict` chip on the PR row (mirror the styling of the `! re-review` chip from push-since-approval, including the actionable-vs-passive distinction). Chip click opens `https://<host>/<owner>/<repo>/pull/<num>/conflicts` in a new tab. Clear the flag when the PR's base SHA advances, the PR closes, or a subsequent rebase attempt succeeds. Per-account scoped (cache key + clear path) so a conflict on account A's PR doesn't leak into account B's view.
-**Done when:** A PR that fails rebase with a conflict shows the `! conflict` chip in the popup on the next poll; clicking it opens the GitHub conflict-resolution UI in a new tab; a successful rebase or base-SHA advance clears the chip without manual intervention. Unit test asserts state transitions; e2e test asserts chip renders and click target is correct.
+**Why:** 2026-05-17 incident: 3 PRs (#194/#195/#196) auto-merged on RED CI within a single session because no required checks gate merges. PR #197 also auto-merged with `OSV Scanner` + `Dependency review` failing (`continue-on-error`). Single biggest leverage to prevent recurrence — upstream of any test-coverage investment. Surfaced by `/test-gaps` 2026-05-17.
+**How:** At https://github.com/bradygrapentine/auto-rebaser/settings/branches → `main` branch protection rule → "Require status checks to pass before merging" → required: `test`, `e2e`, `npm audit (critical)`, `Gitleaks secret scan`, `Dependency review` (now hard-gated as of PR #198). Hold `OSV Scanner` off the required list until OPS-2 (vite-6 major upgrade) clears the remaining advisories — gating on a known-red check would block all merges. Verify by opening a deliberately-red test PR and confirming GitHub blocks the merge button.
+**Done when:** Branch-protection rule active on `main`; a throwaway PR with a forced unit-test failure shows the Merge button disabled until tests pass. Manual UI step — no code change required.
+
+### OPS-2 — Upgrade vite 5→6 + esbuild 0.21→0.25 to clear remaining OSV advisories — Medium
+**Status:** 🟢 Ready
+**Why:** PR #198 hard-gated the OSV job (SEC-9 part 2 + SEC-10) and surfaced two remaining dev-only advisories that the SEC-9 part 1 minors did not clear: GHSA-4w7w-66w2-5vf9 (vite 5.4.21 → fixed in 6.4.2, severity 6.3) and GHSA-67mh-4wv8-2f99 (esbuild 0.21.5 → fixed in 0.25.0, severity 5.3). Both dev-only — production bundle is still clean via `npm audit --omit=dev`. Until these clear, OSV is red on main and cannot be added to OPS-1's required-checks set. The plan explicitly forbids re-adding `continue-on-error` as the easy out.
+**How:** Bump `vite` to `^6.4` (or current minor of 6.x) and `@vitejs/plugin-react` to whatever 6-compatible major is current. `npm install` then `rm -rf node_modules && npm ci` (per global rule for dep-bump PRs). Run full verify chain: `npm run typecheck && npm test && npm run e2e && npm run build && TARGET=firefox npm run build`. Vite 5→6 is semver-major; read the migration guide before bumping (likely config-file changes, possibly plugin API). esbuild bumps transitively or via direct dev-dep. If vite 6 breaks the build, scope-down to esbuild-only and defer vite.
+**Done when:** OSV Scanner job reports SUCCESS on main with zero advisories; OSV can be added to OPS-1's required-checks list; production bundle still builds for both Chrome and Firefox targets.
+
+## §2 In progress
 
 ## §2 In progress
 _(none)_
@@ -39,6 +47,12 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
+### DOC-1 — Backfill ADRs from v2 release history — Low
+**Status:** ⚪ Parked — v2 released; revisit when next major release work begins
+**Why:** `docs/decisions/index.md` is a `[TODO — none yet]` placeholder despite shipping v2.0.0 to Chrome + Firefox stores with a security-hardening sprint (6 of 8 SEC stories merged). Surfaced 2026-05-16 by `/insights-from-rag`. Meaningful architectural decisions exist (v2 manifest changes, security model, token-storage choice, store-submission strategy) but aren't memorialized. Parked because the extension is live and stable — backfilling is nice-to-have, not blocking.
+**How (when unparked, fresh session):** 1) Read `CLAUDE.md` first. 2) Run `/insights-from-rag auto-rebaser` to confirm the finding is still current. 3) Invoke `/backfill-adrs 60`. Likely candidates: v2 token-storage model (chrome.storage.session split), manifest.v3 service worker pattern, store-submission flow, OWASP-driven security hardening, dual-browser packaging.
+**Done when:** 3-5 ADRs land in `docs/decisions/`, index is populated, PR merges. Sister stories: weather-forecaster (shipped), fathom DOC-1 (active), carelog TD-147 (consolidation, different scope).
+
 ### SEC-5 — Move access token to `chrome.storage.session` — Low
 **Status:** 🟢 Ready
 **Why:** `chrome.storage.local` is unencrypted at rest. Persist only the refresh token; keep the short-lived access token in memory (session storage). OWASP A04/A07.
@@ -51,25 +65,22 @@ _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once sp
 **How:** GitHub Action triggers on PRs touching `src/core/auth*`, `src/github/http*`, `manifest*.json`, `.github/workflows/**`; runs `/security-gate` (or a thinner curated subset) and posts findings as a PR check.
 **Done when:** Test PR mutating `auth-refresh.ts` triggers the gate and posts a result comment.
 
-### SEC-9 — Upgrade vite/esbuild/vitest dev-deps to clear OSV criticals — Medium
-**Status:** 🟢 Ready
-**Why:** SEC-3 (security workflow) shipped with `continue-on-error: true` on the OSV job because vitest 1.6.0 has GHSA-9crc-q9x8-hgqq (critical RCE, dev-only) and vite 5.4.1 / esbuild 0.21.5 have 13 medium-severity advisories. Production bundle is unaffected (`npm audit --omit=dev` is the prod gate), but OSV's signal is currently muted.
-**How:** Bump `vitest` to >=1.6.1 in `package.json`, run `npm install`, then `npm run typecheck && npm test && npm run e2e`. Bump `vite` and `@vitejs/plugin-react` to current minors. Drop the `continue-on-error: true` line from the OSV job in `.github/workflows/security.yml`.
-**Done when:** OSV job is hard-failing again with zero advisories; main Security workflow green end-to-end without continue-on-error.
+_(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
 
-### SEC-10 — Enable repo Dependency Graph + restore dep-review job — Low
-**Status:** 🟢 Ready
-**Why:** SEC-3 shipped with the `dependency-review` job set to `continue-on-error: true` because the Dependency Graph feature isn't enabled on the repo. Without it, the action can't compare PR-introduced vs. removed deps.
-**How:** Repo owner toggles "Dependency Graph" on at https://github.com/bradygrapentine/auto-rebaser/settings/security_analysis (one-time UI click). Then drop `continue-on-error: true` from the `dependency-review` job in `.github/workflows/security.yml`.
-**Done when:** dep-review job runs cleanly on a sample PR and produces a finding (or zero-finding all-clear) without continue-on-error.
-
-_(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9, SEC-10 added as follow-up debt from the SEC-3 implementation. Prior: FOLLOWUP-3 shipped 2026-05-11 via PR #109; CHORE-1 UTC-midnight test flake fixed via PR #108.)_
+_(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 part 1 + SEC-1 regression fix shipped 2026-05-17 via #194/#195/#196/#197 — see §7 below. Remaining follow-ups: SEC-9 part 2 (workflow edit), SEC-10 (after dep-graph toggle).)_
 
 ---
 
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-05-17 — CONFLICT-1 + SEC-9/10 + incident follow-ups
+- **CONFLICT-1** Rebase-rejected state + clickable conflict chip — PR #195 (new `'rebase-rejected'` PRState distinct from `'conflict'`/`'needs-manual'`; HTTP_422 maps to it; popup chip links to `/conflicts` UI; per-account-scoped via existing PRRecord round-trip)
+- **SEC-9 part 1** Bump vitest 1.6.0→1.6.1, vite 5.4.1→5.4.21, @vitejs/plugin-react 4.3.1→4.7 — PR #194
+- **SEC-9 hotfix** Bump @vitest/coverage-v8 1.6.0→1.6.1 to fix npm-ci ERESOLVE peer-dep mismatch — PR #196
+- **SEC-1 regression fix** Drop over-restrictive `sender.tab !== undefined` check from `isAuthorizedSender`; URL-origin check is sufficient. Closes 3-day-old CI red on main caused by SEC-1 (#188) rejecting popup-as-tab senders used by 11 e2e specs — PR #197
+- **SEC-9 part 2 + SEC-10** Drop `continue-on-error: true` from OSV Scanner and Dependency review jobs in `.github/workflows/security.yml` after Dependency Graph was enabled at repo level. Both jobs now hard-gate. Surfaced residual dev-only advisories (vite 5.4.21 → 6.4.2, esbuild 0.21.5 → 0.25.0) tracked as OPS-2 — PR #198
 
 ### Phase 1 — v0.1 baseline (initial commit)
 - **1.1** GitHub OAuth Sign-in
