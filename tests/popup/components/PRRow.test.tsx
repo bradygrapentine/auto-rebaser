@@ -144,6 +144,36 @@ describe('PRRow', () => {
     expect(stopProp).toHaveBeenCalled();
   });
 
+  describe('CONFLICT-1: rebase-rejected chip', () => {
+    const rejectedPR: PRRecord = {
+      ...basePR,
+      state: 'rebase-rejected',
+      errorMessage: 'Rebase rejected by GitHub',
+    };
+
+    it('renders conflict chip with link to /conflicts when state=rebase-rejected', () => {
+      render(<PRRow pr={rejectedPR} />);
+      const chip = screen.getByTestId('rebase-rejected-chip');
+      expect(chip).toHaveAttribute('href', 'https://github.com/owner/repo/pull/42/conflicts');
+      expect(chip).toHaveAttribute('target', '_blank');
+      expect(chip).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('does not render chip when state is not rebase-rejected', () => {
+      render(<PRRow pr={basePR} />);
+      expect(screen.queryByTestId('rebase-rejected-chip')).not.toBeInTheDocument();
+    });
+
+    it('chip click does not propagate to outer row anchor', () => {
+      render(<PRRow pr={rejectedPR} />);
+      const chip = screen.getByTestId('rebase-rejected-chip');
+      const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const stopProp = vi.spyOn(ev, 'stopPropagation');
+      chip.dispatchEvent(ev);
+      expect(stopProp).toHaveBeenCalled();
+    });
+  });
+
   it('renders direct-merge-failure badge with method + error in title', () => {
     const failedPR = {
       ...basePR,

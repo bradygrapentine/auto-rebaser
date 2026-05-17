@@ -146,6 +146,19 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
             </span>
           )
         )}
+        {pr.state === 'rebase-rejected' && (
+          <a
+            href={`${pr.url}/conflicts`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="pr-row__conflict-chip"
+            data-testid="rebase-rejected-chip"
+            title="GitHub refused the rebase — open the conflict-resolution UI."
+          >
+            ! conflict
+          </a>
+        )}
         {directMergeFailure && !noAllowedMethod && (
           <span
             className="pr-row__skip-badge"

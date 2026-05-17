@@ -226,7 +226,7 @@ describe('behind PR rebase', () => {
 });
 
 describe('behind + HTTP_422', () => {
-  it('needs-manual state on 422', async () => {
+  it('rebase-rejected state on 422 (CONFLICT-1)', async () => {
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSearchResult({ id: 1, number: 1 })
     );
@@ -238,7 +238,7 @@ describe('behind + HTTP_422', () => {
     await runPollCycle();
 
     const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(upserted[0].state).toBe('needs-manual');
+    expect(upserted[0].state).toBe('rebase-rejected');
     expect(upserted[0].errorMessage).toBe('Rebase rejected by GitHub');
   });
 });
