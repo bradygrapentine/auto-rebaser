@@ -17,19 +17,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm audit --audit-level=critical --omit=dev
-        # --omit=dev: vitest/vite are dev-only deps with known critical advisories
-        # (GHSA-9crc-q9x8-hgqq — RCE only when API server is listening during dev).
-        # They are never bundled into the production extension. Tighten once
-        # vitest >=1.6.1 is pinned in package.json.
+        # --omit=dev: vitest/vite are dev-only and never bundled into the production extension.
 
   osv:
     name: OSV Scanner
     runs-on: ubuntu-latest
-    # continue-on-error: today's findings are all dev-only (vitest GHSA-9crc-q9x8-hgqq
-    # critical RCE, plus medium vite/esbuild advisories). Production deps are gated by
-    # the `audit` job above with `--omit=dev`. Drop continue-on-error once vitest is
-    # pinned to >=1.6.1 and vite/esbuild are upgraded.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
@@ -49,9 +41,6 @@ jobs:
     name: Dependency review
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    # continue-on-error: dependency graph must be enabled in repo settings first;
-    # safe to set to false once https://github.com/bradygrapentine/auto-rebaser/settings/security_analysis is configured.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/dependency-review-action@v4
