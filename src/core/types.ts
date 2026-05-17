@@ -8,6 +8,8 @@ export type PRState =
   | 'updated'
   | 'conflict'
   | 'needs-manual'
+  /** CONFLICT-1 — GitHub refused the rebase (HTTP_422). Distinct from `conflict` (merge-time HTTP_409) and from `needs-manual` (other non-rebase manual interventions). Renders a `! conflict` chip linking to GitHub's conflict-resolution UI. */
+  | 'rebase-rejected'
   | 'error'
   /** PR was open last poll, now closed-and-merged on GitHub. Carried for one cycle so Phase 2 automations (2.6, 2.9) can run against it before pruning. */
   | 'merged'

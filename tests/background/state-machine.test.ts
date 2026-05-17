@@ -64,9 +64,9 @@ describe('deriveStateFromMergeable', () => {
 });
 
 describe('mapUpdateBranchError', () => {
-  it('HTTP_422 → needs-manual', () => {
+  it('HTTP_422 → rebase-rejected (CONFLICT-1)', () => {
     const result = mapUpdateBranchError(new Error('HTTP_422: Unprocessable'));
-    expect(result.state).toBe('needs-manual');
+    expect(result.state).toBe('rebase-rejected');
     expect(result.errorMessage).toBe('Rebase rejected by GitHub');
   });
 

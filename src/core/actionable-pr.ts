@@ -20,6 +20,7 @@ export function isPRActionable(
   switch (pr.state) {
     case 'conflict':
     case 'needs-manual':
+    case 'rebase-rejected':
       return true;
     case 'behind': {
       const repoOptedOut = settings.autoRebaseOptOutRepos.includes(pr.repo);

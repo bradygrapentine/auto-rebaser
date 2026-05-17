@@ -11,6 +11,7 @@ const cases: Array<[PRState, string]> = [
   ['updated', 'Updated'],
   ['conflict', 'Conflict'],
   ['needs-manual', 'Manual'],
+  ['rebase-rejected', 'Rebase rejected'],
   ['error', 'Error'],
   ['merged', 'Merged'],
   ['closed', 'Closed'],

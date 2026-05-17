@@ -10,7 +10,7 @@ export interface PRGroup {
   hasAttention: boolean;
 }
 
-const ATTENTION_STATES = new Set(['behind', 'updated', 'conflict', 'needs-manual', 'error', 'merged', 'closed']);
+const ATTENTION_STATES = new Set(['behind', 'updated', 'conflict', 'needs-manual', 'rebase-rejected', 'error', 'merged', 'closed']);
 
 interface Options {
   /** Story 5.1 — when true, a stale PR contributes to `hasAttention`. */

@@ -46,7 +46,7 @@ export function mapUpdateBranchError(err: unknown): UpdateBranchAttempt {
   const msg = err instanceof Error ? err.message : String(err);
 
   if (msg.startsWith('HTTP_422')) {
-    return { state: 'needs-manual', errorMessage: 'Rebase rejected by GitHub' };
+    return { state: 'rebase-rejected', errorMessage: 'Rebase rejected by GitHub' };
   }
   if (msg.startsWith('HTTP_409')) {
     return { state: 'conflict', errorMessage: 'Merge conflict' };
