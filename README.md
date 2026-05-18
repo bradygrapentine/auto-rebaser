@@ -9,7 +9,7 @@ Local-first. No backend. Everything runs in the extension service worker against
 ## Install
 
 - **Chrome Web Store**: https://chromewebstore.google.com/detail/auto-rebaser/fcbanfgcfcjmhnoanachedlpbopiodpi
-- **Firefox Add-ons**: _in review_ — load unpacked from `dist-firefox/` in the meantime (see Development).
+- **Firefox Add-ons**: https://addons.mozilla.org/en-US/firefox/addon/auto-rebaser/
 
 ## Features
 
