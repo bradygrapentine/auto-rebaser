@@ -24,7 +24,16 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        with:
+          clean: true
+      # Container-based osv-scanner-action only supports Linux runners.
+      # Self-hosted macOS path: install via brew + run directly.
+      - name: Install osv-scanner
+        run: |
+          if ! command -v osv-scanner >/dev/null 2>&1; then
+            brew install osv-scanner
+          fi
+      - run: osv-scanner --recursive --skip-git ./
 
   gitleaks:
     name: Gitleaks secret scan
@@ -33,9 +42,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          clean: true
+      # gitleaks-action downloads to a fixed temp path that collides across
+      # runs on the persistent runner. Install via brew + invoke directly.
+      - name: Install gitleaks
+        run: |
+          if ! command -v gitleaks >/dev/null 2>&1; then
+            brew install gitleaks
+          fi
+      - name: Run gitleaks
+        run: gitleaks detect --no-banner --redact --source .
 
   dependency-review:
     name: Dependency review
