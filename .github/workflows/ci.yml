@@ -7,9 +7,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -20,9 +22,13 @@ jobs:
       - run: npm run build
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
+      - name: Pre-clean persistent runner state
+        run: rm -rf ~/.npm/_npx 2>/dev/null || true
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
