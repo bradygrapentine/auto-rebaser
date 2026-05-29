@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-17 (CONFLICT-1 shipped via PR #195; SEC-9 part 1 (dep bumps) shipped via PR #194; SEC-1 regression fix via PR #197 after CI was red on main 3 days; coverage-v8 hotfix via PR #196)_
+_Last `/backlog-sync`: 2026-05-29 (logged the self-hosted CI hardening + PR-state stale-chip session to §7: #204 e2e timeout, #205 CI ops, #206 authored stale-chip, #207 REVIEWER-2 reviewer-store transition+prune)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 58 |
+| ✅ Shipped | 61 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -76,7 +76,10 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
-### 2026-05-28 — reviewer-store stale-chip fix
+### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **e2e timeout** Raise Playwright per-test timeout 30s→60s for the self-hosted Mac runner. The budget also bounds MV3 persistent-context teardown (retain-on-failure video/trace) — the slow path under CI load — so the failure was teardown-bound, not body-bound (the test runs ~5s idle) — PR #204
+- **CI ops** Add `timeout-minutes` to `test` (15) + `e2e` (20) jobs (both inherited the 360-min default, so a hung job sat red for hours); e2e trace now uploads on `always()` not `failure()` so a timeout/cancel still yields a trace (the gap that left #204's red run undiagnosable) — PR #205
+- **authored stale-chip** Authored-PR transition re-fetch now stamps `closed` on `HTTP_404` — authoritative for a search-absent PR and cap-safe (a 1000-result-cap-dropped *open* PR returns 200, not 404). Fixes a legacy `needs-manual` record frozen as a permanent `[manual]` chip that should read `[closed]` — PR #206
 - **REVIEWER-2** Reviewer-PR store transition detection + prune. The reviewer phase wrote results additively (`upsertReviewerPRs`) with no transition-to-closed detection and no prune — the mirror of the authored phase's logic was simply absent. A reviewer-tracked PR merged/closed manually dropped out of the `is:open` reviewer search and its stale chip stuck forever (same bug class as the authored #206, but worse: froze at *any* state, not just legacy `needs-manual`). Fix mirrors the authored phase: re-fetch search-absent reviewer PRs to stamp `merged`/`closed` (404 → `closed`, per #206's cap-safe rule), carry one cycle, then prune via new `pruneStaleReviewer`. Found while diagnosing #206. — PR #207
 
 ### 2026-05-17 — CONFLICT-1 + SEC-9/10 + incident follow-ups
