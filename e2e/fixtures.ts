@@ -19,6 +19,21 @@ import { tmpdir } from 'node:os';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXTENSION_PATH = join(__dirname, '..', 'dist');
 
+// Bound a close() so a hung MV3 persistent-context / page teardown can't
+// consume the whole per-test budget and fail an otherwise-passing test. On
+// the self-hosted Mac, headless Chromium teardown has intermittently hung;
+// the per-test timeout would then surface as "Tearing down X exceeded the
+// test timeout". If close() doesn't resolve within `ms`, we abandon it — the
+// worker process exits at run end and reaps the orphaned browser anyway.
+async function closeWithTimeout(close: () => Promise<unknown>, ms = 10_000): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    Promise.resolve(close()).catch(() => {}),
+    new Promise<void>((resolve) => { timer = setTimeout(resolve, ms); }),
+  ]);
+  if (timer) clearTimeout(timer);
+}
+
 export interface ExtensionFixtures {
   context: BrowserContext;
   extensionId: string;
@@ -53,8 +68,8 @@ export const test = base.extend<ExtensionFixtures>({
     const initPage = await context.newPage();
     await initPage.goto('about:blank');
     await use(context);
-    await initPage.close().catch(() => {});
-    await context.close();
+    await closeWithTimeout(() => initPage.close());
+    await closeWithTimeout(() => context.close());
     rmSync(userDataDir, { recursive: true, force: true });
   },
 
@@ -79,7 +94,7 @@ export const test = base.extend<ExtensionFixtures>({
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
     await use(page);
-    await page.close();
+    await closeWithTimeout(() => page.close());
   },
 });
 

@@ -11,21 +11,25 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  // 60s per-test budget. This timeout also bounds fixture teardown — the
-  // MV3 persistent-context close (with retain-on-failure video/trace) is the
-  // slow path on the self-hosted Mac runner under CI load. The test body
-  // itself runs in ~5s idle; the extra headroom absorbs teardown + runner
-  // contention without masking real app-logic regressions (those surface
-  // well under 60s). See #202 (self-hosted migration) for context.
+  // 60s per-test budget — also bounds fixture teardown. #204 raised this from
+  // 30s but it was the wrong lever: settings-persistence still timed out at
+  // 60s on the self-hosted Mac, the failure landing in teardown ("Tearing down
+  // popupPage exceeded the test timeout"). Root cause was VIDEO recording, not
+  // the budget: measured locally, `video` adds ~2-4s/spec even on a passing
+  // run (recorded then discarded), and finalizing it during a failing test's
+  // teardown is the hang. Dropping video (below) is the real fix; the 60s
+  // budget stays as headroom for runner contention.
   timeout: 60_000,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // Extension state is shared — keep tests serial.
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: {
-    // Trace + screenshot on first retry — keeps the artifact bundle small
-    // while preserving everything you need to diagnose a failing CI run.
+    // Trace on failure is the primary debugging artifact (DOM snapshots,
+    // network, console) — richer than video and cheap to finalize. Video is
+    // intentionally OFF: its per-run recording cost and failure-path
+    // finalization were hanging teardown on the self-hosted runner.
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: 'off',
   },
 });
