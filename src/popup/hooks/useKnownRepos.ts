@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KNOWN_REPOS_KEY,
   type KnownRepo,
@@ -8,6 +8,13 @@ import { STORAGE_KEYS_V2 } from '../../core/storage/multi-account';
 
 export function useKnownRepos(): string[] {
   const [repos, setRepos] = useState<KnownRepo[]>([]);
+  // PERF-1: fire POLL_NOW at most once per mount. A poll cycle's own
+  // stampPollTime write lands in the accounts container, which fires
+  // storage.onChanged → refresh() → still-empty → POLL_NOW, re-triggering the
+  // cycle indefinitely for a zero-PR account. A ref (not state — must be read
+  // live in the refresh closure, with no re-render churn) bootstraps one poll
+  // on mount; later self-induced refreshes update the list but never re-poll.
+  const pollRequestedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -15,7 +22,8 @@ export function useKnownRepos(): string[] {
       void getKnownRepos().then((r) => {
         if (cancelled) return;
         setRepos(r);
-        if (r.length === 0) {
+        if (r.length === 0 && !pollRequestedRef.current) {
+          pollRequestedRef.current = true;
           chrome.runtime.sendMessage({ type: 'POLL_NOW' })?.catch(() => {
             // best-effort
           });
