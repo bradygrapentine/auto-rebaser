@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 57 |
+| ✅ Shipped | 58 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -75,6 +75,9 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-05-28 — reviewer-store stale-chip fix
+- **REVIEWER-2** Reviewer-PR store transition detection + prune. The reviewer phase wrote results additively (`upsertReviewerPRs`) with no transition-to-closed detection and no prune — the mirror of the authored phase's logic was simply absent. A reviewer-tracked PR merged/closed manually dropped out of the `is:open` reviewer search and its stale chip stuck forever (same bug class as the authored #206, but worse: froze at *any* state, not just legacy `needs-manual`). Fix mirrors the authored phase: re-fetch search-absent reviewer PRs to stamp `merged`/`closed` (404 → `closed`, per #206's cap-safe rule), carry one cycle, then prune via new `pruneStaleReviewer`. Found while diagnosing #206. — PR #207
 
 ### 2026-05-17 — CONFLICT-1 + SEC-9/10 + incident follow-ups
 - **CONFLICT-1** Rebase-rejected state + clickable conflict chip — PR #195 (new `'rebase-rejected'` PRState distinct from `'conflict'`/`'needs-manual'`; HTTP_422 maps to it; popup chip links to `/conflicts` UI; per-account-scoped via existing PRRecord round-trip)

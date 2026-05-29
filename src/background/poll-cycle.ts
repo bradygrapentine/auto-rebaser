@@ -13,6 +13,7 @@ import {
   stampPollTime,
   loadReviewerStore,
   upsertReviewerPRs,
+  pruneStaleReviewer,
 } from '../core/pr-store';
 import {
   getAutomationSettings,
@@ -795,7 +796,48 @@ async function runReviewerPhase(settings: AutomationSettings, scope?: AccountSco
     });
   }
 
-  await (scope ? scope.upsertReviewerPRs(processed) : upsertReviewerPRs(processed));
+  // ── Transition detection: reviewer PRs open last poll, absent from search now.
+  // Mirrors the authored phase. Without this the reviewer store was additive-
+  // only (no transition, no prune), so a reviewer-tracked PR merged/closed
+  // manually kept its stale chip forever. Re-fetch search-absent PRs to stamp
+  // merged/closed (carry one cycle); already-terminal records are dropped by
+  // the prune below.
+  const currentIds = new Set(search.items.map((i) => i.id));
+  const transitioned: Array<PRRecord & PRRecordPhaseTwo> = [];
+  for (const prev of existing) {
+    if (currentIds.has(prev.id)) continue; // still open → handled by the loop above
+    if (prev.state === 'merged' || prev.state === 'closed') continue; // terminal + gone → prune
+    const [owner, repo] = prev.repo.split('/');
+    if (!owner || !repo) continue;
+    try {
+      const detail = await getPR(owner, repo, prev.number, accountId);
+      if (detail.state === 'open') {
+        // Absent from the reviewer search but still open (e.g. review no longer
+        // requested). Preserve so it isn't pruned out from under an in-flight arm.
+        transitioned.push({ ...prev, lastUpdated: Date.now() });
+        continue;
+      }
+      const merged = detail.merged === true || detail.merged_at != null;
+      transitioned.push({ ...prev, state: merged ? 'merged' : 'closed', lastUpdated: Date.now() });
+    } catch (err) {
+      if (isAbortError(err)) return;
+      const msg = err instanceof Error ? err.message : String(err);
+      // A 404 on a search-absent PR is authoritative (see the authored phase):
+      // the PR is closed/gone — stamp closed. Transient 5xx / ambiguous 403
+      // preserve for next-cycle retry.
+      if (msg.startsWith('HTTP_404')) {
+        transitioned.push({ ...prev, state: 'closed', lastUpdated: Date.now() });
+      } else {
+        transitioned.push({ ...prev, lastUpdated: Date.now() });
+      }
+    }
+  }
+
+  const finalReviewer = [...processed, ...transitioned];
+  await (scope ? scope.upsertReviewerPRs(finalReviewer) : upsertReviewerPRs(finalReviewer));
+  await (scope
+    ? scope.pruneStaleReviewer(finalReviewer.map((p) => p.id))
+    : pruneStaleReviewer(finalReviewer.map((p) => p.id)));
 }
 
 /**
