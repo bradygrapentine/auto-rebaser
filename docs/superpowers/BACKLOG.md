@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-29 (PERF-1 #216 + SEC-7 #217 shipped; OPS-2 OSV symptom time-boxed by #215 — Security gate now green, dep upgrade de-urgentized; SEC-5 scope corrected to multi-account auth-blob refactor. Earlier this window: OPS-1 #211, OPS-3 #213, #204–#207)_
+_Last `/backlog-sync`: 2026-05-29 (SEC-5 #219 shipped — access token → chrome.storage.session. Earlier this window: PERF-1 #216, SEC-7 #217, OPS-2 OSV time-box #215, OPS-1 #211, OPS-3 #213, #204–#207. Sole remaining Ready: OPS-2, Low/de-urgentized.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,12 +9,12 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 2 |
+| 🟢 Ready | 1 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 66 |
+| ✅ Shipped | 67 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -49,13 +49,6 @@ _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once sp
 **How (when unparked, fresh session):** 1) Read `CLAUDE.md` first. 2) Run `/insights-from-rag auto-rebaser` to confirm the finding is still current. 3) Invoke `/backfill-adrs 60`. Likely candidates: v2 token-storage model (chrome.storage.session split), manifest.v3 service worker pattern, store-submission flow, OWASP-driven security hardening, dual-browser packaging.
 **Done when:** 3-5 ADRs land in `docs/decisions/`, index is populated, PR merges. Sister stories: weather-forecaster (shipped), fathom DOC-1 (active), carelog TD-147 (consolidation, different scope).
 
-### SEC-5 — Move access token to `chrome.storage.session` — Low
-**Status:** 🟢 Ready (SCOPE CORRECTED 2026-05-29 — bigger than originally written; deserves its own focused sprint)
-**Why:** `chrome.storage.local` is unencrypted at rest. Keep the short-lived access token in `chrome.storage.session` (cleared on browser restart); persist only the refresh token + metadata in local. OWASP A04/A07.
-**Scope reality (discovered 2026-05-29):** the access token is NOT a discrete storage write — it's a **field inside the per-account `Auth` blob** persisted via a single `set({[accounts]: …})` on the multi-account container (`getAuthFor`/`setAuthGitHubAppFor`/`doRefresh`). Splitting it means: strip `accessToken` from the blob in EVERY writer, stash it separately in `chrome.storage.session` keyed **per accountId** (cross-leak risk between accounts), re-merge on read in `getAuth`/`getAuthFor`, and route `doRefresh`'s write-back through session too. The real getter is `getToken()` (NOT `getAccessToken()` — that doesn't exist); fresh reads go via `ensureFreshToken()`/`forceRefresh()`. This is a sensitive multi-account auth-persistence-core refactor, not the "Low" tweak the original row implied.
-**How:** Per-account session/local split per the scope note above; on SW eviction the missing session token is transparently re-acquired via the existing refresh path. PAT path stays in local (long-lived credential, not a short-lived token). Write an ADR in `docs/decisions/` (project convention — NOT `docs/adr/`) capturing the trade-off (extra refresh roundtrip on eviction vs reduced disk-at-rest exposure). Gate behind the SEC-7 auth-gate + full security review.
-**Done when:** access token never in `storage.local`/`sync` (behavioral test, not a line-grep — the write is a whole-blob set); refresh_token+metadata survive restart; token re-acquired after restart; per-account isolation tested (A's session read never returns B's token); ADR merged.
-
 _(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
 
 _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 part 1 + SEC-1 regression fix shipped 2026-05-17 via #194/#195/#196/#197 — see §7 below. Remaining follow-ups: SEC-9 part 2 (workflow edit), SEC-10 (after dep-graph toggle).)_
@@ -67,6 +60,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **SEC-5** Access token → `chrome.storage.session` (off-disk), refresh token + metadata stay in `chrome.storage.local`. The token was a field on the per-account `Auth` blob in local; SEC-5 routes every Auth writer (`setAuthGitHubApp`/`For`, `setInstallations`/`For`, `migrateAndWriteAuth` — the last covers first sign-in AND the add-account runner transitively) through a `splitAccessToken` funnel that blanks the blob's `accessToken` to `''` and stashes the real token in session keyed `access_token:<accountId>`; readers overlay it back; `ensureFreshToken` re-acquires after SW/browser-restart eviction (guard after the refresh-expiry check); `getToken`→`null` when absent; `clearAuth`/`removeAccount`/`github_app→PAT` switch clear the session token. PAT stays in local. opus-on-opus (2 cycles — caught the incomplete writer set) + fresh-Opus security diff review (caught a stale-token-on-method-switch edge, fixed). New behavioral stateful-mock tests; 1020 green; the new SEC-7 auth-gate passed on the PR. ADR: `docs/decisions/2026-05-29-access-token-session-storage.md`. OWASP A04/A07/A01 — PR #219
 - **PERF-1** Fire `POLL_NOW` at most once per popup mount. A zero-PR account self-sustained a re-poll loop: the poll cycle's own `stampPollTime` writes the accounts container → `chrome.storage.onChanged` → `useKnownRepos.refresh()` → still-empty → `POLL_NOW` → `runPollCycle()` (unthrottled, `messages.ts:51`) → … wasting GitHub API quota + battery; this was the root cause behind the #209 e2e POLL_NOW storm. Fix: a `useRef` once-per-mount guard (initial refresh bootstraps one poll; later self-induced storage writes refresh the list but never re-poll). TDD red→green; 1010 suite green. Plan: `docs/plans/2026-05-29-sec7-perf1.md` — PR #216
 - **SEC-7** Advisory auth-diff security gate in PR CI. New `scripts/security-gate-auth.sh` + path-filtered `security-gate-pr.yml` (on PRs touching `src/core/auth*`/`src/github/http*`, ubuntu) asserting three concrete invariants from shipped SEC work: (a) no `storage.sync.set` of tokens in auth core, (b) no token identifier in `console.*`, (c) every `src/github/http*` references `assertGithubOrigin`. `/security-gate` is a Claude skill that can't run in CI, so this is the curated static-checker substitute. Advisory (NOT in the required set — promotion is a runbook follow-up). Verified: exits 0 clean, trips on each seeded violation. Runbook: `docs/runbooks/2026-05-29-sec-7-auth-gate.md` — PR #217
 - **OPS-2 (interim)** Time-box the dev-only OSV advisories (vite/esbuild/ws) in `osv-scanner.toml` so the Security gate goes GREEN on main without waiting on the dep-major upgrade — unblocks OSV joining OPS-1's required-checks set. The full vite 6 + vitest 3 upgrade (OPS-2, now Low) remains as the durable fix to remove the time-box allowlist before it expires — PR #215
