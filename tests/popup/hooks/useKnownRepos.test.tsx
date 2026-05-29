@@ -59,6 +59,42 @@ describe('useKnownRepos', () => {
     });
   });
 
+  // PERF-1: the poll cycle's own stampPollTime writes the accounts container,
+  // which fires onChanged → refresh → still-empty → POLL_NOW → poll → ... a
+  // self-sustaining loop for zero-PR accounts. POLL_NOW must fire at most once
+  // per mount; later self-induced storage writes refresh the list but never
+  // re-trigger a poll.
+  it('sends POLL_NOW at most once per mount even when onChanged re-fires on still-empty repos', async () => {
+    (getKnownRepos as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    renderHook(() => useKnownRepos());
+
+    await waitFor(() => {
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
+    });
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
+
+    // Simulate the poll cycle's own storage write re-triggering the listener
+    // while repos are still empty (the loop condition).
+    const addListenerMock = chrome.storage.onChanged
+      .addListener as ReturnType<typeof vi.fn>;
+    const listener = addListenerMock.mock.calls[0][0] as (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => void;
+
+    act(() => {
+      listener({ knownRepos: { newValue: [] } }, 'local');
+    });
+
+    // The re-triggered refresh must run (getKnownRepos called again)...
+    await waitFor(() => {
+      expect(getKnownRepos).toHaveBeenCalledTimes(2);
+    });
+    // ...but POLL_NOW must NOT be sent a second time.
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
   it('updates when chrome.storage.onChanged fires', async () => {
     (getKnownRepos as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
