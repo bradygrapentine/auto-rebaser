@@ -80,3 +80,7 @@ describe('isPRActionable', () => {
     ).toBe(false);
   });
 });
+
+// OPS-1 gate probe — intentional failure, DO NOT MERGE.
+import { test as _opsProbe, expect as _opsExpect } from 'vitest';
+_opsProbe('OPS-1 required-check probe (intentional fail)', () => { _opsExpect(1).toBe(2); });
