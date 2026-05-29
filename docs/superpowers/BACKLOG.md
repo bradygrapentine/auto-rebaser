@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-29 (logged the self-hosted CI hardening + PR-state stale-chip session to §7: #204 e2e timeout, #205 CI ops, #206 authored stale-chip, #207 REVIEWER-2 reviewer-store transition+prune)_
+_Last `/backlog-sync`: 2026-05-29 (OPS-1 required-checks shipped #211; OPS-3 filed #212 then shipped #213 — `test` job moved to ubuntu-latest. Earlier this window: #204 e2e timeout, #205 CI ops, #206 authored stale-chip, #207 REVIEWER-2 reviewer-store transition+prune)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,12 +9,12 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 5 |
+| 🟢 Ready | 4 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 63 |
+| ✅ Shipped | 64 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -48,12 +48,6 @@ _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once sp
 **How:** Confirm the loop on the SW side first (does the poll cycle write `pr_store`/accounts on a zero-PR result, and is `POLL_NOW` throttled?). If unthrottled: either (a) guard `POLL_NOW` in `useKnownRepos` so it fires at most once per mount / debounce it, or (b) skip the empty-`pr_store` storage write that retriggers it, or (c) record a sentinel "polled, zero repos" so `repos.length === 0` doesn't re-fire. Add a unit test for the SW poll-on-empty path and a popup-hook test asserting POLL_NOW isn't sent on self-induced storage writes.
 **Done when:** A zero-PR account does not re-poll on its own storage writes; covered by tests.
 
-### OPS-3 — Harden `test` job against `setup-node` deadlock on the self-hosted runner under concurrent host load — Medium
-**Status:** 🟢 Ready (needs reproduction-frequency confirmation before picking a fix)
-**Why:** Surfaced 2026-05-29 while watching CI on the OPS-1 merge commit (`70999b7`, run `26651477975`). The `test` job (self-hosted mac) was `cancelled` — but not by a test failure: step 3 `actions/setup-node@v4` started 17:16:03 and **never completed**, producing zero log output, until the `timeout-minutes: 20` cap (added #205) killed the job at 17:35:56. Steps 4–7 (`npm ci`, `typecheck`, `test`, `build`) never ran. The identical step succeeded on the prior commit `49d974d`, and #211 changed only backlog docs (no workflow change) → not a code/workflow regression. At hang time the host was running ≥3 other projects' `Runner.Worker`s concurrently (weather-forecaster, carelog, fathom `pnpm test`); this Mac hosts **7 runners across 6 projects**. A re-run on the now-idle runner passed cleanly in ~4 min (`test` ✅, `e2e` ✅), confirming a **transient under-load deadlock in setup-node's tool-cache/`cache: npm` path**, not a persistent wedge. `test` is an OPS-1 **required check**, so a recurrence blocks PR merges — same "Mac under load" family that pushed e2e to ubuntu (#209, [[PERF-1]] adjacent but distinct: PERF-1 is the popup POLL_NOW loop, this is the runner host).
-**How (ranked, pick after confirming frequency):** (a) **Move `test` to `ubuntu-latest`** like e2e (#209) — removes the self-hosted host from the required-check critical path entirely; simplest, highest-confidence. (b) Keep self-hosted but **pin Node on the runner and drop `actions/setup-node`'s download path** (pre-install node 20, skip tool-cache acquisition). (c) **Drop `cache: npm`** on the self-hosted `test` job — cache restore is a known self-hosted hang vector. (d) **Cap concurrency on the host** (the 7-runners-on-one-Mac contention is the trigger). Read `.github/workflows/ci.yml` `test` job first; do workflow edits directly, NOT via subagent (per `feedback_subagent_ci_wait`). If recurrence is rare, (c)+(d) may suffice; if it blocks merges repeatedly, do (a).
-**Done when:** the `test` required check completes well under its timeout across several consecutive merges under normal multi-project host load — verified by no `setup-node`/cancel hangs over a sample of runs, or by reproducing the hang and confirming the chosen fix clears it.
-
 ### DOC-1 — Backfill ADRs from v2 release history — Low
 **Status:** ⚪ Parked — v2 released; revisit when next major release work begins
 **Why:** `docs/decisions/index.md` is a `[TODO — none yet]` placeholder despite shipping v2.0.0 to Chrome + Firefox stores with a security-hardening sprint (6 of 8 SEC stories merged). Surfaced 2026-05-16 by `/insights-from-rag`. Meaningful architectural decisions exist (v2 manifest changes, security model, token-storage choice, store-submission strategy) but aren't memorialized. Parked because the extension is live and stable — backfilling is nice-to-have, not blocking.
@@ -83,6 +77,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **OPS-3** Move the `test` job from `runs-on: self-hosted` to `ubuntu-latest`. The job's `actions/setup-node@v4` step deadlocked on the self-hosted Mac under concurrent multi-project host load — zero output for ~20 min until the timeout cap killed it (the #211 merge commit `70999b7`, run `26651477975`); recovered only by a manual re-run on the idle host. Since `test` is an OPS-1 required check, a recurrence blocks every merge. Fix mirrors the e2e move (#209), pulling the contended host off the required-check critical path; job id `test` kept so the required-check binding holds; Security workflow stays self-hosted. Validated: `test` ran green on ubuntu in 55s. Plan: `docs/plans/2026-05-29-ops-3-test-runner-deadlock.md` — PR #213
 - **OPS-1** Required status checks on the `main` ruleset. The ruleset (id 16056686) enforced PR-only/linear-history but required ZERO checks, so PRs could merge on red CI (2026-05-17 incident). Added a `required_status_checks` rule for `test`, `e2e`, `npm audit (critical)`, `Gitleaks secret scan`, `Dependency review` (OSV held off until OPS-2; strict/up-to-date off; 0 approvals so the solo owner can still merge). Verified via a throwaway failing-test PR (#210) showing `mergeStateStatus=BLOCKED` with all 5 checks resolving to real runs (no ghost-check lock). Runbook: `docs/runbooks/2026-05-29-ops-1-required-checks.md`. Config change, no code PR.
 - **e2e on ubuntu** Pinned the `e2e` job to `ubuntu-latest` (test + security stay self-hosted) after the trace showed the MV3 popup click hanging on "waiting for scheduled navigations" — a `POLL_NOW` re-poll storm (empty known-repos) that never lets the page go network-idle on the contended Mac. `noWaitAfter` on popup clicks + `video: off` + bounded fixture teardown as defense-in-depth. #204 (timeout) and the first cut of #209 (video) were wrong levers. Filed PERF-1 for the underlying product loop — PR #209
 - **e2e timeout** Raise Playwright per-test timeout 30s→60s for the self-hosted Mac runner. The budget also bounds MV3 persistent-context teardown (retain-on-failure video/trace) — the slow path under CI load — so the failure was teardown-bound, not body-bound (the test runs ~5s idle) — PR #204
