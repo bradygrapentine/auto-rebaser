@@ -9,7 +9,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 4 |
+| 🟢 Ready | 5 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
@@ -47,6 +47,12 @@ _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once sp
 **Why:** Surfaced 2026-05-29 while diagnosing the self-hosted e2e hang (PR #209). `src/popup/hooks/useKnownRepos.ts` fires `chrome.runtime.sendMessage({ type: 'POLL_NOW' })` whenever known-repos is empty, on EVERY `chrome.storage.onChanged` (local). A poll cycle's own `stampPollTime` writes the accounts container (local) → `onChanged` → refresh → repos still empty → `POLL_NOW` again. For a user with **zero authored PRs** (no repos ever recorded) this is a self-sustaining re-poll loop — wasted GitHub API quota + battery. In e2e it manifested as a network storm (9× mocked `api.github.com` fulfillments) that hung Playwright's post-click navigation wait; the test was stabilized via `noWaitAfter` + pinning e2e to ubuntu, but the underlying popup behavior is a likely real product issue.
 **How:** Confirm the loop on the SW side first (does the poll cycle write `pr_store`/accounts on a zero-PR result, and is `POLL_NOW` throttled?). If unthrottled: either (a) guard `POLL_NOW` in `useKnownRepos` so it fires at most once per mount / debounce it, or (b) skip the empty-`pr_store` storage write that retriggers it, or (c) record a sentinel "polled, zero repos" so `repos.length === 0` doesn't re-fire. Add a unit test for the SW poll-on-empty path and a popup-hook test asserting POLL_NOW isn't sent on self-induced storage writes.
 **Done when:** A zero-PR account does not re-poll on its own storage writes; covered by tests.
+
+### OPS-3 — Harden `test` job against `setup-node` deadlock on the self-hosted runner under concurrent host load — Medium
+**Status:** 🟢 Ready (needs reproduction-frequency confirmation before picking a fix)
+**Why:** Surfaced 2026-05-29 while watching CI on the OPS-1 merge commit (`70999b7`, run `26651477975`). The `test` job (self-hosted mac) was `cancelled` — but not by a test failure: step 3 `actions/setup-node@v4` started 17:16:03 and **never completed**, producing zero log output, until the `timeout-minutes: 20` cap (added #205) killed the job at 17:35:56. Steps 4–7 (`npm ci`, `typecheck`, `test`, `build`) never ran. The identical step succeeded on the prior commit `49d974d`, and #211 changed only backlog docs (no workflow change) → not a code/workflow regression. At hang time the host was running ≥3 other projects' `Runner.Worker`s concurrently (weather-forecaster, carelog, fathom `pnpm test`); this Mac hosts **7 runners across 6 projects**. A re-run on the now-idle runner passed cleanly in ~4 min (`test` ✅, `e2e` ✅), confirming a **transient under-load deadlock in setup-node's tool-cache/`cache: npm` path**, not a persistent wedge. `test` is an OPS-1 **required check**, so a recurrence blocks PR merges — same "Mac under load" family that pushed e2e to ubuntu (#209, [[PERF-1]] adjacent but distinct: PERF-1 is the popup POLL_NOW loop, this is the runner host).
+**How (ranked, pick after confirming frequency):** (a) **Move `test` to `ubuntu-latest`** like e2e (#209) — removes the self-hosted host from the required-check critical path entirely; simplest, highest-confidence. (b) Keep self-hosted but **pin Node on the runner and drop `actions/setup-node`'s download path** (pre-install node 20, skip tool-cache acquisition). (c) **Drop `cache: npm`** on the self-hosted `test` job — cache restore is a known self-hosted hang vector. (d) **Cap concurrency on the host** (the 7-runners-on-one-Mac contention is the trigger). Read `.github/workflows/ci.yml` `test` job first; do workflow edits directly, NOT via subagent (per `feedback_subagent_ci_wait`). If recurrence is rare, (c)+(d) may suffice; if it blocks merges repeatedly, do (a).
+**Done when:** the `test` required check completes well under its timeout across several consecutive merges under normal multi-project host load — verified by no `setup-node`/cancel hangs over a sample of runs, or by reproducing the hang and confirming the chosen fix clears it.
 
 ### DOC-1 — Backfill ADRs from v2 release history — Low
 **Status:** ⚪ Parked — v2 released; revisit when next major release work begins
