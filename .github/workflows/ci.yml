@@ -26,17 +26,18 @@ jobs:
       - run: npm run build
 
   e2e:
-    runs-on: self-hosted
-    # Full e2e suite runs in ~2min idle; 20min absorbs runner contention
-    # while still killing a genuinely hung job instead of waiting out the
-    # 360-minute default.
+    # Pinned to GitHub-hosted ubuntu (test + security stay self-hosted). The
+    # MV3 popup e2e deadlocks on the self-hosted Mac under load: toggling a
+    # setting drives a POLL_NOW loop (empty known-repos re-polls on every
+    # storage change), so the page never goes network-idle and Playwright's
+    # post-click "waiting for scheduled navigations" hangs past the timeout.
+    # This flow has always run green on ubuntu; raising the timeout (#204) and
+    # dropping video (#209) only changed the symptom. See REVIEWER/OPS backlog
+    # for the underlying POLL_NOW-storm investigation.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          clean: true
-      - name: Pre-clean persistent runner state
-        run: rm -rf ~/.npm/_npx 2>/dev/null || true
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
