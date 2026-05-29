@@ -33,7 +33,8 @@ jobs:
           if ! command -v osv-scanner >/dev/null 2>&1; then
             brew install osv-scanner
           fi
-      - run: osv-scanner scan source --recursive ./
+      # --config: dev-only advisories are time-boxed in osv-scanner.toml (OPS-2).
+      - run: osv-scanner scan source --recursive --config=osv-scanner.toml ./
 
   gitleaks:
     name: Gitleaks secret scan
