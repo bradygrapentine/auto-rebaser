@@ -8,6 +8,10 @@ on:
 jobs:
   test:
     runs-on: self-hosted
+    # Fail fast instead of inheriting the 360-minute default. A hung or
+    # runner-contended job dies predictably at the cap rather than sitting
+    # red for hours. Full unit+typecheck+build runs in a couple minutes.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,6 +27,10 @@ jobs:
 
   e2e:
     runs-on: self-hosted
+    # Full e2e suite runs in ~2min idle; 20min absorbs runner contention
+    # while still killing a genuinely hung job instead of waiting out the
+    # 360-minute default.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,9 +46,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npx playwright test
-      - if: failure()
+      # always() (not failure()) so the trace still uploads when the job is
+      # CANCELLED by the timeout-minutes cap — failure() is skipped on
+      # cancellation, which is exactly when we were left blind. trace/video
+      # are retain-on-failure, so test-results/ is empty on green and
+      # if-no-files-found: ignore keeps that case quiet.
+      - if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-trace
           path: test-results/
           retention-days: 7
+          if-no-files-found: ignore
