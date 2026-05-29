@@ -7,10 +7,16 @@ on:
 
 jobs:
   test:
-    runs-on: self-hosted
-    # Fail fast instead of inheriting the 360-minute default. A hung or
-    # runner-contended job dies predictably at the cap rather than sitting
-    # red for hours. Full unit+typecheck+build runs in a couple minutes.
+    # Runs on GitHub-hosted ubuntu (Security stays self-hosted). Moved off the
+    # self-hosted Mac after actions/setup-node deadlocked under concurrent
+    # multi-project host load — zero output for ~20 min until the timeout cap
+    # killed it (OPS-3; the #211 merge commit 70999b7, run 26651477975). `test`
+    # is an OPS-1 required check, so a host wedge blocks every PR merge; ubuntu
+    # removes the contended host from the critical path. Mirrors the e2e fix
+    # (#209) — the identical setup-node step runs green on ubuntu for e2e.
+    runs-on: ubuntu-latest
+    # Fail fast instead of inheriting the 360-minute default; the suite runs in
+    # a couple minutes, so a stuck job dies predictably at the cap.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +32,8 @@ jobs:
       - run: npm run build
 
   e2e:
-    # Pinned to GitHub-hosted ubuntu (test + security stay self-hosted). The
+    # Pinned to GitHub-hosted ubuntu (Security stays self-hosted; `test` moved
+    # to ubuntu in OPS-3). The
     # MV3 popup e2e deadlocks on the self-hosted Mac under load: toggling a
     # setting drives a POLL_NOW loop (empty known-repos re-polls on every
     # storage change), so the page never goes network-idle and Playwright's
