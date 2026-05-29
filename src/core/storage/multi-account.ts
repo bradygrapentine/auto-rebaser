@@ -39,6 +39,10 @@ export const STORAGE_KEYS_V2 = {
   /** Prefix only — append accountId to form a full key. */
   perAccountSettingsPrefix: 'per_account_settings:',
   migrationBannerDismissed: 'migration_banner_dismissed',
+  /** SEC-5 — prefix for the per-account access token in chrome.storage.session
+   *  (append accountId). Access tokens are kept off-disk (session only); the
+   *  refresh token + metadata stay in the local `auth` blob. */
+  accessTokenSessionPrefix: 'access_token:',
 } as const;
 
 export const STORAGE_VERSION = 2;
@@ -180,6 +184,64 @@ export async function removeAccount(id: string): Promise<void> {
   const nextIndex = index.filter((x) => x !== id);
   await chrome.storage.sync.remove(perAccountSettingsKey(id));
   await chrome.storage.sync.set({ [STORAGE_KEYS_V2.perAccountSettingsIndex]: nextIndex });
+
+  // SEC-5 — drop the off-disk access token for this account too.
+  await removeAccessTokenFor(id);
+}
+
+// ── SEC-5: per-account access token in chrome.storage.session ──────────────
+//
+// The access token never touches chrome.storage.local (disk). It lives in
+// chrome.storage.session, which is in-memory for the extension's session and
+// cleared on browser restart. The refresh token + expiry metadata stay in the
+// local `auth` blob (with accessToken blanked to ''), so a restart re-acquires
+// the access token via the existing refresh path. Flat per-account keys avoid a
+// read-modify-write race; session is per-SW-lifetime so there's no container to
+// maintain. `chrome.storage.session` may be undefined on older runtimes — in
+// that case the token simply isn't persisted across calls and the refresh path
+// re-acquires it (degraded, not broken).
+
+function sessionArea(): chrome.storage.StorageArea | undefined {
+  return (chrome.storage as { session?: chrome.storage.StorageArea }).session;
+}
+
+function accessTokenKey(accountId: string): string {
+  return `${STORAGE_KEYS_V2.accessTokenSessionPrefix}${accountId}`;
+}
+
+export async function writeAccessTokenFor(accountId: string, token: string): Promise<void> {
+  const area = sessionArea();
+  if (!area) return;
+  await area.set({ [accessTokenKey(accountId)]: token });
+}
+
+export async function readAccessTokenFor(accountId: string): Promise<string | null> {
+  const area = sessionArea();
+  if (!area) return null;
+  const key = accessTokenKey(accountId);
+  const result = await area.get(key);
+  const token = (result ?? {})[key];
+  return typeof token === 'string' ? token : null;
+}
+
+export async function removeAccessTokenFor(accountId: string): Promise<void> {
+  const area = sessionArea();
+  if (!area) return;
+  await area.remove(accessTokenKey(accountId));
+}
+
+/**
+ * SEC-5 — split an Auth blob into the local-safe copy (access token blanked)
+ * and the session token. For github_app, the real access token is returned
+ * separately for chrome.storage.session; the local copy keeps every other
+ * field with `accessToken: ''`. PAT is a pass-through (the PAT is the
+ * long-lived credential, not a short-lived token — it stays in local).
+ */
+export function splitAccessToken(auth: Auth): { localAuth: Auth; sessionToken: string | null } {
+  if (auth.method === 'github_app') {
+    return { localAuth: { ...auth, accessToken: '' }, sessionToken: auth.accessToken };
+  }
+  return { localAuth: auth, sessionToken: null };
 }
 
 // ── global settings ───────────────────────────────────────────────────────
@@ -395,16 +457,23 @@ export async function migrateAndWriteAuth(opts: {
     Partial<AccountState>
   >;
 
+  // SEC-5 — keep access tokens out of the persisted (local) blob; stash them
+  // in chrome.storage.session per account. This is the central write chokepoint
+  // for first sign-in AND the add-account runner, so both are covered here.
   if (opts.legacyAuth && opts.legacyId) {
+    const { localAuth, sessionToken } = splitAccessToken(opts.legacyAuth);
     accounts[opts.legacyId] = {
       ...(accounts[opts.legacyId] ?? {}),
-      auth: opts.legacyAuth,
+      auth: localAuth,
     };
+    if (sessionToken !== null) await writeAccessTokenFor(opts.legacyId, sessionToken);
   }
+  const { localAuth: newLocalAuth, sessionToken: newSessionToken } = splitAccessToken(opts.newAuth);
   accounts[opts.newId] = {
     ...(accounts[opts.newId] ?? {}),
-    auth: opts.newAuth,
+    auth: newLocalAuth,
   };
+  if (newSessionToken !== null) await writeAccessTokenFor(opts.newId, newSessionToken);
 
   await chrome.storage.local.set({
     [STORAGE_KEYS_V2.accounts]: accounts,

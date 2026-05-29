@@ -19,10 +19,40 @@ import {
   getActiveAccountId,
   buildAccountId,
   migrateAndWriteAuth,
+  writeAccessTokenFor,
+  readAccessTokenFor,
+  removeAccessTokenFor,
+  splitAccessToken,
 } from './storage/multi-account';
 import { assertGithubOrigin, getApiBase } from './host-config';
 
 export const AUTH_KEY = 'auth';
+
+/**
+ * SEC-5 — persist an auth blob for an account, keeping the access token off
+ * disk: the local `auth` blob carries `accessToken: ''`; the real token goes
+ * to chrome.storage.session. The single write chokepoint for the per-account
+ * (active + explicit-id) writers. (First sign-in / add-account go through
+ * `migrateAndWriteAuth`, which applies the same split.)
+ */
+async function persistAuthForId(accountId: string, auth: Auth): Promise<void> {
+  const { localAuth, sessionToken } = splitAccessToken(auth);
+  await writeAccountKeyFor(accountId, 'auth', localAuth);
+  if (sessionToken !== null) {
+    await writeAccessTokenFor(accountId, sessionToken);
+  } else {
+    // SEC-5 — non-App auth (PAT) has no session token; clear any stale App
+    // token left under this id (e.g. re-auth github_app → PAT on the same id).
+    await removeAccessTokenFor(accountId);
+  }
+}
+
+/** SEC-5 — overlay the session-held access token onto a stored github_app blob. */
+async function overlayAccessToken(accountId: string, stored: Auth): Promise<Auth> {
+  if (stored.method !== 'github_app') return stored;
+  const token = await readAccessTokenFor(accountId);
+  return { ...stored, accessToken: token ?? '' };
+}
 
 export interface AuthGitHubApp extends TokenSet {
   method: 'github_app';
@@ -51,7 +81,16 @@ export type Auth = AuthGitHubApp | AuthPAT;
 
 export async function getAuth(): Promise<Auth | null> {
   const stored = await readAccountKey('auth');
-  if (stored) return stored;
+  if (stored) {
+    // SEC-5 — overlay the session access token for the active github_app
+    // account. No active id means a legacy top-level blob (pre-MA-1, pre-SEC-5)
+    // whose token is still in `stored` — return as-is.
+    if (stored.method === 'github_app') {
+      const id = await getActiveAccountId();
+      if (id) return overlayAccessToken(id, stored);
+    }
+    return stored;
+  }
 
   // Migration from legacy sync.github_token (PAT only — pre-4.3 builds didn't
   // support GitHub App auth at all).
@@ -100,7 +139,7 @@ export async function setAuthGitHubApp(tokenSet: TokenSet): Promise<void> {
       ...(login ? { login } : {}),
       ...(installations ? { installations } : {}),
     };
-    await writeAccountKeyFor(activeId, 'auth', auth);
+    await persistAuthForId(activeId, auth);
     return;
   }
 
@@ -130,7 +169,11 @@ export async function setInstallations(installations: Installation[]): Promise<v
   const prev = await getAuth();
   if (!prev || prev.method !== 'github_app') return;
   const next: AuthGitHubApp = { ...prev, installations };
-  await writeAccountKey('auth', next);
+  // SEC-5 — `prev` is overlaid (real token); route through the split so the
+  // local write stays token-free. Legacy no-active-id path keeps prior behavior.
+  const id = await getActiveAccountId();
+  if (id) await persistAuthForId(id, next);
+  else await writeAccountKey('auth', next);
 }
 
 export async function setAuthPAT(token: string, knownLogin?: string): Promise<void> {
@@ -141,7 +184,8 @@ export async function setAuthPAT(token: string, knownLogin?: string): Promise<vo
     const login =
       knownLogin ?? (prev && prev.method === 'pat' ? prev.login : undefined);
     const auth: AuthPAT = { method: 'pat', token, ...(login ? { login } : {}) };
-    await writeAccountKeyFor(activeId, 'auth', auth);
+    // SEC-5 — persistAuthForId clears any stale App session token on this id.
+    await persistAuthForId(activeId, auth);
     return;
   }
 
@@ -170,7 +214,9 @@ export async function setPATLogin(login: string): Promise<void> {
 /** Explicit-id variant — reads the named account's auth directly. */
 export async function getAuthFor(accountId: string): Promise<Auth | null> {
   const stored = await readAccountKeyFor(accountId, 'auth');
-  return stored ?? null;
+  if (!stored) return null;
+  // SEC-5 — overlay the session access token for github_app blobs.
+  return overlayAccessToken(accountId, stored);
 }
 
 /** Explicit-id variant — update only installations on the named account's auth. No-op for non-App. */
@@ -181,7 +227,7 @@ export async function setInstallationsFor(
   const prev = await getAuthFor(accountId);
   if (!prev || prev.method !== 'github_app') return;
   const next: AuthGitHubApp = { ...prev, installations };
-  await writeAccountKeyFor(accountId, 'auth', next);
+  await persistAuthForId(accountId, next);
 }
 
 /** Explicit-id variant — write the named account's GitHub App auth. Preserves installations. */
@@ -194,11 +240,14 @@ export async function setAuthGitHubAppFor(accountId: string, tokenSet: TokenSet)
     ...tokenSet,
     ...(installations ? { installations } : {}),
   };
-  await writeAccountKeyFor(accountId, 'auth', auth);
+  await persistAuthForId(accountId, auth);
 }
 
 export async function clearAuth(): Promise<void> {
+  // SEC-5 — drop the off-disk session token for the active account too.
+  const activeId = await getActiveAccountId();
   await removeAccountKey('auth');
+  if (activeId) await removeAccessTokenFor(activeId);
   // Belt-and-suspenders: also drop the legacy sync key in case migration
   // hasn't run yet on this device.
   await chrome.storage.sync.remove(STORAGE_KEYS.token);
@@ -219,7 +268,9 @@ export async function clearAuth(): Promise<void> {
 export async function getToken(): Promise<string | null> {
   const auth = await getAuth();
   if (!auth) return null;
-  return auth.method === 'github_app' ? auth.accessToken : auth.token;
+  // SEC-5 — a github_app access token may be absent (session evicted); return
+  // null so callers refresh via ensureFreshToken rather than using ''.
+  return auth.method === 'github_app' ? auth.accessToken || null : auth.token;
 }
 
 /** Persist a PAT. Equivalent to `setAuthPAT`. */
