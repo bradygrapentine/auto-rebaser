@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-29 (OPS-1 required-checks shipped #211; OPS-3 filed #212 then shipped #213 — `test` job moved to ubuntu-latest. Earlier this window: #204 e2e timeout, #205 CI ops, #206 authored stale-chip, #207 REVIEWER-2 reviewer-store transition+prune)_
+_Last `/backlog-sync`: 2026-05-29 (PERF-1 #216 + SEC-7 #217 shipped; OPS-2 OSV symptom time-boxed by #215 — Security gate now green, dep upgrade de-urgentized; SEC-5 scope corrected to multi-account auth-blob refactor. Earlier this window: OPS-1 #211, OPS-3 #213, #204–#207)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,20 +9,21 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 4 |
+| 🟢 Ready | 2 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 64 |
+| ✅ Shipped | 66 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-### OPS-2 — Upgrade vite 5→6 + vitest 1→3 + esbuild 0.21→0.25 to clear remaining OSV advisories — Medium
-**Status:** 🟢 Ready (scope revised 2026-05-17 after probe)
+### OPS-2 — Upgrade vite 5→6 + vitest 1→3 + esbuild 0.21→0.25 to drop the OSV time-box allowlist — Low
+**Status:** 🟢 Ready (DE-URGENTIZED 2026-05-29 — the blocking symptom is gone)
+**Update 2026-05-29 (#215):** the OSV-red symptom was resolved by **time-boxing the dev-only advisories** in `osv-scanner.toml` (#215) — the Security gate is now GREEN on main and OSV can join OPS-1's required set without the dep upgrade. So this dep-major upgrade is **no longer urgent**; it's now the *durable* fix that lets us **remove the time-box allowlist** before it expires. Staged approach below still applies (stage (a) vitest 1→2 was attempted-then-cut from the 2026-05-29 sprint as overtaken). Priority dropped Medium→Low.
 **Why:** PR #198 hard-gated the OSV job (SEC-9 part 2 + SEC-10) and surfaced two remaining dev-only advisories that the SEC-9 part 1 minors did not clear: GHSA-4w7w-66w2-5vf9 (vite 5.4.21 → fixed in 6.4.2, severity 6.3) and GHSA-67mh-4wv8-2f99 (esbuild 0.21.5 → fixed in 0.25.0, severity 5.3). Both dev-only — production bundle is still clean via `npm audit --omit=dev`. Until these clear, OSV is red on main and cannot be added to OPS-1's required-checks set. The plan explicitly forbids re-adding `continue-on-error` as the easy out.
 **Scope reality (discovered 2026-05-17 by direct probe on `chore/ops-2-vite-6-esbuild`):** vite 5→6 + esbuild bump alone works at runtime (build passes, esbuild 0.25 transitively installed), but `vite.config.ts` typecheck fails on the `test:` block. Root cause: vitest 1.6.1 peers `vite ^5.0.0` and bundles its own vite 5 — dual-vite mismatch when consumer hoists vite 6. Vitest 2.x has same peer constraint. **vitest 3.x or 4.x is required for clean vite 6 typing.** vitest 1→3 spans two majors of breaking changes against ~930 unit tests in `tests/` (config API, mock semantics, snapshot format may shift). Probe was reverted; branch `chore/ops-2-vite-6-esbuild` retained for future attempt.
 **How (revised):** Write a plan doc first (`docs/plans/<date>-ops-2-vite-6-vitest-3.md`) breaking the work into stages: (a) vitest 1→2 alone, fix breakages, ship; (b) vitest 2→3 alone, fix breakages, ship; (c) vite 5→6 + esbuild major, ship. Each stage independently verifiable via `npm test && npm run typecheck && npm run e2e && npm run build && TARGET=firefox npm run build`. Always `rm -rf node_modules && npm ci` (per global rule for dep-bump PRs). If stage (c) still has typing residue, switch vite.config.ts import to `from 'vitest/config'` (vitest 3+ re-exports defineConfig with `test` typing and uses the hoisted vite). DO NOT attempt as a single PR — staged keeps blast radius small and bisectable.
@@ -42,12 +43,6 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
-### PERF-1 — Investigate POLL_NOW re-poll loop when known-repos is empty — Medium
-**Status:** 🟢 Ready (needs SW-side confirmation before fixing)
-**Why:** Surfaced 2026-05-29 while diagnosing the self-hosted e2e hang (PR #209). `src/popup/hooks/useKnownRepos.ts` fires `chrome.runtime.sendMessage({ type: 'POLL_NOW' })` whenever known-repos is empty, on EVERY `chrome.storage.onChanged` (local). A poll cycle's own `stampPollTime` writes the accounts container (local) → `onChanged` → refresh → repos still empty → `POLL_NOW` again. For a user with **zero authored PRs** (no repos ever recorded) this is a self-sustaining re-poll loop — wasted GitHub API quota + battery. In e2e it manifested as a network storm (9× mocked `api.github.com` fulfillments) that hung Playwright's post-click navigation wait; the test was stabilized via `noWaitAfter` + pinning e2e to ubuntu, but the underlying popup behavior is a likely real product issue.
-**How:** Confirm the loop on the SW side first (does the poll cycle write `pr_store`/accounts on a zero-PR result, and is `POLL_NOW` throttled?). If unthrottled: either (a) guard `POLL_NOW` in `useKnownRepos` so it fires at most once per mount / debounce it, or (b) skip the empty-`pr_store` storage write that retriggers it, or (c) record a sentinel "polled, zero repos" so `repos.length === 0` doesn't re-fire. Add a unit test for the SW poll-on-empty path and a popup-hook test asserting POLL_NOW isn't sent on self-induced storage writes.
-**Done when:** A zero-PR account does not re-poll on its own storage writes; covered by tests.
-
 ### DOC-1 — Backfill ADRs from v2 release history — Low
 **Status:** ⚪ Parked — v2 released; revisit when next major release work begins
 **Why:** `docs/decisions/index.md` is a `[TODO — none yet]` placeholder despite shipping v2.0.0 to Chrome + Firefox stores with a security-hardening sprint (6 of 8 SEC stories merged). Surfaced 2026-05-16 by `/insights-from-rag`. Meaningful architectural decisions exist (v2 manifest changes, security model, token-storage choice, store-submission strategy) but aren't memorialized. Parked because the extension is live and stable — backfilling is nice-to-have, not blocking.
@@ -55,16 +50,11 @@ _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once sp
 **Done when:** 3-5 ADRs land in `docs/decisions/`, index is populated, PR merges. Sister stories: weather-forecaster (shipped), fathom DOC-1 (active), carelog TD-147 (consolidation, different scope).
 
 ### SEC-5 — Move access token to `chrome.storage.session` — Low
-**Status:** 🟢 Ready
-**Why:** `chrome.storage.local` is unencrypted at rest. Persist only the refresh token; keep the short-lived access token in memory (session storage). OWASP A04/A07.
-**How:** Update `auth-store` to read/write `access_token` from `chrome.storage.session` and refresh on SW eviction (refresh path already exists). Persist `refresh_token` + metadata in local. Write an ADR (`docs/adr/`) capturing the trade-off (extra refresh roundtrip vs reduced disk exposure).
-**Done when:** Token survives popup close (refresh works), is cleared on browser restart, and ADR is merged.
-
-### SEC-7 — Wire `/security-gate` into PR CI for auth-touching diffs — Low
-**Status:** 🟢 Ready
-**Why:** Manual-only security review drifts. OWASP A06. Builds on SEC-3 (security workflow) which shipped 2026-05-14.
-**How:** GitHub Action triggers on PRs touching `src/core/auth*`, `src/github/http*`, `manifest*.json`, `.github/workflows/**`; runs `/security-gate` (or a thinner curated subset) and posts findings as a PR check.
-**Done when:** Test PR mutating `auth-refresh.ts` triggers the gate and posts a result comment.
+**Status:** 🟢 Ready (SCOPE CORRECTED 2026-05-29 — bigger than originally written; deserves its own focused sprint)
+**Why:** `chrome.storage.local` is unencrypted at rest. Keep the short-lived access token in `chrome.storage.session` (cleared on browser restart); persist only the refresh token + metadata in local. OWASP A04/A07.
+**Scope reality (discovered 2026-05-29):** the access token is NOT a discrete storage write — it's a **field inside the per-account `Auth` blob** persisted via a single `set({[accounts]: …})` on the multi-account container (`getAuthFor`/`setAuthGitHubAppFor`/`doRefresh`). Splitting it means: strip `accessToken` from the blob in EVERY writer, stash it separately in `chrome.storage.session` keyed **per accountId** (cross-leak risk between accounts), re-merge on read in `getAuth`/`getAuthFor`, and route `doRefresh`'s write-back through session too. The real getter is `getToken()` (NOT `getAccessToken()` — that doesn't exist); fresh reads go via `ensureFreshToken()`/`forceRefresh()`. This is a sensitive multi-account auth-persistence-core refactor, not the "Low" tweak the original row implied.
+**How:** Per-account session/local split per the scope note above; on SW eviction the missing session token is transparently re-acquired via the existing refresh path. PAT path stays in local (long-lived credential, not a short-lived token). Write an ADR in `docs/decisions/` (project convention — NOT `docs/adr/`) capturing the trade-off (extra refresh roundtrip on eviction vs reduced disk-at-rest exposure). Gate behind the SEC-7 auth-gate + full security review.
+**Done when:** access token never in `storage.local`/`sync` (behavioral test, not a line-grep — the write is a whole-blob set); refresh_token+metadata survive restart; token re-acquired after restart; per-account isolation tested (A's session read never returns B's token); ADR merged.
 
 _(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
 
@@ -77,6 +67,9 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **PERF-1** Fire `POLL_NOW` at most once per popup mount. A zero-PR account self-sustained a re-poll loop: the poll cycle's own `stampPollTime` writes the accounts container → `chrome.storage.onChanged` → `useKnownRepos.refresh()` → still-empty → `POLL_NOW` → `runPollCycle()` (unthrottled, `messages.ts:51`) → … wasting GitHub API quota + battery; this was the root cause behind the #209 e2e POLL_NOW storm. Fix: a `useRef` once-per-mount guard (initial refresh bootstraps one poll; later self-induced storage writes refresh the list but never re-poll). TDD red→green; 1010 suite green. Plan: `docs/plans/2026-05-29-sec7-perf1.md` — PR #216
+- **SEC-7** Advisory auth-diff security gate in PR CI. New `scripts/security-gate-auth.sh` + path-filtered `security-gate-pr.yml` (on PRs touching `src/core/auth*`/`src/github/http*`, ubuntu) asserting three concrete invariants from shipped SEC work: (a) no `storage.sync.set` of tokens in auth core, (b) no token identifier in `console.*`, (c) every `src/github/http*` references `assertGithubOrigin`. `/security-gate` is a Claude skill that can't run in CI, so this is the curated static-checker substitute. Advisory (NOT in the required set — promotion is a runbook follow-up). Verified: exits 0 clean, trips on each seeded violation. Runbook: `docs/runbooks/2026-05-29-sec-7-auth-gate.md` — PR #217
+- **OPS-2 (interim)** Time-box the dev-only OSV advisories (vite/esbuild/ws) in `osv-scanner.toml` so the Security gate goes GREEN on main without waiting on the dep-major upgrade — unblocks OSV joining OPS-1's required-checks set. The full vite 6 + vitest 3 upgrade (OPS-2, now Low) remains as the durable fix to remove the time-box allowlist before it expires — PR #215
 - **OPS-3** Move the `test` job from `runs-on: self-hosted` to `ubuntu-latest`. The job's `actions/setup-node@v4` step deadlocked on the self-hosted Mac under concurrent multi-project host load — zero output for ~20 min until the timeout cap killed it (the #211 merge commit `70999b7`, run `26651477975`); recovered only by a manual re-run on the idle host. Since `test` is an OPS-1 required check, a recurrence blocks every merge. Fix mirrors the e2e move (#209), pulling the contended host off the required-check critical path; job id `test` kept so the required-check binding holds; Security workflow stays self-hosted. Validated: `test` ran green on ubuntu in 55s. Plan: `docs/plans/2026-05-29-ops-3-test-runner-deadlock.md` — PR #213
 - **OPS-1** Required status checks on the `main` ruleset. The ruleset (id 16056686) enforced PR-only/linear-history but required ZERO checks, so PRs could merge on red CI (2026-05-17 incident). Added a `required_status_checks` rule for `test`, `e2e`, `npm audit (critical)`, `Gitleaks secret scan`, `Dependency review` (OSV held off until OPS-2; strict/up-to-date off; 0 approvals so the solo owner can still merge). Verified via a throwaway failing-test PR (#210) showing `mergeStateStatus=BLOCKED` with all 5 checks resolving to real runs (no ghost-check lock). Runbook: `docs/runbooks/2026-05-29-ops-1-required-checks.md`. Config change, no code PR.
 - **e2e on ubuntu** Pinned the `e2e` job to `ubuntu-latest` (test + security stay self-hosted) after the trace showed the MV3 popup click hanging on "waiting for scheduled navigations" — a `POLL_NOW` re-poll storm (empty known-repos) that never lets the page go network-idle on the contended Mac. `noWaitAfter` on popup clicks + `video: off` + bounded fixture teardown as defense-in-depth. #204 (timeout) and the first cut of #209 (video) were wrong levers. Filed PERF-1 for the underlying product loop — PR #209
