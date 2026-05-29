@@ -1,0 +1,24 @@
+name: Security gate (auth diffs)
+
+# SEC-7 — advisory auth-diff security gate. Runs the curated static checker
+# scripts/security-gate-auth.sh on PRs that touch auth-attaching source. The
+# paths filter matches exactly what the script scans (manifest CSP/permission
+# review stays manual; .github/workflows/** is excluded so the gate never
+# gates its own edits). ubuntu-latest per OPS-3 (keep checks off the
+# self-hosted host). NOT in the branch-protection required set — advisory
+# until tuned; promotion is a tracked follow-up.
+on:
+  pull_request:
+    paths:
+      - 'src/core/auth*'
+      - 'src/github/http*'
+
+jobs:
+  auth-gate:
+    name: auth-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run auth security gate
+        run: bash scripts/security-gate-auth.sh
