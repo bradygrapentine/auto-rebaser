@@ -9,23 +9,17 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 5 |
+| 🟢 Ready | 4 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 61 |
+| ✅ Shipped | 63 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
-
-### OPS-1 — Configure branch-protection required checks on main — High
-**Status:** 🟢 Ready
-**Why:** 2026-05-17 incident: 3 PRs (#194/#195/#196) auto-merged on RED CI within a single session because no required checks gate merges. PR #197 also auto-merged with `OSV Scanner` + `Dependency review` failing (`continue-on-error`). Single biggest leverage to prevent recurrence — upstream of any test-coverage investment. Surfaced by `/test-gaps` 2026-05-17.
-**How:** At https://github.com/bradygrapentine/auto-rebaser/settings/branches → `main` branch protection rule → "Require status checks to pass before merging" → required: `test`, `e2e`, `npm audit (critical)`, `Gitleaks secret scan`, `Dependency review` (now hard-gated as of PR #198). Hold `OSV Scanner` off the required list until OPS-2 (vite-6 major upgrade) clears the remaining advisories — gating on a known-red check would block all merges. Verify by opening a deliberately-red test PR and confirming GitHub blocks the merge button.
-**Done when:** Branch-protection rule active on `main`; a throwaway PR with a forced unit-test failure shows the Merge button disabled until tests pass. Manual UI step — no code change required.
 
 ### OPS-2 — Upgrade vite 5→6 + vitest 1→3 + esbuild 0.21→0.25 to clear remaining OSV advisories — Medium
 **Status:** 🟢 Ready (scope revised 2026-05-17 after probe)
@@ -83,6 +77,8 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **OPS-1** Required status checks on the `main` ruleset. The ruleset (id 16056686) enforced PR-only/linear-history but required ZERO checks, so PRs could merge on red CI (2026-05-17 incident). Added a `required_status_checks` rule for `test`, `e2e`, `npm audit (critical)`, `Gitleaks secret scan`, `Dependency review` (OSV held off until OPS-2; strict/up-to-date off; 0 approvals so the solo owner can still merge). Verified via a throwaway failing-test PR (#210) showing `mergeStateStatus=BLOCKED` with all 5 checks resolving to real runs (no ghost-check lock). Runbook: `docs/runbooks/2026-05-29-ops-1-required-checks.md`. Config change, no code PR.
+- **e2e on ubuntu** Pinned the `e2e` job to `ubuntu-latest` (test + security stay self-hosted) after the trace showed the MV3 popup click hanging on "waiting for scheduled navigations" — a `POLL_NOW` re-poll storm (empty known-repos) that never lets the page go network-idle on the contended Mac. `noWaitAfter` on popup clicks + `video: off` + bounded fixture teardown as defense-in-depth. #204 (timeout) and the first cut of #209 (video) were wrong levers. Filed PERF-1 for the underlying product loop — PR #209
 - **e2e timeout** Raise Playwright per-test timeout 30s→60s for the self-hosted Mac runner. The budget also bounds MV3 persistent-context teardown (retain-on-failure video/trace) — the slow path under CI load — so the failure was teardown-bound, not body-bound (the test runs ~5s idle) — PR #204
 - **CI ops** Add `timeout-minutes` to `test` (15) + `e2e` (20) jobs (both inherited the 360-min default, so a hung job sat red for hours); e2e trace now uploads on `always()` not `failure()` so a timeout/cancel still yields a trace (the gap that left #204's red run undiagnosable) — PR #205
 - **authored stale-chip** Authored-PR transition re-fetch now stamps `closed` on `HTTP_404` — authoritative for a search-absent PR and cap-safe (a 1000-result-cap-dropped *open* PR returns 200, not 404). Fixes a legacy `needs-manual` record frozen as a permanent `[manual]` chip that should read `[closed]` — PR #206
