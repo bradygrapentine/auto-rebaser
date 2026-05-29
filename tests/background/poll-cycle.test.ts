@@ -711,6 +711,57 @@ describe('error PR retried on next cycle', () => {
   });
 });
 
+describe('transition: closed PR absent from search whose getPR 404s', () => {
+  // Bug: an authored PR that was open last poll but is now closed/merged
+  // leaves the `is:open author:@me` search. The transition re-fetch (getPR)
+  // can 404 when the GitHub App can't read the now-closed PR's detail — the
+  // old code then PRESERVED the prior state forever, freezing stale chips
+  // (e.g. a legacy `needs-manual` showing as `[manual]` that should be
+  // `[closed]`). A 404 on a search-absent PR is authoritative: it cannot be a
+  // 1000-result search-cap artifact (a cap-dropped *open* PR returns 200), so
+  // stamp it closed.
+  it('stamps closed when getPR returns HTTP_404', async () => {
+    const previousStore: PRStore = {
+      prs: [{
+        id: 1, number: 190, title: 'ci: use self-hosted runner', repo: 'org/fathom',
+        url: 'https://github.com/org/fathom/pull/190',
+        state: 'needs-manual', lastUpdated: 1000,
+      }],
+      lastPollAt: 1000,
+    };
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue(previousStore);
+    // Absent from the open-authored search → transition detection picks it up.
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(makeSearchResult());
+    (getPR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_404'));
+
+    await runPollCycle();
+
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const pr = upserted.find((p: PRRecord) => p.id === 1);
+    expect(pr.state).toBe('closed');
+  });
+
+  it('preserves prior state on transient HTTP_503 (cap-safety: not a confirmed close)', async () => {
+    const previousStore: PRStore = {
+      prs: [{
+        id: 1, number: 190, title: 'ci: use self-hosted runner', repo: 'org/fathom',
+        url: 'https://github.com/org/fathom/pull/190',
+        state: 'needs-manual', lastUpdated: 1000,
+      }],
+      lastPollAt: 1000,
+    };
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue(previousStore);
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(makeSearchResult());
+    (getPR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_503'));
+
+    await runPollCycle();
+
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const pr = upserted.find((p: PRRecord) => p.id === 1);
+    expect(pr.state).toBe('needs-manual');
+  });
+});
+
 describe('phase-2 automation pass (A3 integration)', () => {
   it('calls runAllAutomations with processedPRs, prDetails, settings, and resolvedThreads', async () => {
     (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue(

@@ -490,11 +490,26 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
       prDetails.set(prev.id, detail);
     } catch (err) {
       if (isAbortError(err)) return 0;
-      // Transient (5xx, network) or 404. Either way, preserve the prior
-      // record so pruneStale doesn't drop it — Phase-2 work for this PR
-      // is incomplete and we want a retry next cycle. Genuinely-deleted
-      // PRs (404) will be handled by GitHub eventually returning a deleted
-      // sentinel or falling out of the prior store organically.
+      const msg = err instanceof Error ? err.message : String(err);
+      // A 404 on a PR that's ABSENT from the open-authored search is
+      // authoritative: the PR is closed/merged or gone. It cannot be a
+      // 1000-result search-cap artifact — a cap-dropped *open* PR returns 200
+      // on direct fetch, not 404. Stamp it closed so a stale chip (e.g. a
+      // legacy `needs-manual` showing as `[manual]`) doesn't freeze forever.
+      // Don't downgrade an already-merged record (the pendingDeletion re-fetch
+      // path also lands here).
+      if (msg.startsWith('HTTP_404') && prev.state !== 'merged' && prev.state !== 'closed') {
+        processedPRs.push({
+          ...(prev as PRRecord & PRRecordPhaseTwo),
+          state: 'closed',
+          lastUpdated: Date.now(),
+          lastFetchError: undefined,
+        } as PRRecord);
+        continue;
+      }
+      // Transient (5xx, network) or ambiguous (403). Preserve the prior record
+      // so pruneStale doesn't drop it — Phase-2 work for this PR is incomplete
+      // and we want a retry next cycle.
       processedPRs.push({ ...prev, lastUpdated: Date.now() } as PRRecord);
       continue;
     }
