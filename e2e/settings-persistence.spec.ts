@@ -33,15 +33,20 @@ test('signed-in: toggling auto-rebase persists across popup reload', async ({ co
   await reloadPopup(popupPage);
 
   // Navigate to settings. The header gear button has aria-label="Settings".
-  await popupPage.getByRole('button', { name: 'Settings' }).click();
+  // noWaitAfter: the popup re-polls on storage changes (empty known-repos →
+  // POLL_NOW), so it's rarely network-idle; without this, Playwright's
+  // post-click "waiting for scheduled navigations to finish" can hang on a
+  // slow/contended runner (traced to a 60s timeout on the self-hosted Mac).
+  await popupPage.getByRole('button', { name: 'Settings' }).click({ noWaitAfter: true });
 
   // Auto-rebase is ON by default. The checkbox is inside a label with the
   // text "Auto-rebase behind PRs".
   const toggle = popupPage.getByRole('checkbox', { name: /Auto-rebase behind PRs/i });
   await expect(toggle).toBeChecked();
 
-  // Flip it OFF. Wait a beat for the async save → setSettings round-trip.
-  await toggle.click();
+  // Flip it OFF. noWaitAfter for the same reason as above — the click action
+  // itself completes; only the post-click navigation/network settle hangs.
+  await toggle.click({ noWaitAfter: true });
   await expect(toggle).not.toBeChecked();
 
   // Verify it persisted to chrome.storage.sync (where AutomationSettings
@@ -65,6 +70,6 @@ test('signed-in: toggling auto-rebase persists across popup reload', async ({ co
 
   // Round-trip: reload the popup and confirm the checkbox is still OFF.
   await reloadPopup(popupPage);
-  await popupPage.getByRole('button', { name: 'Settings' }).click();
+  await popupPage.getByRole('button', { name: 'Settings' }).click({ noWaitAfter: true });
   await expect(popupPage.getByRole('checkbox', { name: /Auto-rebase behind PRs/i })).not.toBeChecked();
 });

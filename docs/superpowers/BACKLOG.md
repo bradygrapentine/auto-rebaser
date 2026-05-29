@@ -9,7 +9,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 4 |
+| 🟢 Ready | 5 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
@@ -47,6 +47,12 @@ _(none)_
 
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
+
+### PERF-1 — Investigate POLL_NOW re-poll loop when known-repos is empty — Medium
+**Status:** 🟢 Ready (needs SW-side confirmation before fixing)
+**Why:** Surfaced 2026-05-29 while diagnosing the self-hosted e2e hang (PR #209). `src/popup/hooks/useKnownRepos.ts` fires `chrome.runtime.sendMessage({ type: 'POLL_NOW' })` whenever known-repos is empty, on EVERY `chrome.storage.onChanged` (local). A poll cycle's own `stampPollTime` writes the accounts container (local) → `onChanged` → refresh → repos still empty → `POLL_NOW` again. For a user with **zero authored PRs** (no repos ever recorded) this is a self-sustaining re-poll loop — wasted GitHub API quota + battery. In e2e it manifested as a network storm (9× mocked `api.github.com` fulfillments) that hung Playwright's post-click navigation wait; the test was stabilized via `noWaitAfter` + pinning e2e to ubuntu, but the underlying popup behavior is a likely real product issue.
+**How:** Confirm the loop on the SW side first (does the poll cycle write `pr_store`/accounts on a zero-PR result, and is `POLL_NOW` throttled?). If unthrottled: either (a) guard `POLL_NOW` in `useKnownRepos` so it fires at most once per mount / debounce it, or (b) skip the empty-`pr_store` storage write that retriggers it, or (c) record a sentinel "polled, zero repos" so `repos.length === 0` doesn't re-fire. Add a unit test for the SW poll-on-empty path and a popup-hook test asserting POLL_NOW isn't sent on self-induced storage writes.
+**Done when:** A zero-PR account does not re-poll on its own storage writes; covered by tests.
 
 ### DOC-1 — Backfill ADRs from v2 release history — Low
 **Status:** ⚪ Parked — v2 released; revisit when next major release work begins
