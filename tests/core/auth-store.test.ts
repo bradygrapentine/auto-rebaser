@@ -108,13 +108,18 @@ describe('auth-store', () => {
 
       expect(store.active_account_id).toBe('gh_octocat');
       const accounts = store.accounts as Record<string, { auth: AuthGitHubApp }>;
+      // SEC-5: access token is blanked in the local blob; the real token goes
+      // to chrome.storage.session under access_token:<id>.
       expect(accounts.gh_octocat.auth).toEqual({
         method: 'github_app',
-        accessToken: 'gho',
+        accessToken: '',
         refreshToken: 'ghr',
         accessTokenExpiresAt: 100,
         refreshTokenExpiresAt: 200,
         login: 'octocat',
+      });
+      expect(chrome.storage.session.set).toHaveBeenCalledWith({
+        'access_token:gh_octocat': 'gho',
       });
       // Critical: top-level `auth` key is NOT written.
       expect(store.auth).toBeUndefined();
@@ -162,13 +167,17 @@ describe('auth-store', () => {
       });
 
       const accounts = store.accounts as Record<string, { auth: AuthGitHubApp }>;
+      // SEC-5: rotated access token is blanked in local; real token in session.
       expect(accounts.gh_octocat.auth).toEqual(
         expect.objectContaining({
-          accessToken: 'new',
+          accessToken: '',
           installations: prevInstalls,
           login: 'octocat',
         }),
       );
+      expect(chrome.storage.session.set).toHaveBeenCalledWith({
+        'access_token:gh_octocat': 'new',
+      });
     });
   });
 

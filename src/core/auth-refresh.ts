@@ -63,6 +63,14 @@ export async function ensureFreshToken(
     return null;
   }
 
+  // SEC-5 — the access token lives in chrome.storage.session and is cleared on
+  // SW/browser restart. An absent (overlaid-to-'') token with a still-valid
+  // refresh token means "evicted" — refresh to re-acquire, regardless of the
+  // recorded access-token expiry.
+  if (!auth.accessToken) {
+    return refreshSharedFlight(auth.refreshToken, accountId ?? IMPLICIT);
+  }
+
   if (now < auth.accessTokenExpiresAt - REFRESH_LEAD_MS) {
     return auth.accessToken;
   }

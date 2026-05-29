@@ -96,8 +96,13 @@ describe('migrateAndWriteAuth — atomicity', () => {
     const setArg = setSpy.mock.calls[0][0] as Record<string, unknown>;
     expect(setArg.active_account_id).toBe('gh_bob');
     const accounts = setArg.accounts as Record<string, { auth: Auth }>;
-    expect(accounts.gh_alice.auth).toEqual(legacyAuth);
-    expect(accounts.gh_bob.auth).toEqual(newAuth);
+    expect(accounts.gh_alice.auth).toEqual(legacyAuth); // PAT — pass-through, stays in local
+    // SEC-5: the github_app access token is blanked in local and stashed in
+    // chrome.storage.session under access_token:<id>.
+    expect(accounts.gh_bob.auth).toEqual({ ...newAuth, accessToken: '' });
+    expect(chrome.storage.session.set).toHaveBeenCalledWith({
+      'access_token:gh_bob': 'gho_bob',
+    });
 
     // Legacy top-level key removed after the atomic write.
     expect(store.auth).toBeUndefined();
