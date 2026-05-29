@@ -68,6 +68,17 @@ export async function stampPollTimeFor(accountId: string, now?: number): Promise
   return next;
 }
 
+export async function pruneStaleReviewerFor(accountId: string, activeIds: number[]): Promise<PRStore> {
+  const current = await loadReviewerStoreFor(accountId);
+  const idSet = new Set(activeIds);
+  const next: PRStore = {
+    prs: current.prs.filter((pr) => idSet.has(pr.id)),
+    lastPollAt: current.lastPollAt,
+  };
+  await saveReviewerStoreFor(accountId, next);
+  return next;
+}
+
 export async function loadReviewerStoreFor(accountId: string): Promise<PRStore> {
   const stored = await readAccountKeyFor(accountId, 'reviewerPRs');
   return stored ?? { ...EMPTY_STORE };
@@ -130,6 +141,17 @@ export async function upsertReviewerPRs(records: PRRecord[]): Promise<PRStore> {
     map.set(rec.id, rec);
   }
   const next: PRStore = { prs: Array.from(map.values()), lastPollAt: current.lastPollAt };
+  await saveReviewerStore(next);
+  return next;
+}
+
+export async function pruneStaleReviewer(activeIds: number[]): Promise<PRStore> {
+  const current = await loadReviewerStore();
+  const idSet = new Set(activeIds);
+  const next: PRStore = {
+    prs: current.prs.filter((pr) => idSet.has(pr.id)),
+    lastPollAt: current.lastPollAt,
+  };
   await saveReviewerStore(next);
   return next;
 }

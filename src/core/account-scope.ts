@@ -27,6 +27,7 @@ import {
   loadReviewerStoreFor,
   saveReviewerStoreFor,
   upsertReviewerPRsFor,
+  pruneStaleReviewerFor,
 } from './pr-store';
 import { appendActivityFor } from './activity-log';
 import {
@@ -57,6 +58,7 @@ export class AccountScope {
   loadReviewerStore(): Promise<PRStore> { return loadReviewerStoreFor(this.id); }
   saveReviewerStore(store: PRStore): Promise<void> { return saveReviewerStoreFor(this.id, store); }
   upsertReviewerPRs(recs: PRRecord[]): Promise<PRStore> { return upsertReviewerPRsFor(this.id, recs); }
+  pruneStaleReviewer(activeIds: number[]): Promise<PRStore> { return pruneStaleReviewerFor(this.id, activeIds); }
 
   // ── Auth ────────────────────────────────────────────────────────────────
   getAuth(): Promise<Auth | null> { return getAuthFor(this.id); }

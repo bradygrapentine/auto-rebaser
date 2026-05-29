@@ -40,6 +40,7 @@ vi.mock('../../src/core/pr-store', async () => {
     stampPollTime: vi.fn().mockResolvedValue(undefined),
     loadReviewerStore: vi.fn(),
     upsertReviewerPRs: vi.fn().mockResolvedValue(undefined),
+    pruneStaleReviewer: vi.fn().mockResolvedValue(undefined),
   };
 });
 vi.mock('../../src/background/badge', () => ({
@@ -73,7 +74,7 @@ import { searchReviewerPRs } from '../../src/github/endpoints/reviewer-search';
 import { enablePullRequestAutoMerge } from '../../src/github/endpoints/auto-merge';
 import { getPRReviewDecision } from '../../src/github/endpoints/pr-review-decision';
 import { listReviews } from '../../src/github/endpoints/reviews';
-import { loadStore, loadReviewerStore, upsertReviewerPRs } from '../../src/core/pr-store';
+import { loadStore, loadReviewerStore, upsertReviewerPRs, pruneStaleReviewer } from '../../src/core/pr-store';
 import { getAutomationSettings, saveAutomationSettings } from '../../src/core/automations-store';
 import { appendActivity } from '../../src/core/activity-log';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
@@ -445,6 +446,85 @@ describe('poll-cycle — reviewer phase', () => {
       await runPollCycle();
       const cycle2 = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as Array<PRRecord & PRRecordPhaseTwo>;
       expect(cycle2[0].pushSinceApproval).toBeUndefined();
+    });
+  });
+
+  // Bug: reviewer store was additive-only (no transition detection, no prune),
+  // so a reviewer-tracked PR merged/closed manually dropped out of the search
+  // and its stale record stuck forever. Mirror the authored phase: re-fetch
+  // search-absent PRs to stamp merged/closed, then prune.
+  describe('reviewer transition + prune (search-absent PRs)', () => {
+    beforeEach(() => withSettings({ enableReviewerTab: true }));
+
+    it('stamps a search-absent reviewer PR closed when getPR says closed', async () => {
+      withReviewerStore([
+        { id: 99, number: 99, title: 'old', repo: 'org/api', url: 'u', state: 'pending', lastUpdated: 0 } as PRRecord & PRRecordPhaseTwo,
+      ]);
+      // Search no longer lists 99 (it was merged/closed manually).
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [] });
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ id: 99, number: 99, state: 'closed' }));
+
+      await runPollCycle();
+
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as Array<PRRecord>;
+      expect(written.find((p) => p.id === 99)?.state).toBe('closed');
+    });
+
+    it('stamps merged when getPR reports merged_at', async () => {
+      withReviewerStore([
+        { id: 99, number: 99, title: 'old', repo: 'org/api', url: 'u', state: 'pending', lastUpdated: 0 } as PRRecord & PRRecordPhaseTwo,
+      ]);
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [] });
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ id: 99, number: 99, state: 'closed', merged_at: '2026-05-29T00:00:00Z' }));
+
+      await runPollCycle();
+
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as Array<PRRecord>;
+      expect(written.find((p) => p.id === 99)?.state).toBe('merged');
+    });
+
+    it('stamps closed on HTTP_404 (App cannot read the now-closed PR)', async () => {
+      withReviewerStore([
+        { id: 99, number: 99, title: 'old', repo: 'org/api', url: 'u', state: 'needs-manual', lastUpdated: 0 } as PRRecord & PRRecordPhaseTwo,
+      ]);
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [] });
+      (getPR as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('HTTP_404'));
+
+      await runPollCycle();
+
+      const written = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as Array<PRRecord>;
+      expect(written.find((p) => p.id === 99)?.state).toBe('closed');
+    });
+
+    it('prunes the reviewer store to current + transitioned ids', async () => {
+      withReviewerStore([
+        { id: 99, number: 99, title: 'old', repo: 'org/api', url: 'u', state: 'pending', lastUpdated: 0 } as PRRecord & PRRecordPhaseTwo,
+      ]);
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      // 42 still open; 99 absent → re-fetched as closed.
+      (getPR as ReturnType<typeof vi.fn>).mockImplementation((_o: string, _r: string, n: number) =>
+        n === 42 ? Promise.resolve(makePR({ id: 42, number: 42 })) : Promise.resolve(makePR({ id: 99, number: 99, state: 'closed' })),
+      );
+
+      await runPollCycle();
+
+      const pruneIds = (pruneStaleReviewer as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as number[];
+      expect(new Set(pruneIds)).toEqual(new Set([42, 99]));
+    });
+
+    it('drops an already-terminal absent PR (no re-fetch, pruned)', async () => {
+      withReviewerStore([
+        { id: 99, number: 99, title: 'old', repo: 'org/api', url: 'u', state: 'closed', lastUpdated: 0 } as PRRecord & PRRecordPhaseTwo,
+      ]);
+      (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+      (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ id: 42, number: 42 }));
+
+      await runPollCycle();
+
+      const pruneIds = (pruneStaleReviewer as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as number[];
+      expect(pruneIds).not.toContain(99);
+      // 99 was already terminal — not re-fetched.
+      expect((getPR as ReturnType<typeof vi.fn>).mock.calls.find((c) => c[2] === 99)).toBeUndefined();
     });
   });
 });
