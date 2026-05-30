@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-30 (**OPS-2 COMPLETE** — stage (c) #225 shipped vite 5→6.4.2 + ws 8.21.0 and cleared all OSV suppressions; OSV now honestly green on main. All 3 stages: #221/#223/#225. Ready queue → **OPS-4** (promote OSV to required-checks, unblocked by this). §5 candidate: COVERAGE-1.)_
+_Last `/backlog-sync`: 2026-05-30 (**OPS-4 shipped** #227 — `OSV Scanner` now a required check on main; completes the OPS-1→OPS-2→OPS-4 security-gate arc. **Ready queue now EMPTY** (Ready=0, Shipped=69). Remaining: §5 candidates COVERAGE-1 + flaky-e2e, DOC-1 parked.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,25 +9,18 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 1 |
+| 🟢 Ready | 0 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 68 |
+| ✅ Shipped | 69 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
-
-### OPS-4 — Promote OSV Scanner to main's branch-protection required-checks set — Low
-**Status:** 🟢 Ready (unblocked 2026-05-30 by OPS-2 stage (c) #225)
-**Why:** OPS-2 is complete (#221/#223/#225) — OSV is now GREEN on main with **zero suppressions** (`osv-scanner.toml` allowlist cleared; vite 6 + ws 8.21.0 genuinely fixed all advisories). OPS-1 deliberately held OSV *off* the required-checks list while the time-box exception existed (so a lapse couldn't block merges). That reason is gone. Adding OSV to the ruleset makes a future dependency vuln a hard merge-gate.
-**Surface:** branch-protection ruleset id `16056686` on `main` (the OPS-1 runbook `docs/runbooks/2026-05-29-ops-1-required-checks.md` documents the existing 5-check set: `test`, `e2e`, `npm audit (critical)`, `Gitleaks secret scan`, `Dependency review`). Add `OSV Scanner`.
-**How:** UI/API ruleset step (like OPS-1 — manual, not a code PR; do NOT dispatch to a subagent). Verify via a throwaway PR that `OSV Scanner` shows as a required check (mergeStateStatus reflects it). Keep strict/up-to-date off and 0 approvals so the solo owner can still merge. Update the OPS-1 runbook's check list.
-**Done when:** `gh api repos/.../rulesets/16056686` lists `OSV Scanner` in required_status_checks; a test PR shows it gating; runbook updated.
-**Verification:** `gh api repos/bradygrapentine/auto-rebaser/rulesets/16056686 --jq '.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context'` includes `OSV Scanner`.
+_(none — Ready queue drained 2026-05-30. Next work: §5 candidates COVERAGE-1 / flaky-e2e, or new v1.1 scoping.)_
 
 ## §2 In progress
 
@@ -66,6 +59,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **OPS-4** Promote `OSV Scanner` to `main`'s branch-protection required-checks set (ruleset `16056686`) — unblocked by OPS-2 completing (OSV now green, zero suppressions). Applied via `gh api` GET→jq-projection→PUT with a pre-validated rollback body; verified post-PUT that all 5 rule types survived and the set is exactly the original 5 + `OSV Scanner` (6), enforcement active, strict/dnoc false, bypass empty — nothing weakened. #227 was the first PR to merge *through* the 6-check gate (OSV green). opus-on-opus 2 cycles — cycle 1 caught that the rollback re-PUT used the raw GET (read-only fields → would fail when needed); fixed to a pre-validated projection. Runbook `docs/runbooks/2026-05-29-ops-1-required-checks.md` committed (was untracked) with the four OSV-exclusion directives reversed. Completes the OPS-1→OPS-2→OPS-4 security-gate arc. Plan: `docs/plans/2026-05-30-ops-4-osv-required-check.md` — PR #227 (runbook) + ruleset change
 - **OPS-2 stage (c) — COMPLETES OPS-2** Upgrade vite `5.4.21 → 6.4.2` (pulls esbuild `0.25.12` + rollup `4.60.2` transitively) + ws `8.20.0 → 8.21.0` (ws is under **jsdom** `^8.18.0`, NOT vite — the row's prior attribution was wrong; `npm update ws` lifted it). vitest stayed 3.2.4 (accepts vite 6), `@vitejs/plugin-react` stayed 4.7.0 (already vite-6 compatible) — no other bumps. **Cleared all 3 `[[IgnoredVulns]]` from `osv-scanner.toml`** — the four advisories (vite GHSA-4w7w, esbuild GHSA-67mh, ws GHSA-58qx, + the Rollup-4 GHSA-mw96 that vite 6 brought into range, resolved 4.60.2 ≥ 4.59.0 fix — caught by opus-on-opus) are now **genuinely fixed, not suppressed**. Proven with a local `osv-scanner scan` ("No issues found") pre-push and the CI OSV job green (7s) with zero exceptions. MV3 build output structurally verified for both targets; 1020/1020, typecheck, 30 e2e. File kept (with `--config` flag) as a documented home for future time-boxes; no `security.yml` edit. **Follow-up: OPS-4** (promote OSV to required-checks, now unblocked). Plan: `docs/plans/2026-05-29-ops-2c-vite-6.md` — PR #225
 - **OPS-2 stage (b)** Upgrade vitest `2.1.9 → 3.2.4` + `@vitest/coverage-v8` lockstep; **vite held at 5.4.21** (vitest 3 carries vite as a direct dep `^5||^6||^7` → dedupes to 5, no dual-vite). Swapped `vite.config.ts` `defineConfig` import `'vite'` → `'vitest/config'` (vitest 3 narrowed the `test:`-block augmentation on the bare path; runtime-identical for `vite build`) — the opus-on-opus reviewer flagged this as the #1 likely break and it was exactly right; with the swap, typecheck clean and 1020/1020 with zero test changes, both builds, 30 e2e. Non-gating coverage drift: coverage-v8 3's AST remap (`ast-v8-to-istanbul`) now measures ~92% lines/stmts, ~88.7% fns vs the 95/94/88/95 floors — CI runs `vitest run` (no coverage) so it doesn't gate; thresholds left untouched (filed COVERAGE-1). opus-on-opus 1 cycle (0 must-fix; 2 should-fixes folded: elevate the import swap to expected + assert green via exit code not reporter-grep). Plan: `docs/plans/2026-05-29-ops-2b-vitest-3.md` — PR #223
 - **OPS-2 stage (a)** Upgrade vitest `1.6.1 → 2.1.9` + `@vitest/coverage-v8` lockstep; **vite held at 5.4.21** (vitest 2 peers `vite ^5` → no dual-vite typecheck hazard, that's deferred to stage c). First of OPS-2's three staged dep-major bumps. vitest 2 flips the default test pool `threads → forks`; the full suite passed green on `forks` with zero config or test changes (no `pool: 'threads'` pin, no fake-timer fixes) — 1020/1020 unit (count unchanged), typecheck clean (`defineConfig` from `'vite'` still types the `test:` block), Chrome+Firefox builds, 30 e2e. Dependency delta was the standard vitest-2 ecosystem (mocker/runner/snapshot + glob/cliui reporter stack); OSV stayed green (no new advisory). opus-on-opus cleared the plan in one cycle (0 must-fix; 3 should-fixes on the vite-major acceptance guard + npm-ci-lock-staging + a fake-timer triage bucket, all folded in). OPS-2 remains Ready at stage (b) [vitest 2→3]. Plan: `docs/plans/2026-05-29-ops-2a-vitest-2.md` — PR #221
