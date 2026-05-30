@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-30 (**COVERAGE-1 shipped** #229 — `npm run test:coverage` honestly green again after v8 3's AST remap; excluded pure-type `types.ts`, +4 etag per-account tests 73→100%, floors recalibrated to measured (branches held). **Ready queue EMPTY** (Ready=0, Shipped=70). Remaining: §5 candidates flaky-e2e (unfiled), DOC-1 parked.)_
+_Last `/backlog-sync`: 2026-05-30 (**DOC-1 shipped** #231 — 5 v2 architecture ADRs backfilled into `docs/decisions/` (now 6, index populated), each source-anchored. **Ready queue EMPTY** (Ready=0, Shipped=71). Remaining §5: flaky-e2e (unfiled, high-uncertainty); no parked rows left. Next: new v1.1 scoping.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,13 +14,13 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 70 |
+| ✅ Shipped | 71 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
-_(none — Ready queue drained 2026-05-30. Next work: §5 candidate flaky-e2e (unfiled), DOC-1 (parked), or new v1.1 scoping.)_
+_(none — Ready queue drained 2026-05-30. Next work: §5 candidate flaky-e2e (unfiled), or new v1.1 scoping. No parked rows remain.)_
 
 ## §2 In progress
 
@@ -36,12 +36,6 @@ _(none)_
 ## §5 Future / unscoped
 _Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
-### DOC-1 — Backfill ADRs from v2 release history — Low
-**Status:** ⚪ Parked — v2 released; revisit when next major release work begins
-**Why:** `docs/decisions/index.md` is a `[TODO — none yet]` placeholder despite shipping v2.0.0 to Chrome + Firefox stores with a security-hardening sprint (6 of 8 SEC stories merged). Surfaced 2026-05-16 by `/insights-from-rag`. Meaningful architectural decisions exist (v2 manifest changes, security model, token-storage choice, store-submission strategy) but aren't memorialized. Parked because the extension is live and stable — backfilling is nice-to-have, not blocking.
-**How (when unparked, fresh session):** 1) Read `CLAUDE.md` first. 2) Run `/insights-from-rag auto-rebaser` to confirm the finding is still current. 3) Invoke `/backfill-adrs 60`. Likely candidates: v2 token-storage model (chrome.storage.session split), manifest.v3 service worker pattern, store-submission flow, OWASP-driven security hardening, dual-browser packaging.
-**Done when:** 3-5 ADRs land in `docs/decisions/`, index is populated, PR merges. Sister stories: weather-forecaster (shipped), fathom DOC-1 (active), carelog TD-147 (consolidation, different scope).
-
 _(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
 
 _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 part 1 + SEC-1 regression fix shipped 2026-05-17 via #194/#195/#196/#197 — see §7 below. Remaining follow-ups: SEC-9 part 2 (workflow edit), SEC-10 (after dep-graph toggle).)_
@@ -53,6 +47,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
+- **DOC-1** Backfill v2 architecture decisions into `docs/decisions/` (held only the SEC-5 ADR). 5 retrospective ADRs, each anchored to a cited source file verified against the tree at authoring time: (1) local-first/no-backend (MV3 SW + `chrome.storage`, no server), (2) multi-account state isolation + per-account sync keys (the `per_account_settings:<id>` separate-key choice exists because `chrome.storage.sync` `QUOTA_BYTES_PER_ITEM` is 8192 — verbatim in `multi-account.ts`), (3) OAuth Device Flow via GitHub App / PAT legacy (auth *mechanism*; cross-links the SEC-5 token-*storage* ADR rather than overlapping), (4) single-source dual-browser build (`TARGET=firefox` switch; `key`-strip is `STORE=1`-gated, not browser-target), (5) host-derived URLs for GHES + per-request `assertGithubOrigin` SSRF guard. Index appended (6 decisions), `last-indexed` bumped. opus-on-opus 1 cycle (0 must-fix — it independently verified all 5 anchors live; 2 should-fixes folded: corrected the `key`-strip attribution from "Web Store" to `STORE=1`, pinned exact line anchors). The row's premise was STALE at pick time (claimed index was `[TODO]`; SEC-5 had already populated it) — caught at verify-row, plan adjusted to append. Doc-only, no code. Plan: `docs/plans/2026-05-30-doc-1-backfill-v2-adrs.md` — PR #231
 - **COVERAGE-1** Restore honest green on `npm run test:coverage` after coverage-v8 3's AST remap (#223) dropped the globals below the 95/94/88/95 floors (non-gating — CI runs `vitest run`). Hybrid, deliberate (not a silent floor-drop): (1) excluded `src/core/types.ts` (174 lines, 0 runtime exports — a pure-type file v8 scored 0%, same class as `**/*.d.ts`); (2) closed a **real** gap — `etag-cache.ts` 73%→100% via 4 tests covering the per-account scoping branch (the cross-account-leak guard every prior test left unexercised); (3) recalibrated floors to measured honest globals lines/stmts 95→92, functions 94→88, **branches held at 88** (the integrity signal it's a measurement recalibration, not a relaxed bar), with a dated in-config rationale + a re-derive warning if `test:coverage` ever becomes required. `test:coverage` exit 0 (92.34/88.39/88.71/92.34); 1024 tests; typecheck clean; no `src/**` logic touched. opus-on-opus 2 cycles — cycle 1 caught the plan naming a non-existent `repos-store.ts` + treating existing test files as new adds; re-scoped step 3 to read the live report. Plan: `docs/plans/2026-05-30-coverage-1-thresholds.md` — PR #229
 - **OPS-4** Promote `OSV Scanner` to `main`'s branch-protection required-checks set (ruleset `16056686`) — unblocked by OPS-2 completing (OSV now green, zero suppressions). Applied via `gh api` GET→jq-projection→PUT with a pre-validated rollback body; verified post-PUT that all 5 rule types survived and the set is exactly the original 5 + `OSV Scanner` (6), enforcement active, strict/dnoc false, bypass empty — nothing weakened. #227 was the first PR to merge *through* the 6-check gate (OSV green). opus-on-opus 2 cycles — cycle 1 caught that the rollback re-PUT used the raw GET (read-only fields → would fail when needed); fixed to a pre-validated projection. Runbook `docs/runbooks/2026-05-29-ops-1-required-checks.md` committed (was untracked) with the four OSV-exclusion directives reversed. Completes the OPS-1→OPS-2→OPS-4 security-gate arc. Plan: `docs/plans/2026-05-30-ops-4-osv-required-check.md` — PR #227 (runbook) + ruleset change
 - **OPS-2 stage (c) — COMPLETES OPS-2** Upgrade vite `5.4.21 → 6.4.2` (pulls esbuild `0.25.12` + rollup `4.60.2` transitively) + ws `8.20.0 → 8.21.0` (ws is under **jsdom** `^8.18.0`, NOT vite — the row's prior attribution was wrong; `npm update ws` lifted it). vitest stayed 3.2.4 (accepts vite 6), `@vitejs/plugin-react` stayed 4.7.0 (already vite-6 compatible) — no other bumps. **Cleared all 3 `[[IgnoredVulns]]` from `osv-scanner.toml`** — the four advisories (vite GHSA-4w7w, esbuild GHSA-67mh, ws GHSA-58qx, + the Rollup-4 GHSA-mw96 that vite 6 brought into range, resolved 4.60.2 ≥ 4.59.0 fix — caught by opus-on-opus) are now **genuinely fixed, not suppressed**. Proven with a local `osv-scanner scan` ("No issues found") pre-push and the CI OSV job green (7s) with zero exceptions. MV3 build output structurally verified for both targets; 1020/1020, typecheck, 30 e2e. File kept (with `--config` flag) as a documented home for future time-boxes; no `security.yml` edit. **Follow-up: OPS-4** (promote OSV to required-checks, now unblocked). Plan: `docs/plans/2026-05-29-ops-2c-vite-6.md` — PR #225
