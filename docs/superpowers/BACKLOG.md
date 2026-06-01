@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**CT-1 shipped** (#237) — conflict-aware rebase backoff, first slice of the v1.1 "Control & Trust" wave; CT-2…CT-4 remain Ready. **Ready=3, Shipped=74.** §5: flaky-e2e (unfiled). Next: `/sprint` CT-2 (capture-first, solo poll-cycle track) or CT-3/CT-4 (parallel-safe).)_
+_Last `/backlog-sync`: 2026-06-01 (**CT-2 shipped** (#239) — CI-green gate before auto-rebase; with CT-1 (#237) the v1.1 poll-cycle engine slices are done. CT-3 + CT-4 remain (disjoint, parallel-safe). **Ready=2, Shipped=75.** §5: flaky-e2e (unfiled). Next: `/sprint` CT-3+CT-4 as a parallel 2-track chunk.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,25 +9,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 3 |
+| 🟢 Ready | 2 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 74 |
+| ✅ Shipped | 75 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)). Make the automation legible + bounded. CT-1 shipped (#237); CT-2 still touches the poll-cycle engine — run it solo (no parallel poll-cycle track); CT-3 & CT-4 are disjoint and parallel-safe._
-
-### CT-2 — CI-green gate before auto-rebase — Medium
-**Status:** 🟢 Ready
-**Why:** Auto-rebasing a PR whose CI is already red wastes Actions minutes and adds noise — a rebase won't make a failing-for-other-reasons PR mergeable. Gating on last-check-success keeps the automation from acting when it can't help.
-**How:** Before the automation pass rebases a behind PR, check the PR's last check-run/commit-status rollup; only proceed if it's success (or treat `pending`/absent per a documented rule). Surface: `src/background/poll-cycle.ts`, `src/github/` (the check-runs/status endpoint — confirm the exact field shape against a real response, capture-first), `src/background/automations/`. **Touches poll-cycle (like shipped CT-1) — run solo, not parallel with another engine track.**
-**Done when:** a behind PR with a failing last check run is NOT auto-rebased; one with a green last run IS; the pending/unknown rule is documented and tested; no new permission added.
+_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)). Make the automation legible + bounded. CT-1 (#237) + CT-2 (#239) shipped — the poll-cycle engine slices are done. CT-3 & CT-4 remain: disjoint and parallel-safe._
 
 ### CT-3 — Per-repo allow/deny + draft/label filters — Low–Medium
 **Status:** 🟢 Ready
@@ -64,6 +58,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-06-01 — v1.1 "Control & Trust" wave
+- **CT-2** CI-green gate before auto-rebase. Auto-rebasing a behind PR whose CI is already red wastes Actions minutes — a rebase won't make a PR failing for non-staleness reasons mergeable. New GraphQL endpoint `getPRStatusRollup` (`src/github/endpoints/status-check-rollup.ts`) mirrors `pr-review-decision.ts` (the other half of GitHub's mergebox): queries the PR's last commit's `statusCheckRollup.state` by `node_id` — one call unifying legacy commit-statuses AND check-runs. Before rebasing a behind PR, read the rollup; suppress the rebase only on a positive `FAILURE`/`ERROR`; `SUCCESS`/`PENDING`/`EXPECTED`/no-checks(`null`) proceed; a fetch failure fails OPEN. Fetched only for a PR about to be rebased (gated behind `action==='rebase' && !rebaseSkipped && !rebaseBackedOff`) — non-behind PRs cost nothing. CI-red PRs stay visibly `behind` (fall-through to the `nextState` default, like `rebaseSkipped` — no new chip/state) and re-check fresh next cycle; no persisted field. Accepted tradeoff (Gate 2): a stale-red PR's helpful rebase is suppressed — bounded (still visible/manually-rebaseable; out-of-date branch drives `mergeable_state` not the rollup). Capture-first: shape pinned to a hard-literal fixture from real `gh api graphql` responses (#237 SUCCESS, #195 FAILURE). opus-on-opus 2 cycles — cycle 1 caught a wrong mock-target (gate test must mock the `status-check-rollup` subdir module directly, not the barrel) + a false barrel-re-export premise (the GraphQL precedent isn't in the barrel); both folded. 13 tests (6 endpoint + 7 gate incl. fails-open + gate-is-rebase-only); 1044 suite, typecheck clean, coverage exit 0, e2e green. Plan: `docs/plans/2026-06-01-ct-2-ci-green-gate.md` — PR #239
 - **CT-1** Conflict-aware rebase backoff. A `rebase-rejected` PR (CONFLICT-1, HTTP_422) stayed "behind base", so every poll re-derived `action: 'rebase'` and re-called `updateBranch` → another 422 → wasted Actions minutes + log noise with no change in outcome. Fix: track the head SHA at which the rebase was rejected (`rebaseRejectedAtSha?` on `PRRecord`); while the PR is `rebase-rejected` and head SHA is unchanged, suppress the `updateBranch` call (no API call, no `updatedCount++`, no activity entry) and re-affirm the `! conflict` chip. Any user push moves `pr.head.sha`, clears the backoff, re-attempts once. The SHA persists via a single conditional spread at the lone record write keyed on `finalState === 'rebase-rejected'` (covers fresh-422 AND backed-off-carry); dropped from the `phaseTwoCarry` destructure so it can't leak into a non-rejected outcome. opus-on-opus 2 cycles — cycle 1 caught the carry-through stuck-forever leak (the "omit when undefined" clear was a no-op because the write auto-spreads the prior record) + a backed-off-mislabeled-as-`behind` chip loss; both folded. 4 TDD cases (backoff holds / clears on push / carry-through cleared / fresh persists); 1031 tests, typecheck clean, coverage exit 0, e2e green. Plan: `docs/plans/2026-06-01-ct-1-conflict-aware-backoff.md` — PR #237
 
 ### 2026-06-01 — found-bug fixes
