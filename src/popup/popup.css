@@ -1490,3 +1490,50 @@ code, .mono {
 
 /* ─── Selection ────────────────────────────────────────────────────────── */
 ::selection { background: var(--term-glow-blue); }
+
+/* ─── TRIAGE-1 "Needs you" surface ─────────────────────────────────────── */
+.needs-you {
+  border: 1px solid var(--term-border-bright);
+  margin: 8px;
+  padding: 6px 8px;
+}
+.needs-you__heading {
+  font-size: 11px;
+  color: var(--term-yellow);
+  margin-bottom: 4px;
+}
+.needs-you__heading::before { content: "! "; color: var(--term-yellow); }
+.needs-you__list { list-style: none; margin: 0; padding: 0; }
+.needs-you__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+  min-width: 0;
+}
+.needs-you__num { color: var(--term-fg-muted); flex-shrink: 0; }
+.needs-you__title {
+  color: var(--term-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.needs-you__ci {
+  font-size: 10px;
+  color: var(--term-red);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.needs-you__action {
+  font-size: 10px;
+  padding: 1px 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid var(--term-border-bright);
+  color: var(--term-cyan);
+  text-decoration: none;
+}
+.needs-you__action:hover { text-decoration: underline; }
