@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**CT-4 shipped** (#241) — notification click-to-open-PR; the firing system was already live (Story 2.4), this completed the last "Done when" clause. CT-1/CT-2/CT-4 done; **CT-3 is the final v1.1 row.** **Ready=1, Shipped=76.** §5: flaky-e2e (unfiled). Next: `/sprint` CT-3 (per-repo allow/deny + filters).)_
+_Last `/backlog-sync`: 2026-06-01 (**CT-3 shipped** (#243/#246/#247/#248) — per-repo allow/deny + draft/label filters, the v1.1 "Control & Trust" capstone. **The whole v1.1 wave (CT-1/CT-2/CT-3/CT-4) is now complete.** **Ready=0, Shipped=77.** §5: flaky-e2e (unfiled), CT-3c label-autocomplete follow-up. Next: needs fresh v1.2 product scoping — no Ready rows.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,25 +9,21 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 1 |
+| 🟢 Ready | 0 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 76 |
+| ✅ Shipped | 77 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)). Make the automation legible + bounded. CT-1 (#237), CT-2 (#239), CT-4 (#241) shipped. **CT-3 is the last v1.1 row.** Note: CT-3 and CT-4 were found NOT parallel-safe (both touched poll-cycle + popup settings) — done serially._
+_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)) is **complete** — CT-1 (#237), CT-2 (#239), CT-4 (#241), CT-3 (#243/#246/#247/#248) all shipped. No Ready rows; next work needs fresh v1.2 product scoping. Follow-up filed: CT-3c (label autocomplete from a labels-list endpoint) — in §5._
 
-### CT-3 — Per-repo allow/deny + draft/label filters — Low–Medium
-**Status:** 🟢 Ready
-**Why:** Users want to bound *where* the tool acts — opt specific repos in/out, skip drafts, or only act on PRs carrying (or lacking) a label. The most-requested control shape for any "acts on your behalf" tool; `known_repos` + per-account settings already exist to hang this on.
-**How:** Add per-account settings for a repo allow/deny list (UI over `known_repos`), a skip-drafts toggle, and an include/exclude-by-label rule; apply the filter in the automation pass and (for visibility) the popup list. Surface: `src/popup/` (settings UI + PR-list filter), `src/core/storage/multi-account.ts` (per-account settings), `src/background/poll-cycle.ts` read-side. Disjoint from CT-1/CT-2's engine edits (settings/UI-led).
-**Done when:** a denied repo / a draft / a label-excluded PR is not auto-acted on; settings persist per-account; popup reflects the filter; tests cover allow, deny, draft-skip, label include/exclude.
+_(none)_
 
 ## §2 In progress
 _(none)_
@@ -39,7 +35,9 @@ _(none)_
 _(none)_
 
 ## §5 Future / unscoped
-_Open for v1.1+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
+_Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
+
+_**CT-3c** (follow-up from CT-3, #248) — label-filter autocomplete. CT-3's include/exclude label inputs are free-text (a typo'd label just never matches — fails safe). Enhance with autocomplete sourced from a GitHub labels-list endpoint per repo. Unscoped; low priority._
 
 _(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
 
@@ -52,6 +50,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-06-01 — v1.1 "Control & Trust" wave
+- **CT-3** Per-repo allow/deny + draft/label filters — the v1.1 capstone. One GLOBAL auto-action filter, ONE pure predicate fed once per PR, consulted at TWO enforcement seams in the poll cycle; suppressed PRs stay visible but every automation skips them. Planned via judge-panel `--ultraplan` (risk-first won), reviewed 2 opus-on-opus cycles, shipped as 4 serial tracks. **T1** (#243): surfaced PR `labels` on the `PullRequest`/`PRRecordPhaseTwo` types + a hard-literal `gh api` fixture (de-risk spike). **T2** (#246): pure `evaluateAutoActionFilter(input, settings) → {suppressed, reason}` (`src/core/automations-filter.ts`) — precedence repo > draft > label, deny-wins, non-empty allow-list requires membership, case-insensitive, undefined-labels→`[]`; + 5 inert-by-default `AutomationSettings` fields (`allowRepos`/`denyRepos`/`skipDraftPRs`/`includeLabels`/`excludeLabels`); 100% module coverage. **T3** (#247): wired into `poll-cycle.ts` at Seam 1 (fold `filterVerdict.suppressed` into `rebaseSkipped` — same fall-through as CT-2 `ciRed`) + Seam 2 (exclude from the `runAllAutomations` candidate list, computed from the persisted record); persists name-only labels ALWAYS-SET so the current poll overrides any `phaseTwoCarry` stale value (the CT-1 footgun); fails open via `DEFAULT_AUTOMATION_SETTINGS`; predicate called at exactly 2 sites. **T4** (#248): popup "Filters" section (skip-drafts toggle, allow/deny via `RepoOptOutList` + known-repo suggestions, include/exclude via new free-text `LabelList`) + a live-recomputed `[filtered]` chip in `PRRow` (D6 — same predicate, no persisted flag). Inert by default; zero migration (`getAutomationSettings` always merges defaults, so pre-CT-3 stored settings get the new keys). opus cycle-1 caught a per-account merge-site miscitation, the labels-carry staleness footgun, a missing value-import, and the rg call-site guard. 38 new tests across the 4 tracks; final integrated main 1093 suite, typecheck clean, coverage exit 0, both builds + e2e green. Plan: `docs/plans/2026-06-01-ct-3-repo-draft-label-filters.md` — PRs #243, #246, #247, #248
 - **CT-4** Notification click-to-open-PR. The notification *firing* system (events, dedupe/throttle, per-account toggles, permission gate, tests) already shipped as Story 2.4 — verify-row found CT-4 ~75% done, with only the "clicking a notification opens the PR" clause unmet (no `onClicked` handler existed; `notify()` discarded the `notificationId`). Re-scoped at Gate 1 to that gap. `notify()` now captures the chrome-generated `notificationId` and persists a GLOBAL `chrome.storage.local` map `{ id → PR-URL }` (bounded to 50 most-recent, append-then-slice; removed on click), only when the payload carries a `url`. A top-level `chrome.notifications.onClicked` listener in `service-worker.ts` opens the URL via `chrome.tabs.create` (no new permission — neither manifest has `tabs`), clears the notification, drops the entry. Persisting in storage + top-level listener both survive MV3 SW eviction between fire and click. `NotifPayload` gains optional `url`; the two poll-cycle callsites thread `e.prUrl`/`pr.url` (urlless → graceful no-op). All best-effort — never changes `notify()`'s return or blocks the cycle (Story 2.4 contract preserved). opus-on-opus 2 cycles — cycle 1 caught the test-stub-yields-no-id gap (fix: local mockImplementation, no setup.ts edit), an unstubbed `chrome.notifications.clear` (guarded `clear?.()`), and an insertion-order underspecification; cycle 2 a storage-mislabel wording fix (global `chrome.storage.local`, not the per-account `readAccountKey`). 6 new tests (id-persist, no-url-no-target, click-opens+clears+removes, click-miss-noop, map-bounded, persist-failure-swallowed); 1050 suite, typecheck clean, coverage exit 0, both builds, e2e green. Plan: `docs/plans/2026-06-01-ct-4-notification-click.md` — PR #241
 - **CT-2** CI-green gate before auto-rebase. Auto-rebasing a behind PR whose CI is already red wastes Actions minutes — a rebase won't make a PR failing for non-staleness reasons mergeable. New GraphQL endpoint `getPRStatusRollup` (`src/github/endpoints/status-check-rollup.ts`) mirrors `pr-review-decision.ts` (the other half of GitHub's mergebox): queries the PR's last commit's `statusCheckRollup.state` by `node_id` — one call unifying legacy commit-statuses AND check-runs. Before rebasing a behind PR, read the rollup; suppress the rebase only on a positive `FAILURE`/`ERROR`; `SUCCESS`/`PENDING`/`EXPECTED`/no-checks(`null`) proceed; a fetch failure fails OPEN. Fetched only for a PR about to be rebased (gated behind `action==='rebase' && !rebaseSkipped && !rebaseBackedOff`) — non-behind PRs cost nothing. CI-red PRs stay visibly `behind` (fall-through to the `nextState` default, like `rebaseSkipped` — no new chip/state) and re-check fresh next cycle; no persisted field. Accepted tradeoff (Gate 2): a stale-red PR's helpful rebase is suppressed — bounded (still visible/manually-rebaseable; out-of-date branch drives `mergeable_state` not the rollup). Capture-first: shape pinned to a hard-literal fixture from real `gh api graphql` responses (#237 SUCCESS, #195 FAILURE). opus-on-opus 2 cycles — cycle 1 caught a wrong mock-target (gate test must mock the `status-check-rollup` subdir module directly, not the barrel) + a false barrel-re-export premise (the GraphQL precedent isn't in the barrel); both folded. 13 tests (6 endpoint + 7 gate incl. fails-open + gate-is-rebase-only); 1044 suite, typecheck clean, coverage exit 0, e2e green. Plan: `docs/plans/2026-06-01-ct-2-ci-green-gate.md` — PR #239
 - **CT-1** Conflict-aware rebase backoff. A `rebase-rejected` PR (CONFLICT-1, HTTP_422) stayed "behind base", so every poll re-derived `action: 'rebase'` and re-called `updateBranch` → another 422 → wasted Actions minutes + log noise with no change in outcome. Fix: track the head SHA at which the rebase was rejected (`rebaseRejectedAtSha?` on `PRRecord`); while the PR is `rebase-rejected` and head SHA is unchanged, suppress the `updateBranch` call (no API call, no `updatedCount++`, no activity entry) and re-affirm the `! conflict` chip. Any user push moves `pr.head.sha`, clears the backoff, re-attempts once. The SHA persists via a single conditional spread at the lone record write keyed on `finalState === 'rebase-rejected'` (covers fresh-422 AND backed-off-carry); dropped from the `phaseTwoCarry` destructure so it can't leak into a non-rejected outcome. opus-on-opus 2 cycles — cycle 1 caught the carry-through stuck-forever leak (the "omit when undefined" clear was a no-op because the write auto-spreads the prior record) + a backed-off-mislabeled-as-`behind` chip loss; both folded. 4 TDD cases (backoff holds / clears on push / carry-through cleared / fresh persists); 1031 tests, typecheck clean, coverage exit 0, e2e green. Plan: `docs/plans/2026-06-01-ct-1-conflict-aware-backoff.md` — PR #237
