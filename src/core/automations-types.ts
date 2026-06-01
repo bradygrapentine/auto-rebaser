@@ -158,6 +158,11 @@ export type PhaseTwoPRState =
 export interface PRRecordPhaseTwo {
   /** GraphQL node_id for GraphQL mutations. Populated when poll fetches PR detail. */
   nodeId?: string;
+  /** CT-3 — name-only labels persisted from the PR detail so the popup's
+   *  `[filtered]` chip can recompute the automation filter without a re-poll.
+   *  Track 3 always-sets this (never carried stale). Optional: absent on v1
+   *  records and pre-CT-3 records. */
+  labels?: Array<{ name: string }>;
   /** True after Story 2.6 successfully deletes the head branch. */
   branchDeleted?: boolean;
   /** True after Story 2.7 successfully enables auto-merge on this PR. */
