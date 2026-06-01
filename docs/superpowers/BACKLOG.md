@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (release-readiness chunk shipped — CT-5 #251, OPS-3-audit #252, TEST-1-audit #253. **v1.2 "PR command center" filed** from the feature assessment: **Ready=3** — TRIAGE-1 (needs-you surface), TRIAGE-2 (CI-failure reason), SPIKE-1 (deferred-feature investigation); **Blocked=5** — PREVIEW-1/DIGEST-1/OPS-5/REVIEWER-3/REVIEWER-4 gated on SPIKE-1. **Shipped=80.** §5: SEC-11/CT-6/CT-7/CT-3c + 11 audit nits, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (**v1.2 "PR command center" shipped** — TRIAGE-1 needs-you surface #257, TRIAGE-2 CI-failure reason #258, T0 base #256, post-wave hardening #259; integrated main 1146 suite green, coverage exit 0. **Ready=1** — SPIKE-1 (investigate the 5 §4-blocked features). **Blocked=5** gated on SPIKE-1. **Shipped=82.** §5: TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c + 11 audit nits, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,31 +9,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 3 |
+| 🟢 Ready | 1 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 5 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 80 |
+| ✅ Shipped | 82 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-_v1.2 "PR command center" direction — scoped from the 2026-06-01 feature assessment. TRIAGE-1/TRIAGE-2 are the ready pair (read-only, surface data the engine already computes); SPIKE-1 gates the 5 lower-confidence ideas in §4._
-
-### TRIAGE-1 — "Needs you" PR triage surface
-**Status:** 🟢 Ready
-**Why:** The tool auto-acts on the easy 80%; its differentiated value is the last-mile it *can't* auto-resolve — today surfaced only as an action-dot. `isPRActionable` (`src/core/actionable-pr.ts`) already classifies attention-needing PRs (conflict / needs-manual / rebase-rejected / behind-when-auto-off / stale-approval) and the count is persisted per account. This promotes that to a first-class surface.
-**How:** Add a "Needs you" section/view in the popup listing actionable PRs, each with its single next action + a deep link derived from the state (conflict → PR conflicts view; rebase-rejected → resolve-conflict; stale-approval → re-request review; behind+auto-off → manual rebase). Read-only; reuses the existing predicate + persisted state — no new GitHub writes.
-**Done when:** actionable PRs render in a dedicated surface with a correct per-reason next-action + deep link; the mapping is exhaustive over `isPRActionable`'s true-cases; no new write endpoint introduced.
-
-### TRIAGE-2 — Surface the CI-failure reason on skipped PRs
-**Status:** 🟢 Ready
-**Why:** CT-2 silently skips auto-rebase on CI-red PRs (`getPRStatusRollup` → FAILURE/ERROR); the user can't see *which* check is red, so the silent inaction reads as a bug and undercuts the trust CT-2 was meant to build. Feeds TRIAGE-1's "fix this check" next-action content.
-**How:** Extend the `getPRStatusRollup` GraphQL (`src/github/endpoints/status-check-rollup.ts`) to also return the failing check-run name(s) + URL; persist a bounded summary on the record (same name-only/bounded discipline as the CT-3 labels carry); render the failing check + link in `PRRow` / the TRIAGE-1 surface.
-**Done when:** a CI-red PR shows the failing check name + a deep link; the persisted field is bounded; fails open (no rollup detail → today's behavior unchanged).
+_v1.2 "PR command center" direction. TRIAGE-1/TRIAGE-2 shipped (#256–#259, see §7). SPIKE-1 remains — it gates the 5 lower-confidence ideas in §4._
 
 ### SPIKE-1 — Investigate the 5 deferred v1.2 features (utility vs cost)
 **Status:** 🟢 Ready
@@ -94,6 +82,12 @@ _**Audit follow-ups (2026-06-01 release-readiness audit, should-fix)** — file:
 
 _The audit's 11 nits (a11y focus-visible/contrast, the orphaned `RepoFilter` dead code, stale comments, `PRRecordPhaseTwo` grab-bag) are recorded in the audit doc; promote individually if they become release-relevant._
 
+_**TRIAGE-POLISH** (post-wave review follow-up, 2026-06-01, should-fix/nit) — low priority:_
+- _**a11y (pre-existing)** — `PRRow` attention-dot uses `aria-label` on a bare roleless `<span>` (PRRow.tsx ~:89); add `role="img"` (or `sr-only` text) so the attention cue isn't color-only for AT users. Not introduced by the TRIAGE wave._
+- _**"+N more" dedup** — the render-cap string is duplicated in `NeedsYouSurface.tsx` and `PRRow.tsx`; extract a shared helper (repeated-copy rule)._
+- _**capture-first gap** — TRIAGE-2's `StatusContext` fixture branch is schema-sourced (this repo is all-GitHub-Actions); a single real `gh api` capture against any legacy-status repo would close it._
+- _**boundary test** — add a `NeedsYouSurface` CI-name-cap test at exactly 2 names (current test uses 3; off-by-one blind spot)._
+
 _(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
 
 _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 part 1 + SEC-1 regression fix shipped 2026-05-17 via #194/#195/#196/#197 — see §7 below. Remaining follow-ups: SEC-9 part 2 (workflow edit), SEC-10 (after dep-graph toggle).)_
@@ -103,6 +97,12 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — v1.2 "PR command center" (TRIAGE pair)
+_Scoped from the 2026-06-01 feature assessment. Planned via judge-panel `--ultraplan` (integration-first angle won — it grew the 2-row chunk into a 3-track wave: a tiny shared **T0 base** lets T1/T2 be strictly file-disjoint with zero inter-rebase), 1 opus-on-opus cycle (0 must-fix, 3 should-fix applied pre-gate), then a post-wave a11y/robust/test-quality review (0 must-fix)._
+- **TRIAGE-1** "Needs you" PR triage surface. Promotes the per-PR action-dot into a first-class popup surface listing the PRs the auto-rebaser can't self-resolve, each with the ONE next action as a deep link. New pure `triageActionFor()` (`src/core/triage-actions.ts`) mirrors `isPRActionable`'s branch order with a `never`-typed exhaustiveness guard + a runtime one-to-one cross-module fixture; new standalone `NeedsYouSurface.tsx` (never touches PRRow — disjoint from T2); rendered above the grouped list, gated to the authored tab; deep links derive from `pr.url` (trusted origin, no guard needed). Read-only, no new write endpoint. Optional `pr.ciFailures` soft-join lights up automatically once T2 persists it (zero merge coupling). PRs #257 (+ T0 base #256). Plan: `docs/plans/2026-06-01-triage-pr-command-center.md`
+- **TRIAGE-2** Surface the CI-failure reason on skipped PRs. CT-2 silently skipped auto-rebase on CI-red PRs; now the failing check name + link is shown. New `getPRStatusRollupDetail()` extends the rollup GraphQL with `statusCheckRollup.contexts` (CheckRun/StatusContext union, **capture-first** fixture from a real #209 OSV-Scanner FAILURE), returns `{ state, failures }` normalized to `{ name, url }` (fresh literal — no `__typename` leak), complete failing-enum sets, bounded at 5. Poll-cycle's rebase-path read switches to the detail variant — ONE round-trip; gate decision unchanged (`.state`); `ciFailures` persisted ALWAYS-SET (CT-3 labels discipline) inside the fail-open try/catch. `PRRow` chip threads `useSettings()` for `enterpriseHost`; **SEC-11 fold** — each API-sourced URL passes the new pure `isSafeExternalUrl` (T0) or degrades to plain text. Defensive `getGlobalSetting` guard (root-cause fix for the new render-path read). PR #258. Post-wave test-hardening (anti-tautology) #259.
+- **T0 base** (#256) — shared substrate: `PRRecordPhaseTwo.ciFailures?` field + pure `isSafeExternalUrl(url, enterpriseHost?)` guard (https + exact-hostname allowlist; full hard-literal rejection matrix). Integration-first: made T1/T2 strictly file-disjoint.
 
 ### 2026-06-01 — release-readiness pre-release chunk (audit follow-up)
 _Source: `docs/audits/2026-06-01-release-readiness-audit.md` (6-reviewer deep audit). 2 verified multi-account correctness must-fixes + the CT-3 test gaps. Planned via judge-panel `--ultraplan` (risk-first won), 2 opus-on-opus cycles, shipped as 3 file-disjoint tracks. NOTE: these reuse the `OPS-3`/`TEST-1` id prefixes already in §7 (the older CI-deadlock OPS-3 #213 and settings-split TEST-1 #106) — disambiguate by PR# + this date._
