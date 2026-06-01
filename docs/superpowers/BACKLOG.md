@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-05-30 (**DOC-1 shipped** #231 — 5 v2 architecture ADRs backfilled into `docs/decisions/` (now 6, index populated), each source-anchored. **Ready queue EMPTY** (Ready=0, Shipped=71). Remaining §5: flaky-e2e (unfiled, high-uncertainty); no parked rows left. Next: new v1.1 scoping.)_
+_Last `/backlog-sync`: 2026-06-01 (**poll-spinner timeout leak fixed** #233 — `PRListView` setTimeout cleared on unmount; pre-existing since #146, surfaced in live-test. **Ready queue EMPTY** (Ready=0, Shipped=72). Remaining §5: flaky-e2e (unfiled, high-uncertainty); no parked rows. Next: new v1.1 scoping.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,7 +14,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 71 |
+| ✅ Shipped | 72 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
@@ -45,6 +45,9 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — found-bug fixes
+- **poll-spinner timeout leak** `PRListView.handlePollNow` scheduled a 500ms `setTimeout(setOptimisticPolling(false))` (optimistic spinner-hold) with no cleanup; closing the popup — or tearing down the test env — within 500ms fired setState on an unmounted component (no-op-but-wrong in prod; an intermittent `ReferenceError: window is not defined` unhandled error after vitest tore down jsdom, which it flags as a false-positive-test risk). Fix: `useRef` the timer + clear-before-reschedule + `useEffect` unmount cleanup. Pre-existing since #146 (optimistic spinner), not a recent regression; intermittent (timer-vs-teardown race) so a narrow passed/failed grep missed it. RED-verified fake-timer test (fails `expected 1 to be +0` without the fix); 1025 tests, `test:coverage` x2 clean (0 unhandled markers). Surfaced by a user screenshot during the DOC-1/COVERAGE-1 live-test pass. — PR #233
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
 - **DOC-1** Backfill v2 architecture decisions into `docs/decisions/` (held only the SEC-5 ADR). 5 retrospective ADRs, each anchored to a cited source file verified against the tree at authoring time: (1) local-first/no-backend (MV3 SW + `chrome.storage`, no server), (2) multi-account state isolation + per-account sync keys (the `per_account_settings:<id>` separate-key choice exists because `chrome.storage.sync` `QUOTA_BYTES_PER_ITEM` is 8192 — verbatim in `multi-account.ts`), (3) OAuth Device Flow via GitHub App / PAT legacy (auth *mechanism*; cross-links the SEC-5 token-*storage* ADR rather than overlapping), (4) single-source dual-browser build (`TARGET=firefox` switch; `key`-strip is `STORE=1`-gated, not browser-target), (5) host-derived URLs for GHES + per-request `assertGithubOrigin` SSRF guard. Index appended (6 decisions), `last-indexed` bumped. opus-on-opus 1 cycle (0 must-fix — it independently verified all 5 anchors live; 2 should-fixes folded: corrected the `key`-strip attribution from "Web Store" to `STORE=1`, pinned exact line anchors). The row's premise was STALE at pick time (claimed index was `[TODO]`; SEC-5 had already populated it) — caught at verify-row, plan adjusted to append. Doc-only, no code. Plan: `docs/plans/2026-05-30-doc-1-backfill-v2-adrs.md` — PR #231
