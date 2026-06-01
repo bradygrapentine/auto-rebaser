@@ -24,6 +24,7 @@ import {
 import { searchAuthoredPRs, getPR, updateBranch, getAuthenticatedUser } from '../github/endpoints';
 import { searchReviewerPRs } from '../github/endpoints/reviewer-search';
 import { getPRReviewDecision } from '../github/endpoints/pr-review-decision';
+import { getPRStatusRollup } from '../github/endpoints/status-check-rollup';
 import { evaluateReviewerAutoMergeGate } from '../core/reviewer-auto-merge-gate';
 import { getRepo, getBranchHeadSHA } from '../github/endpoints/repos';
 import { deleteRef } from '../github/endpoints/git-refs';
@@ -310,7 +311,28 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
       && prevRec?.rebaseRejectedAtSha != null
       && prevRec.rebaseRejectedAtSha === pr.head?.sha;
 
-    if (action === 'rebase' && !rebaseSkipped && !rebaseBackedOff) {
+    // CT-2: CI-green gate. A rebase re-runs Actions and won't make a PR that's
+    // failing for non-staleness reasons mergeable, so don't auto-rebase a behind
+    // PR whose CI is definitively red. Read statusCheckRollup ONLY for a PR we're
+    // actually about to rebase (no cost for non-behind PRs). Fail OPEN: only a
+    // POSITIVE FAILURE/ERROR suppresses — a fetch error or any non-red state
+    // (SUCCESS/PENDING/EXPECTED/no-checks) proceeds. Re-read fresh each cycle, so
+    // the gate opens automatically once CI goes green (no persisted field).
+    let ciRed = false;
+    if (action === 'rebase' && !rebaseSkipped && !rebaseBackedOff && pr.node_id) {
+      try {
+        const rollup = await getPRStatusRollup(pr.node_id, accountId);
+        ciRed = rollup === 'FAILURE' || rollup === 'ERROR';
+      } catch {
+        // Advisory pre-flight — never block the load-bearing rebase on its own
+        // fetch failure (CLAUDE.md global §5). ciRed stays false → rebase proceeds.
+      }
+    }
+
+    // CT-2: ciRed → fall through with finalState = nextState ('behind'), exactly
+    // like rebaseSkipped (no else-if): PR stays visible, no updateBranch, no
+    // updatedCount++, no activity entry. Re-checked fresh next cycle.
+    if (action === 'rebase' && !rebaseSkipped && !rebaseBackedOff && !ciRed) {
       try {
         await updateBranch(owner, repo, item.number, accountId);
         updatedCount++;
