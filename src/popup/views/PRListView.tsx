@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { PRRecord } from '../../core/types';
 import { isPRActionable } from '../../core/actionable-pr';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
@@ -150,11 +150,18 @@ export function PRListView({
   // spinner would never appear. Hold the spin locally for at least 500ms so
   // the click is always visibly acknowledged.
   const [optimisticPolling, setOptimisticPolling] = useState(false);
+  // Track the spin-hold timer so it can be cleared on unmount — otherwise a
+  // popup closed within 500ms of a Poll Now click fires setState on an
+  // unmounted component (a no-op-but-wrong update in prod, and an unhandled
+  // "window is not defined" after the test env tears down).
+  const pollSpinTimer = useRef<ReturnType<typeof setTimeout>>();
   const handlePollNow = () => {
     setOptimisticPolling(true);
-    setTimeout(() => setOptimisticPolling(false), 500);
+    clearTimeout(pollSpinTimer.current);
+    pollSpinTimer.current = setTimeout(() => setOptimisticPolling(false), 500);
     void chrome.runtime.sendMessage({ type: 'POLL_NOW' });
   };
+  useEffect(() => () => clearTimeout(pollSpinTimer.current), []);
 
   const moveFocus = (delta: 1 | -1) => {
     if (flatVisiblePRs.length === 0) return;

@@ -82,6 +82,25 @@ describe('PRListView', () => {
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
   });
 
+  it('clears the poll-spinner timeout on unmount (no setState after teardown)', () => {
+    vi.useFakeTimers();
+    try {
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+      const { unmount } = render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+      const before = vi.getTimerCount();
+      // Clicking Poll Now schedules the 500ms optimistic-spin-hold timer.
+      fireEvent.click(screen.getByRole('button', { name: /poll now/i }));
+      expect(vi.getTimerCount()).toBe(before + 1);
+      // Unmount must clear it — otherwise the callback fires setOptimisticPolling
+      // on an unmounted component (the intermittent "window is not defined"
+      // unhandled error after the test env tears down).
+      unmount();
+      expect(vi.getTimerCount()).toBe(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('mounts PollSummaryFooter when activity entries exist and onOpenActivity is wired', () => {
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
     (chrome.storage.local.get as ReturnType<typeof Object>).mockResolvedValue({
