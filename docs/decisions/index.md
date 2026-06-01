@@ -2,7 +2,7 @@
 type: index
 folder: docs/decisions
 project: auto-rebaser
-last-indexed: 2026-05-30
+last-indexed: 2026-06-01
 ---
 
 # decisions
@@ -19,3 +19,4 @@ Filename convention: `YYYY-MM-DD-short-name.md` (e.g., `2026-05-15-inngest-vs-qu
 - [2026-05-30 — OAuth Device Flow against a GitHub App, PAT as legacy path (DOC-1)](2026-05-30-oauth-device-flow-github-app.md)
 - [2026-05-30 — Single-source dual-browser build (Chrome + Firefox) (DOC-1)](2026-05-30-single-source-dual-browser-build.md)
 - [2026-05-30 — Host-derived GitHub URLs (GHES) + per-request origin assertion (DOC-1)](2026-05-30-host-derived-urls-ghes-origin-assertion.md)
+- [2026-06-01 — Deferred v1.2 feature verdicts: PREVIEW-1/DIGEST-1 build, OPS-5 defer, REVIEWER-3/4 drop (SPIKE-1)](2026-06-01-spike-1-deferred-feature-verdicts.md)
