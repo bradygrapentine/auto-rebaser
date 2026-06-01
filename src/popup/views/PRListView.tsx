@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import type { PRRecord } from '../../core/types';
 import { isPRActionable } from '../../core/actionable-pr';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
@@ -47,14 +47,32 @@ export function PRListView({
   const store = activeTab === 'reviewer' ? reviewerStore : authoredStore;
   const { prs, lastPollAt, pollInProgress } = store;
 
+  // Optimistic spinner — pollInProgress from storage can flip true→false
+  // faster than React renders when the cycle is short (cached 304s), so the
+  // spinner would never appear. requestPoll holds the spin locally for 500ms
+  // so EVERY poll trigger — the manual Poll Now button AND the auto-poll-on-open
+  // below — is visibly acknowledged. The timer is tracked so it can be cleared
+  // on unmount; otherwise a popup closed within 500ms fires setState on an
+  // unmounted component (a no-op-but-wrong update in prod, and an unhandled
+  // "window is not defined" after the test env tears down).
+  const [optimisticPolling, setOptimisticPolling] = useState(false);
+  const pollSpinTimer = useRef<ReturnType<typeof setTimeout>>();
+  const requestPoll = useCallback(() => {
+    setOptimisticPolling(true);
+    clearTimeout(pollSpinTimer.current);
+    pollSpinTimer.current = setTimeout(() => setOptimisticPolling(false), 500);
+    void chrome.runtime.sendMessage({ type: 'POLL_NOW' });
+  }, []);
+  useEffect(() => () => clearTimeout(pollSpinTimer.current), []);
+
   // Auto-poll when the popup opens if we don't have fresh data. Fires
-  // when there's never been a poll OR the last poll is older than 60s,
-  // so the user sees current state without manually clicking the
+  // when there's never been a poll OR the last poll is older than 60s, so the
+  // user sees current state — with the spinner — without manually clicking the
   // refresh icon every time the popup wakes up.
   useEffect(() => {
     const stale = lastPollAt == null || Date.now() - lastPollAt > 60_000;
     if (stale && !pollInProgress) {
-      chrome.runtime.sendMessage({ type: 'POLL_NOW' });
+      requestPoll();
     }
     // Intentionally only fires on mount — periodic polling is handled
     // by the service-worker alarm.
@@ -145,23 +163,9 @@ export function PRListView({
     && flatVisiblePRs.some((p) => p.id === focusedPRId);
   const effectiveFocusedId = focusStillVisible ? focusedPRId : null;
 
-  // Optimistic spinner — pollInProgress from storage can flip true→false
-  // faster than React renders when the cycle is short (cached 304s), so the
-  // spinner would never appear. Hold the spin locally for at least 500ms so
-  // the click is always visibly acknowledged.
-  const [optimisticPolling, setOptimisticPolling] = useState(false);
-  // Track the spin-hold timer so it can be cleared on unmount — otherwise a
-  // popup closed within 500ms of a Poll Now click fires setState on an
-  // unmounted component (a no-op-but-wrong update in prod, and an unhandled
-  // "window is not defined" after the test env tears down).
-  const pollSpinTimer = useRef<ReturnType<typeof setTimeout>>();
-  const handlePollNow = () => {
-    setOptimisticPolling(true);
-    clearTimeout(pollSpinTimer.current);
-    pollSpinTimer.current = setTimeout(() => setOptimisticPolling(false), 500);
-    void chrome.runtime.sendMessage({ type: 'POLL_NOW' });
-  };
-  useEffect(() => () => clearTimeout(pollSpinTimer.current), []);
+  // Manual Poll Now (button / 'r' key) shares the same spin+send path as the
+  // auto-poll above.
+  const handlePollNow = requestPoll;
 
   const moveFocus = (delta: 1 | -1) => {
     if (flatVisiblePRs.length === 0) return;
