@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (v1.1 wave complete; **release-readiness audit** filed 2 verified must-fixes + follow-ups. **Ready=3** — CT-5 (notify scope leak), OPS-3 (settings partition revert), TEST-1 (CT-3 test gaps) — the pre-release correctness chunk, in flight via `/sprint --ultraplan`. **Shipped=77.** §5: SEC-11/CT-6/CT-7/CT-3c follow-ups, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (v1.1 wave complete; **release-readiness pre-release chunk shipped** — CT-5 #251 (notify scope leak), OPS-3-audit #252 (settings partition revert), TEST-1-audit #253 (CT-3 test gaps) — all merged, integrated main 1103 suite green. **Ready=0. Shipped=80.** §5: SEC-11/CT-6/CT-7/CT-3c follow-ups + 11 audit nits, flaky-e2e (unfiled). Next work needs v1.2 product scoping.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,37 +9,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 3 |
+| 🟢 Ready | 0 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 77 |
+| ✅ Shipped | 80 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-_v1.1 "Control & Trust" wave shipped (CT-1/CT-2/CT-3/CT-4). The 2026-06-01 release-readiness audit (`docs/audits/2026-06-01-release-readiness-audit.md`) found 2 verified multi-account correctness must-fixes + test gaps — this pre-release chunk fixes them before the next store push._
-
-### CT-5 — Thread AccountScope into the CT-4 notification path — must-fix
-**Status:** 🟢 Ready
-**Why:** `notify()` reads/writes its throttle via the `@deprecated`-for-SW implicit-id `readAccountKey`/`writeAccountKey('notif_throttle')` (notifications.ts:127,168) instead of the threaded `AccountScope`. `runPollCycle` iterates every account with its own `scope`, so account A's throttle suppresses/clobbers account B's notifications. Verified against source.
-**How:** Add `accountId`/`AccountScope` to `notify()`; route throttle through `readAccountKeyFor`/`writeAccountKeyFor`; pass `scope` from `runAutomationsPass` into both `notify()` calls (poll-cycle.ts:1147,1155). Repo-qualify `throttleKey` → `${repo}#${prNumber}:${event}`.
-**Done when:** account A throttled does not suppress/clobber account B; `repoA#42` and `repoB#42` have independent throttle slots; no SW-side caller of the deprecated implicit wrappers remains (grep clean).
-
-### OPS-3 — Single-source the global/per-account settings partition — must-fix
-**Status:** 🟢 Ready
-**Why:** `GLOBAL_KEYS` lists `enableIgnoredRepos` (automations-store.ts:31) so it's excluded from the per-account write, but the v2 global write/read only handle `ignoredRepos`+`enableKeyboardShortcuts` — so `enableIgnoredRepos=false` is stored nowhere and reverts to `DEFAULT=true` on next read (re-activating ignored repos against intent); v1→v2 migration loses it on the next save too. Verified against source.
-**How:** Derive the partition from ONE exported tuple (`GLOBAL_AUTOMATION_KEYS`); build `isGlobalKey`, the global getters/setters, AND migration's `stripGlobalKeys`+global-promotion loop from it; persist+read `enableIgnoredRepos` consistently.
-**Done when:** `enableIgnoredRepos=false` survives save→read with an active account; a v1 user who disabled it retains it post-migration AND after the next save; the 4 declaration sites reference the single tuple.
-
-### TEST-1 — Close the CT-3 filter test gaps the audit found
-**Status:** 🟢 Ready
-**Why:** The skip-drafts Seam-1 test is tautological (a draft PR never reaches rebase, so it passes with `skipDraftPRs:false`); Seam-2 (the only place non-rebase automations are suppressed, reading persisted `isDraft`/labels) only has deny-repo coverage; no multi-gate (CT-1×CT-2×CT-3) interaction test exists.
-**How:** Replace the tautological Seam-1 test with real Seam-2 assertions (persisted-`isDraft:true`+`skipDraftPRs`, `excludeLabels` match, `includeLabels` miss → excluded from `candidateIds()`); add a gate-interaction-matrix block (CT-3-suppressed PR never fetches the rollup; suppressed+rebase-rejected pins `rebaseRejectedAtSha`).
-**Done when:** Seam-2 draft/include/exclude all covered through `runPollCycle`; interaction matrix asserts gate precedence; no tautological test remains.
+_(none — the 2026-06-01 release-readiness pre-release chunk shipped: CT-5 #251, OPS-3-audit #252, TEST-1-audit #253. Next work needs v1.2 product scoping; §5 holds spec'd-but-unscheduled follow-ups.)_
 
 ## §2 In progress
 _(none)_
@@ -71,6 +53,12 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — release-readiness pre-release chunk (audit follow-up)
+_Source: `docs/audits/2026-06-01-release-readiness-audit.md` (6-reviewer deep audit). 2 verified multi-account correctness must-fixes + the CT-3 test gaps. Planned via judge-panel `--ultraplan` (risk-first won), 2 opus-on-opus cycles, shipped as 3 file-disjoint tracks. NOTE: these reuse the `OPS-3`/`TEST-1` id prefixes already in §7 (the older CI-deadlock OPS-3 #213 and settings-split TEST-1 #106) — disambiguate by PR# + this date._
+- **CT-5** Account-scope the CT-4 notification throttle. `notify()` read/wrote its throttle via the `@deprecated`-for-SW implicit-id `readAccountKey`/`writeAccountKey('notif_throttle')` instead of the threaded `AccountScope`; since `runPollCycle` iterates every account with its own `scope`, account A's throttle map clobbered account B's (cross-account notification suppression, defeated further by MV3 SW eviction). Fix threads `scope?` as the **4th** `notify()` param (AFTER `now=Date.now()`, so existing positional-`now` callers don't break — the must-fix opus-on-opus caught in cycle 1); throttle routes through two new `AccountScope` delegators (`readNotifThrottle`/`writeNotifThrottle` → `readAccountKeyFor`/`writeAccountKeyFor`); both poll-cycle callsites pass `undefined, scope`; `throttleKey` repo-qualified → `${repo}#${prNumber}:${event}`. SW path fully scoped (grep-clean excluding the intentional `scope===undefined` popup fallback in notifications.ts). 4 new tests (cross-account isolation, repo-qualification, same-key throttle). Plan: `docs/plans/2026-06-01-ct5-ops3-test1-prerelease.md` — PR #251
+- **OPS-3** Single-source the global/per-account settings partition. `enableIgnoredRepos` was in `GLOBAL_KEYS` (so excluded from the per-account write by `isGlobalKey`) but the v2 global write/read only handled `ignoredRepos`+`enableKeyboardShortcuts` — so `enableIgnoredRepos=false` was stored nowhere and reverted to `DEFAULT=true` on read (re-activating ignored repos against intent); v1→v2 migration lost it on the next save. Fix: a single exported `GLOBAL_AUTOMATION_KEYS` tuple drives `isGlobalKey`, the save loop, both read paths (`getAutomationSettings` + `getAutomationSettingsFor` via new `readGlobalAutomationSettings`), AND migration's `stripGlobalKeys` + global-promotion loop. 2 new store tests (false survives save→read; save writes exactly the tuple keys, hard-literal) + 1 migration test (lands in global not per-account). Plan: same — PR #252
+- **TEST-1** Close the CT-3 filter test gaps. The skip-drafts Seam-1 test was tautological (a draft derives `action:'none'` in `deriveStateFromMergeable` before the rebase path, so `updateBranch` is never called regardless of `skipDraftPRs`); Seam-2 (persisted-`isDraft`/labels, the only place non-rebase automations are suppressed) had only deny-repo coverage; no multi-gate interaction test existed. Replaced the tautological test with 3 genuine Seam-2 candidate-exclusions through `runPollCycle` (persisted-draft, exclude-label, include-label-miss — each with a selective control PR) + a gate-interaction matrix (CT-3-suppressed behind PR skips BOTH `updateBranch` and the CT-2 `getPRStatusRollup` fetch; `denyRepos`+prior `rebase-rejected`@same-SHA re-affirms `rebase-rejected` and re-persists `rebaseRejectedAtSha`). Net +2 cases in the file; integrated main 1103 suite, typecheck clean, coverage exit 0. Plan: same — PR #253
 
 ### 2026-06-01 — v1.1 "Control & Trust" wave
 - **CT-3** Per-repo allow/deny + draft/label filters — the v1.1 capstone. One GLOBAL auto-action filter, ONE pure predicate fed once per PR, consulted at TWO enforcement seams in the poll cycle; suppressed PRs stay visible but every automation skips them. Planned via judge-panel `--ultraplan` (risk-first won), reviewed 2 opus-on-opus cycles, shipped as 4 serial tracks. **T1** (#243): surfaced PR `labels` on the `PullRequest`/`PRRecordPhaseTwo` types + a hard-literal `gh api` fixture (de-risk spike). **T2** (#246): pure `evaluateAutoActionFilter(input, settings) → {suppressed, reason}` (`src/core/automations-filter.ts`) — precedence repo > draft > label, deny-wins, non-empty allow-list requires membership, case-insensitive, undefined-labels→`[]`; + 5 inert-by-default `AutomationSettings` fields (`allowRepos`/`denyRepos`/`skipDraftPRs`/`includeLabels`/`excludeLabels`); 100% module coverage. **T3** (#247): wired into `poll-cycle.ts` at Seam 1 (fold `filterVerdict.suppressed` into `rebaseSkipped` — same fall-through as CT-2 `ciRed`) + Seam 2 (exclude from the `runAllAutomations` candidate list, computed from the persisted record); persists name-only labels ALWAYS-SET so the current poll overrides any `phaseTwoCarry` stale value (the CT-1 footgun); fails open via `DEFAULT_AUTOMATION_SETTINGS`; predicate called at exactly 2 sites. **T4** (#248): popup "Filters" section (skip-drafts toggle, allow/deny via `RepoOptOutList` + known-repo suggestions, include/exclude via new free-text `LabelList`) + a live-recomputed `[filtered]` chip in `PRRow` (D6 — same predicate, no persisted flag). Inert by default; zero migration (`getAutomationSettings` always merges defaults, so pre-CT-3 stored settings get the new keys). opus cycle-1 caught a per-account merge-site miscitation, the labels-carry staleness footgun, a missing value-import, and the rg call-site guard. 38 new tests across the 4 tracks; final integrated main 1093 suite, typecheck clean, coverage exit 0, both builds + e2e green. Plan: `docs/plans/2026-06-01-ct-3-repo-draft-label-filters.md` — PRs #243, #246, #247, #248
