@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { NeedsYouSurface } from '../../../src/popup/components/NeedsYouSurface';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../../src/core/automations-types';
@@ -28,6 +28,8 @@ describe('NeedsYouSurface', () => {
     const action = screen.getByTestId('needs-you-action') as HTMLAnchorElement;
     expect(action.getAttribute('href')).toBe('https://github.com/org/r/pull/1/conflicts');
     expect(action.textContent).toBe('open conflicts');
+    // Clicking the action must not bubble to the row (stopPropagation).
+    fireEvent.click(action);
   });
 
   it('renders nothing when no PR is actionable', () => {

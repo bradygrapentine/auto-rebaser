@@ -200,4 +200,42 @@ describe('PRRow', () => {
     render(<PRRow pr={basePR} />);
     expect(screen.queryByTestId('ping-link')).not.toBeInTheDocument();
   });
+
+  // ── TRIAGE-2 — CI-failure chip + SEC-11 URL guard ────────────────────────
+  it('renders a clickable CI-failure link for a safe github.com URL', () => {
+    const pr = { ...basePR, ciFailures: [{ name: 'build', url: 'https://github.com/owner/repo/runs/1' }] };
+    render(<PRRow pr={pr as PRRecord} />);
+    const link = screen.getByTestId('ci-failure-link') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('https://github.com/owner/repo/runs/1');
+    expect(link.textContent).toBe('build');
+    // Clicking the chip link must not bubble to the row's own click handler.
+    fireEvent.click(link);
+  });
+
+  it('degrades a hostile data: URL to plain text (no link)', () => {
+    const pr = { ...basePR, ciFailures: [{ name: 'build', url: 'data:text/html,x' }] };
+    render(<PRRow pr={pr as PRRecord} />);
+    expect(screen.getByTestId('ci-failure-chip')).toBeInTheDocument();
+    expect(screen.queryByTestId('ci-failure-link')).not.toBeInTheDocument();
+  });
+
+  it('caps rendered names at 2 + N more', () => {
+    const pr = {
+      ...basePR,
+      ciFailures: [
+        { name: 'build', url: null },
+        { name: 'lint', url: null },
+        { name: 'e2e', url: null },
+      ],
+    };
+    render(<PRRow pr={pr as PRRecord} />);
+    expect(screen.getByTestId('ci-failure-chip').textContent).toContain('+1 more');
+  });
+
+  it('renders no CI-failure chip when ciFailures absent or empty', () => {
+    render(<PRRow pr={basePR} />);
+    expect(screen.queryByTestId('ci-failure-chip')).not.toBeInTheDocument();
+    render(<PRRow pr={{ ...basePR, ciFailures: [] } as PRRecord} />);
+    expect(screen.queryByTestId('ci-failure-chip')).not.toBeInTheDocument();
+  });
 });

@@ -22,6 +22,7 @@ vi.mock('../../src/github/endpoints', () => ({
 }));
 vi.mock('../../src/github/endpoints/status-check-rollup', () => ({
   getPRStatusRollup: vi.fn(),
+  getPRStatusRollupDetail: vi.fn(),
 }));
 vi.mock('../../src/github/endpoints/repos', () => ({
   getRepo: vi.fn(),
@@ -60,7 +61,7 @@ vi.mock('../../src/core/activity-log', () => ({
 
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { searchAuthoredPRs, getPR, updateBranch } from '../../src/github/endpoints';
-import { getPRStatusRollup } from '../../src/github/endpoints/status-check-rollup';
+import { getPRStatusRollup, getPRStatusRollupDetail } from '../../src/github/endpoints/status-check-rollup';
 import { loadStore, upsertPRs } from '../../src/core/pr-store';
 import { getAutomationSettings } from '../../src/core/automations-store';
 import { runAllAutomations } from '../../src/background/automations/orchestrator';
@@ -123,6 +124,9 @@ beforeEach(() => {
   const store: PRStore = { prs: [], lastPollAt: null };
   (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue(store);
   (getPRStatusRollup as ReturnType<typeof vi.fn>).mockResolvedValue('SUCCESS');
+  // The poll cycle's CI read is getPRStatusRollupDetail; default it green so the
+  // rebase path proceeds (failures empty) unless a test overrides.
+  (getPRStatusRollupDetail as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'SUCCESS', failures: [] });
 });
 
 describe('poll-cycle — CT-3 auto-action filter (Seam 1: rebase)', () => {
@@ -284,7 +288,7 @@ describe('poll-cycle — CT-3 gate interaction matrix', () => {
     setSettings(settings({ denyRepos: ['org/repo'] }));
     await runPollCycle();
     expect(updateBranch).not.toHaveBeenCalled();
-    expect(getPRStatusRollup).not.toHaveBeenCalled();
+    expect(getPRStatusRollupDetail).not.toHaveBeenCalled();
     expect(upserted()[0].state).toBe('behind');
   });
 
@@ -315,7 +319,7 @@ describe('poll-cycle — CT-3 gate interaction matrix', () => {
     setSettings(settings({ denyRepos: ['org/repo'] }));
     await runPollCycle();
     expect(updateBranch).not.toHaveBeenCalled();
-    expect(getPRStatusRollup).not.toHaveBeenCalled();
+    expect(getPRStatusRollupDetail).not.toHaveBeenCalled();
     const rec = upserted()[0] as { state: string; rebaseRejectedAtSha?: string };
     expect(rec.state).toBe('rebase-rejected');
     expect(rec.rebaseRejectedAtSha).toBe('abc');

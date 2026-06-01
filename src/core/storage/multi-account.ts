@@ -249,7 +249,11 @@ export function splitAccessToken(auth: Auth): { localAuth: Auth; sessionToken: s
 export async function getGlobalSetting<K extends keyof GlobalSettings>(
   key: K,
 ): Promise<GlobalSettings[K] | undefined> {
-  const result = await chrome.storage.sync.get(STORAGE_KEYS_V2.globalSettings);
+  // Guard the result itself, not just the property: chrome.storage.get is typed
+  // to always resolve an object, but a defensive `?? {}` keeps a render-time
+  // caller (TRIAGE-2's useSettings → loadSettings) from throwing if it ever
+  // resolves undefined.
+  const result = (await chrome.storage.sync.get(STORAGE_KEYS_V2.globalSettings)) ?? {};
   const settings = (result[STORAGE_KEYS_V2.globalSettings] ?? {}) as Partial<GlobalSettings>;
   return settings[key];
 }
@@ -258,7 +262,7 @@ export async function setGlobalSetting<K extends keyof GlobalSettings>(
   key: K,
   value: GlobalSettings[K],
 ): Promise<void> {
-  const result = await chrome.storage.sync.get(STORAGE_KEYS_V2.globalSettings);
+  const result = (await chrome.storage.sync.get(STORAGE_KEYS_V2.globalSettings)) ?? {};
   const settings = (result[STORAGE_KEYS_V2.globalSettings] ?? {}) as Partial<GlobalSettings>;
   settings[key] = value;
   await chrome.storage.sync.set({ [STORAGE_KEYS_V2.globalSettings]: settings });

@@ -26,7 +26,7 @@ import {
 import { searchAuthoredPRs, getPR, updateBranch, getAuthenticatedUser } from '../github/endpoints';
 import { searchReviewerPRs } from '../github/endpoints/reviewer-search';
 import { getPRReviewDecision } from '../github/endpoints/pr-review-decision';
-import { getPRStatusRollup } from '../github/endpoints/status-check-rollup';
+import { getPRStatusRollupDetail, type CIFailure } from '../github/endpoints/status-check-rollup';
 import { evaluateReviewerAutoMergeGate } from '../core/reviewer-auto-merge-gate';
 import { getRepo, getBranchHeadSHA } from '../github/endpoints/repos';
 import { deleteRef } from '../github/endpoints/git-refs';
@@ -333,13 +333,21 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
     // (SUCCESS/PENDING/EXPECTED/no-checks) proceeds. Re-read fresh each cycle, so
     // the gate opens automatically once CI goes green (no persisted field).
     let ciRed = false;
+    // TRIAGE-2: render metadata — the failing checks behind a CI-red verdict.
+    // Always reset per PR (current-poll-authoritative, never stale-carried).
+    let ciFailures: CIFailure[] = [];
     if (action === 'rebase' && !rebaseSkipped && !rebaseBackedOff && pr.node_id) {
       try {
-        const rollup = await getPRStatusRollup(pr.node_id, accountId);
-        ciRed = rollup === 'FAILURE' || rollup === 'ERROR';
+        // ONE round-trip for both the gate decision (.state) and the render
+        // metadata (.failures); switched from getPRStatusRollup to the detail
+        // variant. The CT-2 gate DECISION is unchanged — still keys off .state.
+        const detail = await getPRStatusRollupDetail(pr.node_id, accountId);
+        ciRed = detail.state === 'FAILURE' || detail.state === 'ERROR';
+        ciFailures = detail.failures;
       } catch {
         // Advisory pre-flight — never block the load-bearing rebase on its own
-        // fetch failure (CLAUDE.md global §5). ciRed stays false → rebase proceeds.
+        // fetch failure (CLAUDE.md global §5). ciRed stays false → rebase
+        // proceeds; ciFailures stays [] (no stale carry).
       }
     }
 
@@ -504,6 +512,11 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
       // unconditionally (absent → `[]`) makes the current poll authoritative.
       // Only { name } persisted (drop color/id/url) to bound per-record growth.
       labels: (pr.labels ?? []).map((l) => ({ name: l.name })),
+      // TRIAGE-2: ALWAYS-SET (current-poll-authoritative; never stale-carried,
+      // same reasoning as the CT-3 labels above). Name+url only, capped at 5
+      // upstream. Empty when the PR's rollup isn't FAILURE/ERROR, isn't a rebase
+      // candidate this cycle, or the detail fetch/parse failed (fail-open).
+      ciFailures,
       ...computeStalenessPatch(pr, fullName, staleSettings),
       ...(pr.requested_reviewers !== undefined
         ? { requestedReviewers: pr.requested_reviewers.map((r) => r.login) }
