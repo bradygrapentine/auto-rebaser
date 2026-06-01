@@ -2,6 +2,8 @@ import type { PRRecord } from '../../core/types';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { StatusBadge } from './StatusBadge';
 import { formatIdleDays } from '../../core/staleness';
+import { evaluateAutoActionFilter } from '../../core/automations-filter';
+import { useAutomationSettings } from '../hooks/useAutomationSettings';
 
 interface Props {
   pr: PRRecord;
@@ -49,6 +51,14 @@ const APP_NOT_INSTALLED_HINT = 'Auto Rebaser App not installed for this repo';
 
 export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rerequestState, onRerequest, installRequestUrl, reviewerChip, actionable }: Props) {
   const extended = pr as PRRecord & PRRecordPhaseTwo;
+  // CT-3 — live-recompute the auto-action filter verdict (D6: single source of
+  // truth — the same predicate the poll cycle gates on, NO persisted flag) so
+  // the chip reflects the user's current settings the instant they change them.
+  const { settings: automationSettings } = useAutomationSettings();
+  const filterVerdict = evaluateAutoActionFilter(
+    { repo: pr.repo, draft: extended.isDraft, labels: extended.labels },
+    automationSettings,
+  );
   const noAllowedMethod = extended.autoMergeSkipReason === 'no-allowed-method';
   const directMergeFailure = extended.lastDirectMergeFailure;
   const staleness = extended.staleness;
@@ -79,6 +89,15 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
           />
         )}
         <StatusBadge state={pr.state} />
+        {filterVerdict.suppressed && (
+          <span
+            className="pr-row__filtered-badge"
+            data-testid="filtered-badge"
+            title={`Automations skip this PR (filter: ${filterVerdict.reason})`}
+          >
+            filtered
+          </span>
+        )}
         <span className="pr-row__num" aria-hidden>#{pr.number}</span>
         <div className="pr-row__title-wrap">
           <span className="pr-row__title">{pr.title}</span>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKnownRepos } from '../hooks/useKnownRepos';
 import { RepoOptOutList } from './RepoOptOutList';
+import { LabelList } from './LabelList';
 import type { MergeMethod, StaleThresholdDays } from '../../core/automations-types';
 
 const MERGE_METHOD_LABELS: Record<MergeMethod, string> = {
@@ -31,7 +32,8 @@ type SubKey =
   | 'stale'
   | 'notifications'
   | 'pushSinceApproval'
-  | 'reviewerTab';
+  | 'reviewerTab'
+  | 'filters';
 
 async function requestNotificationsPermission(): Promise<boolean> {
   if (typeof chrome === 'undefined' || !chrome.permissions?.request) return true;
@@ -180,6 +182,7 @@ export function AutomationsSettings() {
     notifications: true,
     pushSinceApproval: true,
     reviewerTab: true,
+    filters: true,
   });
 
   const toggle = (k: SubKey) =>
@@ -635,6 +638,54 @@ export function AutomationsSettings() {
             />
           </label>
         </div>
+      </div>
+
+      {/* CT-3 — global auto-action filters. Applied WHERE automations act
+          (rebase / auto-merge / delete-branch / …): a suppressed PR stays
+          visible in the list but every automation skips it. Inert by default. */}
+      <div className="automation-block" data-testid="filters-block">
+        <div className="automation-row">
+          <Chevron
+            expanded={expanded.filters}
+            onClick={() => toggle('filters')}
+            label="auto-action filters section"
+          />
+          <label className="toggle">
+            <span className="toggle__name">Skip draft PRs</span>
+            <input
+              type="checkbox"
+              checked={settings.skipDraftPRs}
+              onChange={(e) => save({ skipDraftPRs: e.target.checked })}
+              data-testid="skip-drafts-toggle"
+            />
+          </label>
+        </div>
+        {expanded.filters && (
+          <>
+            <RepoOptOutList
+              label="Only these repos (allow-list)"
+              repos={settings.allowRepos}
+              onChange={(allowRepos) => save({ allowRepos })}
+              suggestions={knownRepos}
+            />
+            <RepoOptOutList
+              label="Never these repos (deny-list)"
+              repos={settings.denyRepos}
+              onChange={(denyRepos) => save({ denyRepos })}
+              suggestions={knownRepos}
+            />
+            <LabelList
+              label="Only PRs with a label (include)"
+              values={settings.includeLabels}
+              onChange={(includeLabels) => save({ includeLabels })}
+            />
+            <LabelList
+              label="Skip PRs with a label (exclude)"
+              values={settings.excludeLabels}
+              onChange={(excludeLabels) => save({ excludeLabels })}
+            />
+          </>
+        )}
       </div>
     </section>
   );

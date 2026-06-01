@@ -41,6 +41,11 @@ vi.mock('../../../src/core/automations-store', () => ({
     unsubscribeStalePRNotifications: false,
     autoDismissOptOutRepos: [],
     notificationsScopeGranted: false,
+    allowRepos: [],
+    denyRepos: [],
+    skipDraftPRs: false,
+    includeLabels: [],
+    excludeLabels: [],
   }),
   saveAutomationSettings: vi.fn().mockResolvedValue(undefined),
 }));
@@ -64,6 +69,12 @@ const AUTOMATION_DEFAULTS = {
   unsubscribeStalePRNotifications: false,
   autoDismissOptOutRepos: [] as string[],
   notificationsScopeGranted: false,
+  // CT-3 auto-action filter fields (inert defaults).
+  allowRepos: [] as string[],
+  denyRepos: [] as string[],
+  skipDraftPRs: false,
+  includeLabels: [] as string[],
+  excludeLabels: [] as string[],
 };
 
 describe('SettingsView', () => {
