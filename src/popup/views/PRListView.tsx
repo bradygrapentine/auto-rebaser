@@ -4,6 +4,7 @@ import { isPRActionable } from '../../core/actionable-pr';
 import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { Header } from '../components/Header';
 import { RepoGroup } from '../components/RepoGroup';
+import { NeedsYouSurface } from '../components/NeedsYouSurface';
 import { PollSummaryFooter } from '../components/PollSummaryFooter';
 import { MigrationBanner } from '../components/MigrationBanner';
 import type { Installation } from '../../github/endpoints/installations';
@@ -279,6 +280,9 @@ export function PRListView({
               </a>
             </div>
           </div>
+        )}
+        {activeTab === 'authored' && (
+          <NeedsYouSurface prs={visiblePRs} settings={settings} />
         )}
         {groups.length === 0 ? (
           <p className="empty-state">no open PRs found</p>
