@@ -93,6 +93,11 @@ const ALL_ON_SETTINGS: AutomationSettings = {
   notifyOnMerged: false,
   notifyOnIdle: false,
   notifyOnPingConfirmed: false,
+  allowRepos: [],
+  denyRepos: [],
+  skipDraftPRs: false,
+  includeLabels: [],
+  excludeLabels: [],
 };
 
 function makeGithubDeps(): OrchestratorDeps {
