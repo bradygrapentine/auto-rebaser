@@ -27,6 +27,8 @@ export interface PRRecord {
   /** Epoch milliseconds of the last state change. */
   lastUpdated: number;
   errorMessage?: string;
+  /** CT-1 — head SHA at which the last auto-rebase was rejected (HTTP_422). While the PR is `rebase-rejected` and head SHA is unchanged, the poll cycle suppresses re-attempting the rebase (no point spamming a doomed rebase + burning Actions minutes until the user pushes a fix). Cleared automatically once head moves or the PR leaves `rebase-rejected`. */
+  rebaseRejectedAtSha?: string;
 }
 
 export interface PRStore {

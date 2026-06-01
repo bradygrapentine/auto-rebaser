@@ -219,7 +219,8 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
     // makes it into processedPRs) will be evicted from the store by pruneStale.
     if (ignoredRepos.has(fullName)) continue;
 
-    const previousState: PRState = storeMap.get(item.id)?.state ?? 'current';
+    const prevRec = storeMap.get(item.id);
+    const previousState: PRState = prevRec?.state ?? 'current';
 
     // Fetch PR
     let pr: PullRequest;
@@ -300,7 +301,16 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
         || (staleSettings?.autoRebaseOptOutRepos ?? []).includes(fullName)
       );
 
-    if (action === 'rebase' && !rebaseSkipped) {
+    // CT-1: conflict-aware backoff. GitHub already rejected the rebase last
+    // cycle (HTTP_422 → 'rebase-rejected'); while the PR's head SHA is unchanged
+    // the rebase is still doomed, so suppress the re-attempt (no API call, no
+    // wasted Actions minutes) until the user pushes a fix (head SHA moves).
+    const rebaseBackedOff =
+      previousState === 'rebase-rejected'
+      && prevRec?.rebaseRejectedAtSha != null
+      && prevRec.rebaseRejectedAtSha === pr.head?.sha;
+
+    if (action === 'rebase' && !rebaseSkipped && !rebaseBackedOff) {
       try {
         await updateBranch(owner, repo, item.number, accountId);
         updatedCount++;
@@ -362,6 +372,12 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
           errorMessage: mapped.errorMessage,
         });
       }
+    } else if (action === 'rebase' && rebaseBackedOff) {
+      // CT-1: silent park identical to last cycle — no updateBranch, no
+      // updatedCount++, no activity entry. Re-affirm the conflict chip exactly
+      // as it was so the popup is unchanged cycle-to-cycle.
+      finalState = 'rebase-rejected';
+      errorMessage = 'Rebase rejected by GitHub'; // exact string from state-machine.ts:49
     }
 
     // Carry forward Phase-2 fields (branchDeleted, autoMergeEnabled, nodeId, …)
@@ -369,7 +385,8 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
     // Drop the prior v1 fields that this loop owns (state/lastUpdated/errorMessage).
     const carriedPhaseTwo: Partial<PRRecord & PRRecordPhaseTwo> = storeMap.get(item.id) ?? {};
     const { state: _s, lastUpdated: _u, errorMessage: _e, id: _i, number: _n,
-            title: _t, repo: _r, url: _ur, ...phaseTwoCarry } = carriedPhaseTwo;
+            title: _t, repo: _r, url: _ur, rebaseRejectedAtSha: _rrs,
+            ...phaseTwoCarry } = carriedPhaseTwo;
 
     // ── Story 5.2-A — stale-approval detection ──
     let staleApprovalPatch: Partial<PRRecord & PRRecordPhaseTwo> = {};
@@ -449,6 +466,14 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
         : {}),
       ...staleApprovalPatch,
       ...(errorMessage !== undefined ? { errorMessage } : {}),
+      // CT-1: persist the rejected SHA on BOTH rebase-rejected outcomes (fresh
+      // 422 and backed-off carry) so next cycle's backoff can engage; absent on
+      // every other outcome → field cleared (it was dropped from the carry
+      // above). Head SHA unknown → persist nothing → backoff won't engage next
+      // cycle (re-attempt once), intentional.
+      ...(finalState === 'rebase-rejected' && pr.head?.sha
+        ? { rebaseRejectedAtSha: pr.head.sha }
+        : {}),
     } as PRRecord);
   }
 
