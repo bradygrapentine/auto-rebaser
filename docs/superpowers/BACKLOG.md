@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**poll-spinner timeout leak fixed** #233 — `PRListView` setTimeout cleared on unmount; pre-existing since #146, surfaced in live-test. **Ready queue EMPTY** (Ready=0, Shipped=72). Remaining §5: flaky-e2e (unfiled, high-uncertainty); no parked rows. Next: new v1.1 scoping.)_
+_Last `/backlog-sync`: 2026-06-01 (**v1.1 "Control & Trust" scoped** — 4 Ready rows filed (CT-1…CT-4) from the `/btw` brainstorm, see `docs/roadmap.md`; **auto-poll spinner fix** #235 shipped. **Ready=4, Shipped=73.** §5: flaky-e2e (unfiled). Next: `/sprint` the CT wave.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,20 +9,43 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 0 |
+| 🟢 Ready | 4 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 72 |
+| ✅ Shipped | 73 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
-_(none — Ready queue drained 2026-05-30. Next work: §5 candidate flaky-e2e (unfiled), or new v1.1 scoping. No parked rows remain.)_
 
-## §2 In progress
+_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)). Make the automation legible + bounded. CT-1 & CT-2 both touch the poll-cycle engine → run serially (CT-2 → CT-1), NOT parallel; CT-3 & CT-4 are disjoint and parallel-safe._
+
+### CT-1 — Conflict-aware rebase backoff — Low
+**Status:** 🟢 Ready
+**Why:** After a rebase is rejected for conflicts, re-attempting on every poll cycle spams the same failing rebase and burns Actions minutes — the PR can't auto-rebase until the user resolves the conflict. CONFLICT-1 already models the `rebase-rejected` state; nothing currently suppresses the retry.
+**How:** When a PR is in `rebase-rejected`, skip auto-rebase until its head SHA changes (the only signal the user has pushed a resolution). Store the rejected head SHA on the PR record; on each cycle, only re-attempt if the live head SHA differs. Surface: `src/background/poll-cycle.ts` (automation pass), the PR-state model that carries `rebase-rejected` (CONFLICT-1, `src/core/types.ts` / pr-store), `src/background/automations/`.
+**Done when:** a `rebase-rejected` PR is not re-rebased on subsequent polls while its head SHA is unchanged; a new head SHA clears the backoff and a rebase is attempted again; unit test covers both branches.
+
+### CT-2 — CI-green gate before auto-rebase — Medium
+**Status:** 🟢 Ready
+**Why:** Auto-rebasing a PR whose CI is already red wastes Actions minutes and adds noise — a rebase won't make a failing-for-other-reasons PR mergeable. Gating on last-check-success keeps the automation from acting when it can't help.
+**How:** Before the automation pass rebases a behind PR, check the PR's last check-run/commit-status rollup; only proceed if it's success (or treat `pending`/absent per a documented rule). Surface: `src/background/poll-cycle.ts`, `src/github/` (the check-runs/status endpoint — confirm the exact field shape against a real response, capture-first), `src/background/automations/`. **File-overlap with CT-1 (both edit poll-cycle) — sequence CT-2 → CT-1.**
+**Done when:** a behind PR with a failing last check run is NOT auto-rebased; one with a green last run IS; the pending/unknown rule is documented and tested; no new permission added.
+
+### CT-3 — Per-repo allow/deny + draft/label filters — Low–Medium
+**Status:** 🟢 Ready
+**Why:** Users want to bound *where* the tool acts — opt specific repos in/out, skip drafts, or only act on PRs carrying (or lacking) a label. The most-requested control shape for any "acts on your behalf" tool; `known_repos` + per-account settings already exist to hang this on.
+**How:** Add per-account settings for a repo allow/deny list (UI over `known_repos`), a skip-drafts toggle, and an include/exclude-by-label rule; apply the filter in the automation pass and (for visibility) the popup list. Surface: `src/popup/` (settings UI + PR-list filter), `src/core/storage/multi-account.ts` (per-account settings), `src/background/poll-cycle.ts` read-side. Disjoint from CT-1/CT-2's engine edits (settings/UI-led).
+**Done when:** a denied repo / a draft / a label-excluded PR is not auto-acted on; settings persist per-account; popup reflects the filter; tests cover allow, deny, draft-skip, label include/exclude.
+
+### CT-4 — Desktop notifications on state transitions — Low–Medium
+**Status:** 🟢 Ready
+**Why:** High daily utility, low cost — "PR #123 is now mergeable", "rebase failed — conflict", "review requested". `notifications.ts` already exists; this is event-driven on real state transitions, not a scheduled push (no overnight/digest scheduling — see roadmap out-of-scope).
+**How:** On a tracked PR's state transition (→ mergeable, → rebase-rejected, new review request), fire a `chrome.notifications` message via the existing `notifications.ts`, behind a per-account opt-in toggle. Dedupe so the same transition doesn't re-notify each poll. Confirm the MV3 `notifications` permission is present/declared. Surface: `src/background/notifications.ts`, the poll-cycle transition-detection points, settings UI for the toggle. Disjoint from CT-1/CT-2/CT-3.
+**Done when:** a state transition fires exactly one notification (deduped across polls); the toggle gates it per-account; clicking a notification opens the PR; tests cover transition→notify and the dedupe.
 
 ## §2 In progress
 _(none)_
@@ -47,6 +70,7 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
 
 ### 2026-06-01 — found-bug fixes
+- **auto-poll spinner on open** The popup auto-polls on open when data is stale (`PRListView` mount effect) but that path sent `POLL_NOW` without engaging the optimistic spinner, and the real `pollInProgress` flag flips true→false too fast on a zero-PR cycle to render — so the refresh icon never animated on open (only the manual button spun). Unified both triggers through one `requestPoll()` that sets the 500ms optimistic spin + sends `POLL_NOW`; reuses the #233 unmount-cleanup ref (no new leak). Added tests: auto-polls-AND-spins-when-stale + does-not-auto-poll-when-fresh (guards the PERF-1 over-poll loop); updated the button/App tests that rendered stale data (button now correctly shows the disabled "Polling" state on open). 1027 tests, coverage clean, 0 unhandled. Surfaced in the same live-test pass as #233. — PR #235
 - **poll-spinner timeout leak** `PRListView.handlePollNow` scheduled a 500ms `setTimeout(setOptimisticPolling(false))` (optimistic spinner-hold) with no cleanup; closing the popup — or tearing down the test env — within 500ms fired setState on an unmounted component (no-op-but-wrong in prod; an intermittent `ReferenceError: window is not defined` unhandled error after vitest tore down jsdom, which it flags as a false-positive-test risk). Fix: `useRef` the timer + clear-before-reschedule + `useEffect` unmount cleanup. Pre-existing since #146 (optimistic spinner), not a recent regression; intermittent (timer-vs-teardown race) so a narrow passed/failed grep missed it. RED-verified fake-timer test (fails `expected 1 to be +0` without the fix); 1025 tests, `test:coverage` x2 clean (0 unhandled markers). Surfaced by a user screenshot during the DOC-1/COVERAGE-1 live-test pass. — PR #233
 
 ### 2026-05-28/29 — self-hosted CI hardening + PR-state stale-chip fixes
