@@ -111,6 +111,21 @@ export interface AutomationSettings {
   notifyOnMerged: boolean;
   notifyOnIdle: boolean;
   notifyOnPingConfirmed: boolean;
+
+  // ── CT-3 — global auto-action filter (bound WHERE automations act) ──
+  // Per-account (NOT in GLOBAL_KEYS). A PR matching the filter is shown in the
+  // popup with a `[filtered]` chip but no automation acts on it. All-empty +
+  // skipDraftPRs:false ⇒ no filtering (defaults preserve current behavior).
+  /** Allow-list of `owner/repo`. Empty ⇒ all repos eligible; non-empty ⇒ allowlist mode (only these act). */
+  allowRepos: string[];
+  /** Deny-list of `owner/repo`. Always subtracts; wins over allow. */
+  denyRepos: string[];
+  /** When true, draft PRs are filtered out (shown, not acted on). */
+  skipDraftPRs: boolean;
+  /** When non-empty, a PR must carry ≥1 of these labels (case-insensitive) to be acted on. */
+  includeLabels: string[];
+  /** A PR carrying any of these labels (case-insensitive) is filtered out. */
+  excludeLabels: string[];
 }
 
 export type StaleThresholdDays = 3 | 7 | 14 | 30 | 60;
@@ -148,6 +163,12 @@ export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
   notifyOnMerged: false,
   notifyOnIdle: false,
   notifyOnPingConfirmed: false,
+  // CT-3 — defaults preserve current behavior (no filtering).
+  allowRepos: [],
+  denyRepos: [],
+  skipDraftPRs: false,
+  includeLabels: [],
+  excludeLabels: [],
 };
 
 export type PhaseTwoPRState =

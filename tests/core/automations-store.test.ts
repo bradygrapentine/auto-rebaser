@@ -125,6 +125,11 @@ describe('automations-store', () => {
       notifyOnMerged: false,
       notifyOnIdle: false,
       notifyOnPingConfirmed: false,
+      allowRepos: [],
+      denyRepos: [],
+      skipDraftPRs: false,
+      includeLabels: [],
+      excludeLabels: [],
     };
     chrome.storage.sync.get = vi
       .fn()
