@@ -160,16 +160,11 @@ describe('poll-cycle — CT-3 auto-action filter (Seam 1: rebase)', () => {
     expect(updateBranch).toHaveBeenCalled();
   });
 
-  it('skip-drafts: a draft behind PR is NOT rebased, stays in store', async () => {
-    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR('org/repo', 'behind', { draft: true }));
-    setSettings(settings({ skipDraftPRs: true }));
-    await runPollCycle();
-    expect(updateBranch).not.toHaveBeenCalled();
-    // Draft PRs derive a GitHub-side 'draft' state (not 'behind'); the point is
-    // the gate suppressed the rebase yet the PR remains visible in the store.
-    expect(upserted()).toHaveLength(1);
-    expect(upserted()[0]).toMatchObject({ id: 1 });
-  });
+  // NOTE: skip-drafts is NOT exercised at Seam 1. A draft PR derives
+  // `action:'none'` (deriveStateFromMergeable short-circuits on isDraft before
+  // the rebase path), so `updateBranch` is never called regardless of
+  // `skipDraftPRs` — a Seam-1 draft assertion is tautological. The real
+  // skip-drafts enforcement is at Seam 2 (candidate exclusion), covered below.
 
   it('exclude-label: a behind PR carrying an excluded label is NOT rebased', async () => {
     (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -221,5 +216,108 @@ describe('poll-cycle — CT-3 auto-action filter (Seam 2: automations candidates
     const ids = candidateIds();
     expect(ids).toContain(1);
     expect(ids).toContain(2);
+  });
+
+  // The seam evaluates the filter on the PERSISTED record (pr.isDraft /
+  // pr.labels), not the live PR — so these clean PRs WOULD be valid candidates
+  // (delete-branch / auto-merge act on non-behind PRs); the gate is the only
+  // thing that drops them. Each test keeps a second, unsuppressed PR to prove
+  // the filter is selective, not a blanket drop.
+
+  it('skip-drafts: a persisted-draft PR is excluded from the candidate list', async () => {
+    setSearch(item(1, 'org/draft'), item(2, 'org/ready'));
+    (getPR as ReturnType<typeof vi.fn>).mockImplementation((_o: string, repo: string) =>
+      Promise.resolve(
+        repo === 'draft'
+          ? makePR('org/draft', 'clean', { id: 1, draft: true })
+          : makePR('org/ready', 'clean', { id: 2, draft: false }),
+      ),
+    );
+    setSettings(settings({ skipDraftPRs: true }));
+    await runPollCycle();
+    const ids = candidateIds();
+    expect(ids).toContain(2);
+    expect(ids).not.toContain(1);
+  });
+
+  it('exclude-label: a PR carrying an excluded label is excluded from candidates', async () => {
+    setSearch(item(1, 'org/blocked'), item(2, 'org/clean'));
+    (getPR as ReturnType<typeof vi.fn>).mockImplementation((_o: string, repo: string) =>
+      Promise.resolve(
+        repo === 'blocked'
+          ? makePR('org/blocked', 'clean', { id: 1, labels: [{ name: 'do-not-merge' }] })
+          : makePR('org/clean', 'clean', { id: 2, labels: [{ name: 'ready' }] }),
+      ),
+    );
+    setSettings(settings({ excludeLabels: ['do-not-merge'] }));
+    await runPollCycle();
+    const ids = candidateIds();
+    expect(ids).toContain(2);
+    expect(ids).not.toContain(1);
+  });
+
+  it('include-label MISS: a PR lacking every required label is excluded', async () => {
+    setSearch(item(1, 'org/tagged'), item(2, 'org/untagged'));
+    (getPR as ReturnType<typeof vi.fn>).mockImplementation((_o: string, repo: string) =>
+      Promise.resolve(
+        repo === 'tagged'
+          ? makePR('org/tagged', 'clean', { id: 1, labels: [{ name: 'automate' }] })
+          : makePR('org/untagged', 'clean', { id: 2, labels: [{ name: 'other' }] }),
+      ),
+    );
+    setSettings(settings({ includeLabels: ['automate'] }));
+    await runPollCycle();
+    const ids = candidateIds();
+    expect(ids).toContain(1);
+    expect(ids).not.toContain(2);
+  });
+});
+
+describe('poll-cycle — CT-3 gate interaction matrix', () => {
+  it('CT-3-suppressed behind PR short-circuits the CI rollup AND the rebase', async () => {
+    // A denied behind PR: the filter verdict suppresses the rebase, which must
+    // skip BOTH the updateBranch call (Seam 1) and the upstream CT-2 CI-rollup
+    // fetch — the rollup is read ONLY for a PR we're actually about to rebase
+    // (poll-cycle.ts:336 guards on !rebaseSkipped), so suppression saves the
+    // GraphQL round-trip, not just the rebase.
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR('org/repo', 'behind'));
+    setSettings(settings({ denyRepos: ['org/repo'] }));
+    await runPollCycle();
+    expect(updateBranch).not.toHaveBeenCalled();
+    expect(getPRStatusRollup).not.toHaveBeenCalled();
+    expect(upserted()[0].state).toBe('behind');
+  });
+
+  it('denyRepos + prior rebase-rejected@same-SHA: backoff still parks the chip', async () => {
+    // Both gates fire at once: the CT-3 deny suppresses the rebase AND the CT-1
+    // conflict-backoff is engaged (prior 'rebase-rejected' at the unchanged head
+    // SHA). updateBranch and the CI rollup are both skipped, yet the backed-off
+    // branch (poll-cycle.ts:411) re-affirms 'rebase-rejected' and RE-PERSISTS
+    // rebaseRejectedAtSha so next cycle's backoff stays engaged.
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR('org/repo', 'behind', { headSha: 'abc' }),
+    );
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue({
+      prs: [
+        {
+          id: 1,
+          number: 1,
+          title: 'PR 1',
+          repo: 'org/repo',
+          url: 'https://github.com/org/repo/pull/1',
+          state: 'rebase-rejected',
+          lastUpdated: 0,
+          rebaseRejectedAtSha: 'abc',
+        },
+      ],
+      lastPollAt: null,
+    });
+    setSettings(settings({ denyRepos: ['org/repo'] }));
+    await runPollCycle();
+    expect(updateBranch).not.toHaveBeenCalled();
+    expect(getPRStatusRollup).not.toHaveBeenCalled();
+    const rec = upserted()[0] as { state: string; rebaseRejectedAtSha?: string };
+    expect(rec.state).toBe('rebase-rejected');
+    expect(rec.rebaseRejectedAtSha).toBe('abc');
   });
 });
