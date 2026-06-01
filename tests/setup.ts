@@ -85,5 +85,10 @@ afterEach(() => {
     writable: true,
     configurable: true,
   });
+  // vitest 4: `restoreAllMocks` now ONLY restores `vi.spyOn` spies and no longer
+  // resets plain `vi.fn()` mock call history (a breaking change from v3). Clear
+  // all mocks too so module-level `vi.fn()` mocks (e.g. the `request` mock in
+  // endpoints.test.ts) don't accumulate calls across tests in the same file.
+  vi.clearAllMocks();
   vi.restoreAllMocks();
 });
