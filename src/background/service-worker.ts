@@ -1,10 +1,13 @@
 import { setupAlarm } from './alarm';
 import { runPollCycle } from './poll-cycle';
 import { registerMessageListener } from './messages';
+import { registerNotificationClickListener } from './notifications';
 import { ALARM_NAME } from '../core/constants';
 import { runMigrationIfNeeded } from '../core/storage/migration';
 
 registerMessageListener();
+// CT-4 — top-level so a notification click wakes the SW and opens the PR.
+registerNotificationClickListener();
 
 async function bootCycle() {
   await runMigrationIfNeeded();

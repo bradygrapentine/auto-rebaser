@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { notify, hasNotificationsPermission, THROTTLE_MS } from '../../src/background/notifications';
+import {
+  notify,
+  hasNotificationsPermission,
+  THROTTLE_MS,
+  handleNotificationClick,
+  CLICK_TARGETS_KEY,
+  CLICK_TARGETS_MAX,
+} from '../../src/background/notifications';
 import type { AutomationSettings } from '../../src/core/automations-types';
 import { STORAGE_KEYS_V2 } from '../../src/core/storage/multi-account';
 
@@ -165,5 +172,72 @@ describe('notify', () => {
     await notify(payload({ event: 'idle', prNumber: 3 }), NOTIF_SETTINGS);
     await notify(payload({ event: 'ping-confirmed', prNumber: 4 }), NOTIF_SETTINGS);
     expect(titles).toEqual(['Rebase conflict', 'PR merged', 'PR idle', 'Reviewer pinged']);
+  });
+});
+
+// CT-4 (re-scoped) — clicking a notification opens the PR.
+describe('notification click-to-open', () => {
+  // Yield deterministic ids from create (the global stub passes none).
+  function createYields(ids: string[]) {
+    let i = 0;
+    (chrome.notifications.create as ReturnType<typeof vi.fn>).mockImplementation(
+      (_opts: unknown, cb: (id: string) => void) => cb(ids[i++] ?? `nid_${i}`),
+    );
+  }
+
+  beforeEach(() => {
+    createYields(['nid_1']);
+    chrome.tabs.create = vi.fn() as unknown as typeof chrome.tabs.create;
+    chrome.notifications.clear = vi.fn() as unknown as typeof chrome.notifications.clear;
+  });
+
+  const clickMap = () =>
+    (local.data[CLICK_TARGETS_KEY] as Record<string, string> | undefined) ?? {};
+
+  it('captures the id and persists the click target when url is set', async () => {
+    await notify(payload({ url: 'https://github.com/org/repo/pull/42' }), NOTIF_SETTINGS, 1_000_000);
+    expect(clickMap()).toEqual({ nid_1: 'https://github.com/org/repo/pull/42' });
+  });
+
+  it('stores NO click target when url is absent (still fires)', async () => {
+    const fired = await notify(payload(), NOTIF_SETTINGS, 1_000_000);
+    expect(fired).toBe(true);
+    expect(clickMap()).toEqual({});
+  });
+
+  it('click opens the PR, clears the notification, and removes the entry', async () => {
+    local.data[CLICK_TARGETS_KEY] = { nid_1: 'https://github.com/org/repo/pull/42' };
+    await handleNotificationClick('nid_1');
+    expect(chrome.tabs.create).toHaveBeenCalledWith({ url: 'https://github.com/org/repo/pull/42' });
+    expect(chrome.notifications.clear).toHaveBeenCalledWith('nid_1');
+    expect(clickMap()).toEqual({});
+  });
+
+  it('click on an unknown id is a no-op (no tab, no throw)', async () => {
+    local.data[CLICK_TARGETS_KEY] = { nid_1: 'https://github.com/org/repo/pull/42' };
+    await expect(handleNotificationClick('unknown')).resolves.toBeUndefined();
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+    expect(clickMap()).toEqual({ nid_1: 'https://github.com/org/repo/pull/42' });
+  });
+
+  it('bounds the click-target map to the most-recent CLICK_TARGETS_MAX', async () => {
+    const n = CLICK_TARGETS_MAX + 5;
+    createYields(Array.from({ length: n }, (_, i) => `nid_${i}`));
+    for (let i = 0; i < n; i++) {
+      // distinct prNumber so the per-(PR,event) throttle never suppresses a fire
+      await notify(payload({ prNumber: i, url: `https://github.com/org/repo/pull/${i}` }), NOTIF_SETTINGS, 1_000_000 + i);
+    }
+    const map = clickMap();
+    expect(Object.keys(map).length).toBe(CLICK_TARGETS_MAX);
+    // newest survives, oldest dropped
+    expect(map[`nid_${n - 1}`]).toBe(`https://github.com/org/repo/pull/${n - 1}`);
+    expect(map.nid_0).toBeUndefined();
+  });
+
+  it('a click-target persist failure is swallowed (notification still fires)', async () => {
+    (local.set as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('storage boom'));
+    const fired = await notify(payload({ url: 'https://github.com/org/repo/pull/42' }), NOTIF_SETTINGS, 1_000_000);
+    expect(fired).toBe(true);
+    expect(chrome.notifications.create).toHaveBeenCalledOnce();
   });
 });

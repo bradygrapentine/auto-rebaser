@@ -1116,7 +1116,7 @@ async function runAutomationsPass(
         else if (e.action === 'auto_merged_now' && e.result === 'success') event = 'merged';
         if (!event) continue;
         await notify(
-          { event, repo: e.repo, prNumber: e.prNumber, prTitle: e.prTitle },
+          { event, repo: e.repo, prNumber: e.prNumber, prTitle: e.prTitle, url: e.prUrl },
           settings,
         );
       }
@@ -1124,7 +1124,7 @@ async function runAutomationsPass(
         const pr = prMap.get(id);
         if (!pr) continue;
         await notify(
-          { event: 'idle', repo: pr.repo, prNumber: pr.number, prTitle: pr.title },
+          { event: 'idle', repo: pr.repo, prNumber: pr.number, prTitle: pr.title, url: pr.url },
           settings,
         );
       }
