@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**v1.2 "PR command center" shipped** — TRIAGE-1 needs-you surface #257, TRIAGE-2 CI-failure reason #258, T0 base #256, post-wave hardening #259; integrated main 1146 suite green, coverage exit 0. **Ready=1** — SPIKE-1 (investigate the 5 §4-blocked features). **Blocked=5** gated on SPIKE-1. **Shipped=82.** §5: TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c + 11 audit nits, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (**SPIKE-1 shipped** — deferred-feature triage verdict doc `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`; cleared the §4 queue: PREVIEW-1 + DIGEST-1 → **build** (§1 Ready), OPS-5 defer / REVIEWER-3 + REVIEWER-4 drop → 🧊. **Ready=2** (PREVIEW-1, DIGEST-1). **Blocked=0.** **Shipped=83.** §5: TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c + 11 audit nits, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,25 +9,33 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 1 |
+| 🟢 Ready | 2 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
-| 🚧 Blocked | 5 |
+| 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 82 |
-| 🧊 Deferred / dropped | 3 |
+| ✅ Shipped | 83 |
+| 🧊 Deferred / dropped | 6 |
 
 ---
 
 ## §1 Ready
 
-_v1.2 "PR command center" direction. TRIAGE-1/TRIAGE-2 shipped (#256–#259, see §7). SPIKE-1 remains — it gates the 5 lower-confidence ideas in §4._
+_v1.2 "PR command center" direction. TRIAGE-1/TRIAGE-2 shipped (#256–#259, see §7). SPIKE-1 shipped (verdict doc `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`) → these two `build` verdicts promoted; OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
 
-### SPIKE-1 — Investigate the 5 deferred v1.2 features (utility vs cost)
+### PREVIEW-1 — Dry-run / preview mode for automations
 **Status:** 🟢 Ready
-**Why:** PREVIEW-1, DIGEST-1, OPS-5, REVIEWER-3, REVIEWER-4 each carry real but uncertain value-vs-effort (per the 2026-06-01 feature assessment). Don't plan/build them blind — investigate each for utility vs cost first.
-**How:** Read-only investigation. For each of the 5: confirm client-side feasibility (no-backend constraint), estimate effort against the current orchestrator/popup architecture, identify redundancy with shipped features, rate value × risk. Output a short decision doc (`docs/decisions/`) with a build / defer / drop verdict per feature.
-**Done when:** a written per-feature verdict exists; each of the 5 §4 rows gets a build/defer/drop recommendation and is unblocked (→ Ready or → 🧊 Deferred) accordingly.
+**Verdict source:** SPIKE-1 → **build** (`docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`).
+**Why:** Highest indirect value of the assessed five — a "show what would happen without acting" dry-run is the trust unlock that lets cautious users enable the already-built aggressive automations (direct-merge, auto-delete-branch). Read-only by definition (no blast).
+**How:** `orchestrator.ts:87 runAllAutomations()` interleaves decision + execution inline across all four automation blocks — there's no separable predicate today. PREVIEW-1 needs a **prep refactor** factoring each automation's decision out of its execution so preview and execution share one predicate, THEN an explain-only render of projected actions. Size as its own multi-track sprint (refactor track first), not a single PR. The decision/execution split is also reusable test scaffolding.
+**Done when:** each automation's decision predicate is callable independently of execution; the orchestrator runs in explain-only mode; the popup renders projected actions; no GitHub mutation fires in preview.
+
+### DIGEST-1 — Activity history / weekly digest view
+**Status:** 🟢 Ready
+**Verdict source:** SPIKE-1 → **build** (lower priority than PREVIEW-1).
+**Why:** Cheap visibility/retention win — makes invisible work visible ("saved you N manual rebases this week"). Changes no outcomes (visibility-only); the only risk is popup feature-bloat, mitigated by the low surface cost.
+**How:** Aggregation pass over the **existing** activity-log data — `activity-log-types.ts:18 ActivityEntry {action,result,ts,prTitle}`, 200-entry/30-day store, `activity-log.ts:106 loadActivityAll()` — grouped by action/result over a time window, plus one popup view mirroring existing view/component patterns. No new types, endpoint, or permission.
+**Done when:** a digest view aggregates the activity log over a window (e.g. 7 days) and renders per-action counts in the popup; reuses existing storage (no new persisted field).
 
 ## §2 In progress
 _(none)_
@@ -36,39 +44,7 @@ _(none)_
 _(none)_
 
 ## §4 Blocked
-
-_All five gated on **SPIKE-1** (utility-vs-cost investigation). Each carries the assessment's preliminary read; the spike confirms build / defer / drop before any planning._
-
-### PREVIEW-1 — Dry-run / preview mode for automations
-**Status:** 🚧 Blocked
-**Blocked by:** SPIKE-1
-**Why:** "Show what would happen without acting" is the trust unlock that lets cautious users enable the aggressive automations already built (direct-merge, auto-delete-branch). But it needs a decision/execution split in the orchestrator (so preview and execution share one predicate) — a real refactor, not just UI. Highest indirect value of the five; spike the refactor cost.
-**How (sketch):** Factor each automation's decision from its execution; run the orchestrator in explain-only mode; render projected actions. Read-only.
-**Done when:** (post-spike — scope set by SPIKE-1 verdict).
-
-### DIGEST-1 — Activity history / weekly digest view
-**Status:** 🚧 Blocked
-**Blocked by:** SPIKE-1
-**Why:** Makes invisible work visible ("saved you N manual rebases this week") — trust/retention lever; the activity-log data already exists, so it's mostly aggregate + UI. But it changes no outcomes (visibility-only) — confirm it's worth the popup surface vs feature-bloat risk.
-**Done when:** (post-spike).
-
-### OPS-5 — Quiet hours / rate-aware polling
-**Status:** 🚧 Blocked
-**Blocked by:** SPIKE-1
-**Why:** Respects per-token GitHub rate limits (multi-account multiplies pressure) and trims off-hours noise. But the poll interval is already user-configurable and quiet-hours brings timezone edge cases — marginal visible value. Spike to confirm the rate-limit pain is real before building.
-**Done when:** (post-spike).
-
-### REVIEWER-3 — Auto-request reviewers from CODEOWNERS
-**Status:** 🚧 Blocked
-**Blocked by:** SPIKE-1
-**Why:** Removes a manual step, but **writes to GitHub on the user's behalf** (social blast if mis-fired), needs a real CODEOWNERS glob/team/precedence parser, and is **often redundant** with branch-protection's own CODEOWNERS auto-request. Spike to confirm net-new value before committing to the parser + write path.
-**Done when:** (post-spike).
-
-### REVIEWER-4 — Nudge-stale-PR comment
-**Status:** 🚧 Blocked
-**Blocked by:** SPIKE-1
-**Why:** Auto public "bump" comments read as spam (high social blast), and reviewer-ping already covers "this is stale" with less cost. The assessment recommends *not* building it; spike confirms drop vs a lower-blast variant (e.g. a local-only nudge reminder).
-**Done when:** (post-spike).
+_(none — SPIKE-1 cleared the queue: PREVIEW-1/DIGEST-1 → §1 Ready, OPS-5/REVIEWER-3/REVIEWER-4 → 🧊. See `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`.)_
 
 ## §5 Future / unscoped
 _Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
@@ -97,6 +73,10 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — SPIKE-1 (deferred-feature triage)
+_Read-only investigation spike (baseline `/sprint`: judge-free single-pass plan, 1 opus-on-opus cycle — 0 must-fix, 3 should-fix applied pre-gate). Verdict doc: `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`._
+- **SPIKE-1** Investigate the 5 §4-blocked v1.2 features for utility vs cost. Four-axis method (client-side feasibility / effort vs current architecture / redundancy / value×risk), every codebase claim file:line-cited. Verdicts: **PREVIEW-1 → build** (L; needs a decision/execution-split refactor first — `orchestrator.ts:87` interleaves decide+execute), **DIGEST-1 → build** (S–M; activity-log data already exists), **OPS-5 → defer** (narrow to rate-aware backoff, drop quiet-hours; no proactive `X-RateLimit` read exists today), **REVIEWER-3 → drop** (redundant w/ branch-protection code-owner auto-request; parser cost + write-blast), **REVIEWER-4 → drop** (redundant w/ shipped Story 5.1 ping at higher social blast). Net: 2 build → §1 Ready, 1 defer + 2 drop → 🧊. Cleared the entire §4 Blocked queue. PR _(this branch)_. Plan: `docs/plans/2026-06-01-spike-1-deferred-feature-verdicts.md`
 
 ### 2026-06-01 — v1.2 "PR command center" (TRIAGE pair)
 _Scoped from the 2026-06-01 feature assessment. Planned via judge-panel `--ultraplan` (integration-first angle won — it grew the 2-row chunk into a 3-track wave: a tiny shared **T0 base** lets T1/T2 be strictly file-disjoint with zero inter-rebase), 1 opus-on-opus cycle (0 must-fix, 3 should-fix applied pre-gate), then a post-wave a11y/robust/test-quality review (0 must-fix)._
@@ -233,6 +213,9 @@ OWASP review (`docs/security/2026-05-14-owasp-review.md`) flagged 8 SEC items. T
 - **2.9** Auto-Dismiss Stale PR Notifications — **dropped** in PR #46. The required `notifications` PAT scope is unavailable to GitHub Apps, so the automation could only run on the legacy PAT path. Not worth maintaining.
 - **5.2 (surfacing-only flavor)** push-since-approval — **dropped**. GitHub branch protection ("Dismiss stale approvals on new commits") covers gating when admins opt in; surfacing-only didn't carry its weight against the existing native option. The **actionable** flavor (5.2-A) is alive in §1 — it's a different feature (idempotent reviewer re-request), so the §🧊 entry here only records the death of the surfacing-only form.
 - **5.3** flaky-CI auto-retry — **deferred**. Supporting infrastructure (pattern editor, activity log entries, GitHub App permission bump for Checks: Write + Actions: Write) is sized for a headline release. Revisit if/when flaky-CI becomes an explicit Pro-tier anchor.
+- **OPS-5** Quiet hours / rate-aware polling — **deferred (narrowed)** by SPIKE-1 (`docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`). Quiet-hours **dropped** (redundant with the already user-configurable poll interval, Story 1.5; not worth the timezone/DST edge cases). The only part worth a future build is a **rate-aware backoff** — there's currently NO proactive `X-RateLimit-Remaining` read (`src/github` only throws reactive `RATE_LIMITED` on 429/403), so it's net-new; promote only on a real multi-account throttling report.
+- **REVIEWER-3** Auto-request reviewers from CODEOWNERS — **dropped** by SPIKE-1. The write path is free (`reviews.ts:86 requestReviewers()`) but the net-new CODEOWNERS glob/team/precedence parser cost + a GitHub-write social-blast risk are not justified: branch-protection's "Require review from Code Owners" already auto-requests code owners for exactly the repos that maintain a CODEOWNERS file (high redundancy; only the narrow CODEOWNERS-without-the-rule case is net-new).
+- **REVIEWER-4** Nudge-stale-PR comment — **dropped** by SPIKE-1. Redundant with the shipped Story 5.1 reviewer-ping (`ping-throttle.ts`, @-mentions `requested_reviewers`) at strictly higher cost — an auto public bump comment is the highest social-blast of the assessed five. If ever wanted, a *local-only* popup nudge reminder (no GitHub write) is a fresh, separately-scoped idea, not this row.
 
 ---
 
