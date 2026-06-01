@@ -184,6 +184,14 @@ export interface PRRecordPhaseTwo {
    *  Track 3 always-sets this (never carried stale). Optional: absent on v1
    *  records and pre-CT-3 records. */
   labels?: Array<{ name: string }>;
+  /** TRIAGE-2 — bounded (≤5), name-only summary of the failing CI checks on the
+   *  PR's last commit, captured from `statusCheckRollup.contexts`. Mirrors the
+   *  CT-3 `labels` discipline: ALWAYS current-poll-authoritative (never
+   *  stale-carried), `{ name, url }` only. `url` is the raw GitHub
+   *  `detailsUrl`/`targetUrl` — UNVALIDATED at the type level; the renderer MUST
+   *  pass it through `isSafeExternalUrl` before using it as an href. Absent on
+   *  records whose rollup is not FAILURE/ERROR or has no contexts detail. */
+  ciFailures?: Array<{ name: string; url: string | null }>;
   /** True after Story 2.6 successfully deletes the head branch. */
   branchDeleted?: boolean;
   /** True after Story 2.7 successfully enables auto-merge on this PR. */
