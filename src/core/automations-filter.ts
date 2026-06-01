@@ -17,7 +17,7 @@ export interface FilterVerdict {
   reason: FilterReason | null;
 }
 
-type FilterSettings = Pick<
+export type FilterSettings = Pick<
   AutomationSettings,
   'allowRepos' | 'denyRepos' | 'skipDraftPRs' | 'includeLabels' | 'excludeLabels'
 >;
@@ -63,4 +63,33 @@ export function evaluateAutoActionFilter(
   }
 
   return NOT_SUPPRESSED;
+}
+
+/**
+ * PREVIEW-1 (T1) — the candidate-selection seam. A verbatim lift of the inline
+ * `automationCandidates` filter that lived in `poll-cycle.ts` (suspended-owner
+ * drop + `evaluateAutoActionFilter` suppression), extracted so BOTH the poll
+ * cycle and the preview gatherer select the SAME automation-candidate set from a
+ * `processedPRs` list — a single shared definition the two paths cannot drift
+ * apart on. Behavior-preserving: adds nothing, only relocates the predicate.
+ *
+ * Ignored-repo filtering is applied by callers BEFORE this helper (poll-cycle's
+ * per-PR `continue`; the preview gather's explicit pre-filter), so the input
+ * `processedPRs` already excludes ignored repos. Generic over the PR shape to
+ * avoid coupling to PRRecord; reads only `repo`/`isDraft`/`labels`.
+ */
+export function selectAutomationCandidates<
+  T extends { repo: string; isDraft?: boolean; labels?: Array<{ name: string }> },
+>(
+  processedPRs: T[],
+  ctx: { suspendedOwnerSet: Set<string>; settings: FilterSettings },
+): T[] {
+  return processedPRs.filter((pr) => {
+    const [owner] = pr.repo.split('/');
+    if (ctx.suspendedOwnerSet.has(owner.toLowerCase())) return false;
+    return !evaluateAutoActionFilter(
+      { repo: pr.repo, draft: pr.isDraft, labels: pr.labels },
+      ctx.settings,
+    ).suppressed;
+  });
 }

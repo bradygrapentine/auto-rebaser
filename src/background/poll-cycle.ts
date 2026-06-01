@@ -1,7 +1,7 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
 import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../core/automations-types';
-import { evaluateAutoActionFilter } from '../core/automations-filter';
+import { evaluateAutoActionFilter, selectAutomationCandidates } from '../core/automations-filter';
 import { computeIdleDays, resolveThreshold } from '../core/staleness';
 import { getAuth, setInstallations } from '../core/auth-store';
 import { AccountScope } from '../core/account-scope';
@@ -659,18 +659,14 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
   }
 
   // Step 4.5: phase-2 automations (best-effort; never blocks the next poll)
-  // Story 4.5 — suspended-installation PRs display but never write. Filter
-  // them out before the orchestrator runs.
-  const automationCandidates = processedPRs.filter((pr: PRRecord & Partial<PRRecordPhaseTwo>) => {
-    const [owner] = pr.repo.split('/');
-    if (suspendedOwnerSet.has(owner.toLowerCase())) return false;
-    // CT-3 Seam 2: exclude PRs the global filter suppresses, computed from the
-    // PERSISTED record (the Phase-2 source of truth) so the orchestrator sees
-    // exactly what the store carries. Fail open via DEFAULT_AUTOMATION_SETTINGS.
-    return !evaluateAutoActionFilter(
-      { repo: pr.repo, draft: pr.isDraft, labels: pr.labels },
-      staleSettings ?? DEFAULT_AUTOMATION_SETTINGS,
-    ).suppressed;
+  // Story 4.5 — suspended-installation PRs display but never write; CT-3 Seam 2 —
+  // exclude PRs the global filter suppresses (from the PERSISTED record, fail-open
+  // via DEFAULT_AUTOMATION_SETTINGS). Both now live in the shared
+  // `selectAutomationCandidates` seam (PREVIEW-1 T1) so preview selects the SAME
+  // set. Byte-identical to the prior inline filter.
+  const automationCandidates = selectAutomationCandidates(processedPRs, {
+    suspendedOwnerSet,
+    settings: staleSettings ?? DEFAULT_AUTOMATION_SETTINGS,
   });
   // Story 2.4 — newly-idle PR ids: had no staleness on the previous cycle and
   // do on this one. Used by the notification dispatch in runAutomationsPass.
