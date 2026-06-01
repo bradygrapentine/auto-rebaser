@@ -26,9 +26,18 @@ export interface NotifPayload {
   prTitle: string;
   /** Optional override for the notification body. Falls back to a default per event. */
   message?: string;
+  /** CT-4 — PR URL opened when the notification is clicked. When absent the
+   *  notification still fires but is not clickable (graceful no-op). */
+  url?: string;
 }
 
 export const THROTTLE_MS = 60 * 60 * 1000; // 1 hour
+
+/** CT-4 — global (NOT account-scoped) chrome.storage.local map of
+ *  chrome-generated notificationId → PR URL, consumed by the onClicked handler.
+ *  Bounded to CLICK_TARGETS_MAX most-recent entries; entries are removed on click. */
+export const CLICK_TARGETS_KEY = 'notif_click_targets';
+export const CLICK_TARGETS_MAX = 50;
 
 const TITLES: Record<NotifEvent, string> = {
   rebased: 'PR rebased',
@@ -120,8 +129,9 @@ export async function notify(
   const last = throttle[key];
   if (typeof last === 'number' && now - last < THROTTLE_MS) return false;
 
+  let notifId: string | undefined;
   try {
-    await new Promise<void>((resolve) => {
+    notifId = await new Promise<string | undefined>((resolve) => {
       chrome.notifications.create(
         {
           type: 'basic',
@@ -129,11 +139,22 @@ export async function notify(
           title: TITLES[payload.event],
           message: payload.message ?? defaultMessage(payload),
         },
-        () => resolve(),
+        (id) => resolve(id),
       );
     });
   } catch {
     return false;
+  }
+
+  // CT-4 — record the notificationId → PR-URL mapping so the onClicked handler
+  // can open the PR. Best-effort and only when we have both an id and a url; a
+  // failure must NOT change the return or block (notifications stay best-effort).
+  if (notifId && payload.url) {
+    try {
+      await persistClickTarget(notifId, payload.url);
+    } catch {
+      // swallow — at worst this one notification isn't clickable.
+    }
   }
 
   // Best-effort throttle write — drop entries older than the throttle window
@@ -150,4 +171,53 @@ export async function notify(
     // stored before — at worst the user gets one extra notification.
   }
   return true;
+}
+
+// ── CT-4 — notification click-to-open ───────────────────────────────────────
+
+async function readClickTargets(): Promise<Record<string, string>> {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local?.get) return {};
+  const snap = await chrome.storage.local.get(CLICK_TARGETS_KEY);
+  const map = snap?.[CLICK_TARGETS_KEY];
+  return map && typeof map === 'object' ? (map as Record<string, string>) : {};
+}
+
+/** Persist `id → url`, bounded to the most-recent CLICK_TARGETS_MAX entries.
+ *  chrome-generated ids are unique, so each call appends a fresh key → object
+ *  insertion order is fire order; slicing the last N drops the oldest. */
+async function persistClickTarget(id: string, url: string): Promise<void> {
+  const current = await readClickTargets();
+  const merged = { ...current, [id]: url };
+  const entries = Object.entries(merged);
+  const bounded =
+    entries.length > CLICK_TARGETS_MAX
+      ? Object.fromEntries(entries.slice(entries.length - CLICK_TARGETS_MAX))
+      : merged;
+  await chrome.storage.local.set({ [CLICK_TARGETS_KEY]: bounded });
+}
+
+/**
+ * Open the PR for a clicked notification. Looks up the stored URL, opens it in a
+ * new tab, clears the notification, and removes the entry. Best-effort: a missing
+ * entry (urlless/pre-ship notification), missing API, or failure is a silent no-op.
+ */
+export async function handleNotificationClick(notificationId: string): Promise<void> {
+  try {
+    const targets = await readClickTargets();
+    const url = targets[notificationId];
+    if (!url) return;
+    chrome.tabs?.create?.({ url });
+    chrome.notifications?.clear?.(notificationId);
+    const { [notificationId]: _gone, ...rest } = targets;
+    await chrome.storage.local.set({ [CLICK_TARGETS_KEY]: rest });
+  } catch {
+    // best-effort — clicking a notification must never throw into the SW.
+  }
+}
+
+/** Register the onClicked listener. Call at the top level of the service worker
+ *  so the click event wakes the SW and is handled after MV3 eviction. */
+export function registerNotificationClickListener(): void {
+  if (typeof chrome === 'undefined' || !chrome.notifications?.onClicked) return;
+  chrome.notifications.onClicked.addListener((id) => void handleNotificationClick(id));
 }
