@@ -217,6 +217,9 @@ describe('PRRow', () => {
     render(<PRRow pr={pr as PRRecord} />);
     expect(screen.getByTestId('ci-failure-chip')).toBeInTheDocument();
     expect(screen.queryByTestId('ci-failure-link')).not.toBeInTheDocument();
+    // Degrading to plain text must still SHOW the check name (a regression that
+    // dropped the name on the non-https branch would otherwise pass green).
+    expect(screen.getByTestId('ci-failure-chip').textContent).toContain('build');
   });
 
   it('caps rendered names at 2 + N more', () => {
