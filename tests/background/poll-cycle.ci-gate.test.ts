@@ -19,6 +19,7 @@ vi.mock('../../src/github/endpoints', () => ({
 }));
 vi.mock('../../src/github/endpoints/status-check-rollup', () => ({
   getPRStatusRollup: vi.fn(),
+  getPRStatusRollupDetail: vi.fn(),
 }));
 vi.mock('../../src/github/endpoints/repos', () => ({
   getRepo: vi.fn(),
@@ -57,7 +58,7 @@ vi.mock('../../src/core/activity-log', () => ({
 
 import { runPollCycle } from '../../src/background/poll-cycle';
 import { searchAuthoredPRs, getPR, updateBranch } from '../../src/github/endpoints';
-import { getPRStatusRollup } from '../../src/github/endpoints/status-check-rollup';
+import { getPRStatusRollupDetail } from '../../src/github/endpoints/status-check-rollup';
 import { loadStore, upsertPRs } from '../../src/core/pr-store';
 import { getAutomationSettings } from '../../src/core/automations-store';
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/core/automations-types';
@@ -88,8 +89,10 @@ function makePR(mergeable_state: PullRequest['mergeable_state'], headSha = 'abc'
   } as PullRequest;
 }
 
-const setRollup = (v: unknown) =>
-  (getPRStatusRollup as ReturnType<typeof vi.fn>).mockResolvedValue(v);
+// The gate now reads getPRStatusRollupDetail ({ state, failures }) in ONE call;
+// the gate DECISION still keys off .state only (failures is render metadata).
+const setRollup = (state: unknown, failures: Array<{ name: string; url: string | null }> = []) =>
+  (getPRStatusRollupDetail as ReturnType<typeof vi.fn>).mockResolvedValue({ state, failures });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -109,7 +112,7 @@ describe('poll-cycle — CT-2 CI-green gate', () => {
     (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR('behind'));
     setRollup('FAILURE');
     await runPollCycle();
-    expect(getPRStatusRollup).toHaveBeenCalledWith('PR_node_1', undefined);
+    expect(getPRStatusRollupDetail).toHaveBeenCalledWith('PR_node_1', undefined);
     expect(updateBranch).not.toHaveBeenCalled();
     expect(upsertedState()).toBe('behind');
   });
@@ -153,7 +156,7 @@ describe('poll-cycle — CT-2 CI-green gate', () => {
     (getPR as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(makePR('behind'))
       .mockResolvedValueOnce(makePR('clean'));
-    (getPRStatusRollup as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('GraphQL boom'));
+    (getPRStatusRollupDetail as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('GraphQL boom'));
     await runPollCycle();
     expect(updateBranch).toHaveBeenCalled();
   });
@@ -161,7 +164,33 @@ describe('poll-cycle — CT-2 CI-green gate', () => {
   it('gate is rebase-only: a non-behind PR never queries the rollup', async () => {
     (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR('clean'));
     await runPollCycle();
-    expect(getPRStatusRollup).not.toHaveBeenCalled();
+    expect(getPRStatusRollupDetail).not.toHaveBeenCalled();
     expect(updateBranch).not.toHaveBeenCalled();
+  });
+
+  // ── TRIAGE-2: the detail call's .failures persist as ciFailures ──────────
+  it('RED persists the failing checks as ciFailures (render metadata)', async () => {
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR('behind'));
+    setRollup('FAILURE', [{ name: 'OSV Scanner', url: 'https://github.com/o/r/runs/1' }]);
+    await runPollCycle();
+    const rec = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0][0] as {
+      ciFailures?: Array<{ name: string; url: string | null }>;
+    };
+    expect(rec.ciFailures).toEqual([{ name: 'OSV Scanner', url: 'https://github.com/o/r/runs/1' }]);
+  });
+
+  it('ciFailures is ALWAYS-SET: a non-rebase-candidate PR persists [] (no stale carry)', async () => {
+    // A clean PR never fetches the detail → ciFailures must be the empty array,
+    // overwriting any prior value (mirrors the CT-3 labels discipline).
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR('clean'));
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue({
+      prs: [{ id: 1, number: 1, title: 'PR', repo: 'org/repo', url: 'u', state: 'behind', lastUpdated: 0, ciFailures: [{ name: 'old', url: null }] }],
+      lastPollAt: null,
+    });
+    await runPollCycle();
+    const rec = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0][0] as {
+      ciFailures?: Array<{ name: string; url: string | null }>;
+    };
+    expect(rec.ciFailures).toEqual([]);
   });
 });

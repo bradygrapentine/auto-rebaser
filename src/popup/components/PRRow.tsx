@@ -3,7 +3,9 @@ import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { StatusBadge } from './StatusBadge';
 import { formatIdleDays } from '../../core/staleness';
 import { evaluateAutoActionFilter } from '../../core/automations-filter';
+import { isSafeExternalUrl } from '../../core/url-safety';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
+import { useSettings } from '../hooks/useSettings';
 
 interface Props {
   pr: PRRecord;
@@ -55,6 +57,10 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
   // truth — the same predicate the poll cycle gates on, NO persisted flag) so
   // the chip reflects the user's current settings the instant they change them.
   const { settings: automationSettings } = useAutomationSettings();
+  // TRIAGE-2 — enterpriseHost lives on `Settings` (useSettings), NOT on
+  // `AutomationSettings` (useAutomationSettings above). Needed to allowlist
+  // GHES check-run URLs in the CI-failure chip below.
+  const { settings: appSettings } = useSettings();
   const filterVerdict = evaluateAutoActionFilter(
     { repo: pr.repo, draft: extended.isDraft, labels: extended.labels },
     automationSettings,
@@ -177,6 +183,36 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
           >
             ! conflict
           </a>
+        )}
+        {extended.ciFailures && extended.ciFailures.length > 0 && (
+          <span
+            className="pr-row__conflict-chip"
+            data-testid="ci-failure-chip"
+            title="CI is failing — auto-rebase is paused until it's green."
+          >
+            ci failed:{' '}
+            {extended.ciFailures.slice(0, 2).map((f, i) => (
+              <span key={`${f.name}-${i}`}>
+                {i > 0 ? ', ' : ''}
+                {f.url && isSafeExternalUrl(f.url, appSettings.enterpriseHost) ? (
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid="ci-failure-link"
+                  >
+                    {f.name}
+                  </a>
+                ) : (
+                  // SEC-11 fold: a non-https / non-allowlisted URL (hostile GHES
+                  // data:/arbitrary) degrades to plain text — never a link.
+                  <span>{f.name}</span>
+                )}
+              </span>
+            ))}
+            {extended.ciFailures.length > 2 ? ` +${extended.ciFailures.length - 2} more` : ''}
+          </span>
         )}
         {directMergeFailure && !noAllowedMethod && (
           <span
