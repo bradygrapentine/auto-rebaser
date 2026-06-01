@@ -42,9 +42,9 @@ describe('AutomationsSettings', () => {
     // + 1 push-since-approval master (default ON) + 1 enable-request-rereview
     // sub (visible by default) + 1 reviewer-tab master (default OFF) + 1
     // reviewer-auto-merge sub (visible by default, disabled when master off)
-    // = 23.
+    // + 1 CT-3 skip-drafts toggle (Filters section) = 24.
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(23);
+    expect(checkboxes).toHaveLength(24);
     expect(screen.getByLabelText(/Auto-rebase behind PRs/)).toBeChecked();
     expect(screen.getByLabelText(/Auto-delete merged branches/)).toBeChecked();
     expect(screen.getByLabelText(/^Auto-enable auto-merge$/)).not.toBeChecked();
@@ -226,8 +226,9 @@ describe('AutomationsSettings', () => {
     render(<AutomationsSettings />);
     await flush();
     const lists = screen.getAllByTestId('repo-opt-out-list');
-    // 1 global ignored-repos + 5 per-automation skip-repos (rebase, delete, merge, merge-clean, resolve)
-    expect(lists).toHaveLength(6);
+    // 1 global ignored-repos + 5 per-automation skip-repos (rebase, delete,
+    // merge, merge-clean, resolve) + 2 CT-3 Filters lists (allow + deny) = 8.
+    expect(lists).toHaveLength(8);
   });
 
   it.each([
@@ -265,8 +266,9 @@ describe('AutomationsSettings', () => {
     );
     render(<AutomationsSettings />);
     await flush();
-    // 6 lists visible by default (ignored + rebase + delete + merge + merge-clean + resolve).
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(6);
+    // 8 lists visible by default (ignored + rebase + delete + merge +
+    // merge-clean + resolve + CT-3 allow + CT-3 deny).
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(8);
 
     // Collapse the auto-merge section — its skip-repos list and merge_method
     // sub-row should disappear.
@@ -274,14 +276,14 @@ describe('AutomationsSettings', () => {
     await act(async () => {
       fireEvent.click(chevron);
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(5);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(7);
     expect(screen.queryByTestId('merge-method-preference')).not.toBeInTheDocument();
 
     // Clicking again re-expands.
     await act(async () => {
       fireEvent.click(screen.getByLabelText(/Expand auto-merge section/));
     });
-    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(6);
+    expect(screen.getAllByTestId('repo-opt-out-list')).toHaveLength(8);
     expect(screen.getByTestId('merge-method-preference')).toBeInTheDocument();
   });
 
