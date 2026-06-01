@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**v1.1 "Control & Trust" scoped** — 4 Ready rows filed (CT-1…CT-4) from the `/btw` brainstorm, see `docs/roadmap.md`; **auto-poll spinner fix** #235 shipped. **Ready=4, Shipped=73.** §5: flaky-e2e (unfiled). Next: `/sprint` the CT wave.)_
+_Last `/backlog-sync`: 2026-06-01 (**CT-1 shipped** (#237) — conflict-aware rebase backoff, first slice of the v1.1 "Control & Trust" wave; CT-2…CT-4 remain Ready. **Ready=3, Shipped=74.** §5: flaky-e2e (unfiled). Next: `/sprint` CT-2 (capture-first, solo poll-cycle track) or CT-3/CT-4 (parallel-safe).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,30 +9,24 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 4 |
+| 🟢 Ready | 3 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 73 |
+| ✅ Shipped | 74 |
 | 🧊 Deferred / dropped | 3 |
 
 ---
 
 ## §1 Ready
 
-_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)). Make the automation legible + bounded. CT-1 & CT-2 both touch the poll-cycle engine → run serially (CT-2 → CT-1), NOT parallel; CT-3 & CT-4 are disjoint and parallel-safe._
-
-### CT-1 — Conflict-aware rebase backoff — Low
-**Status:** 🟢 Ready
-**Why:** After a rebase is rejected for conflicts, re-attempting on every poll cycle spams the same failing rebase and burns Actions minutes — the PR can't auto-rebase until the user resolves the conflict. CONFLICT-1 already models the `rebase-rejected` state; nothing currently suppresses the retry.
-**How:** When a PR is in `rebase-rejected`, skip auto-rebase until its head SHA changes (the only signal the user has pushed a resolution). Store the rejected head SHA on the PR record; on each cycle, only re-attempt if the live head SHA differs. Surface: `src/background/poll-cycle.ts` (automation pass), the PR-state model that carries `rebase-rejected` (CONFLICT-1, `src/core/types.ts` / pr-store), `src/background/automations/`.
-**Done when:** a `rebase-rejected` PR is not re-rebased on subsequent polls while its head SHA is unchanged; a new head SHA clears the backoff and a rebase is attempted again; unit test covers both branches.
+_v1.1 "Control & Trust" wave (see [`docs/roadmap.md`](../roadmap.md)). Make the automation legible + bounded. CT-1 shipped (#237); CT-2 still touches the poll-cycle engine — run it solo (no parallel poll-cycle track); CT-3 & CT-4 are disjoint and parallel-safe._
 
 ### CT-2 — CI-green gate before auto-rebase — Medium
 **Status:** 🟢 Ready
 **Why:** Auto-rebasing a PR whose CI is already red wastes Actions minutes and adds noise — a rebase won't make a failing-for-other-reasons PR mergeable. Gating on last-check-success keeps the automation from acting when it can't help.
-**How:** Before the automation pass rebases a behind PR, check the PR's last check-run/commit-status rollup; only proceed if it's success (or treat `pending`/absent per a documented rule). Surface: `src/background/poll-cycle.ts`, `src/github/` (the check-runs/status endpoint — confirm the exact field shape against a real response, capture-first), `src/background/automations/`. **File-overlap with CT-1 (both edit poll-cycle) — sequence CT-2 → CT-1.**
+**How:** Before the automation pass rebases a behind PR, check the PR's last check-run/commit-status rollup; only proceed if it's success (or treat `pending`/absent per a documented rule). Surface: `src/background/poll-cycle.ts`, `src/github/` (the check-runs/status endpoint — confirm the exact field shape against a real response, capture-first), `src/background/automations/`. **Touches poll-cycle (like shipped CT-1) — run solo, not parallel with another engine track.**
 **Done when:** a behind PR with a failing last check run is NOT auto-rebased; one with a green last run IS; the pending/unknown rule is documented and tested; no new permission added.
 
 ### CT-3 — Per-repo allow/deny + draft/label filters — Low–Medium
@@ -68,6 +62,9 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — v1.1 "Control & Trust" wave
+- **CT-1** Conflict-aware rebase backoff. A `rebase-rejected` PR (CONFLICT-1, HTTP_422) stayed "behind base", so every poll re-derived `action: 'rebase'` and re-called `updateBranch` → another 422 → wasted Actions minutes + log noise with no change in outcome. Fix: track the head SHA at which the rebase was rejected (`rebaseRejectedAtSha?` on `PRRecord`); while the PR is `rebase-rejected` and head SHA is unchanged, suppress the `updateBranch` call (no API call, no `updatedCount++`, no activity entry) and re-affirm the `! conflict` chip. Any user push moves `pr.head.sha`, clears the backoff, re-attempts once. The SHA persists via a single conditional spread at the lone record write keyed on `finalState === 'rebase-rejected'` (covers fresh-422 AND backed-off-carry); dropped from the `phaseTwoCarry` destructure so it can't leak into a non-rejected outcome. opus-on-opus 2 cycles — cycle 1 caught the carry-through stuck-forever leak (the "omit when undefined" clear was a no-op because the write auto-spreads the prior record) + a backed-off-mislabeled-as-`behind` chip loss; both folded. 4 TDD cases (backoff holds / clears on push / carry-through cleared / fresh persists); 1031 tests, typecheck clean, coverage exit 0, e2e green. Plan: `docs/plans/2026-06-01-ct-1-conflict-aware-backoff.md` — PR #237
 
 ### 2026-06-01 — found-bug fixes
 - **auto-poll spinner on open** The popup auto-polls on open when data is stale (`PRListView` mount effect) but that path sent `POLL_NOW` without engaging the optimistic spinner, and the real `pollInProgress` flag flips true→false too fast on a zero-PR cycle to render — so the refresh icon never animated on open (only the manual button spun). Unified both triggers through one `requestPoll()` that sets the 500ms optimistic spin + sends `POLL_NOW`; reuses the #233 unmount-cleanup ref (no new leak). Added tests: auto-polls-AND-spins-when-stale + does-not-auto-poll-when-fresh (guards the PERF-1 over-poll loop); updated the button/App tests that rendered stale data (button now correctly shows the disabled "Polling" state on open). 1027 tests, coverage clean, 0 unhandled. Surfaced in the same live-test pass as #233. — PR #235
