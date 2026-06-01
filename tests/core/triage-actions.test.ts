@@ -92,6 +92,7 @@ describe('triageActionFor ↔ isPRActionable one-to-one (cross-module exhaustive
     { name: 'current', pr: pr({ state: 'current' }), settings: settings() },
     { name: 'behind+auto-on', pr: pr({ state: 'behind' }), settings: settings() },
     { name: 'updated', pr: pr({ state: 'updated' }), settings: settings() },
+    { name: 'error', pr: pr({ state: 'error' }), settings: settings() },
   ];
 
   for (const c of cases) {
