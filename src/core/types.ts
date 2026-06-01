@@ -131,6 +131,12 @@ export interface PullRequest {
   /** GraphQL node_id — needed for Story 2.7 (enable auto-merge). */
   node_id?: string;
   draft?: boolean;
+  /** CT-3 — labels on the PR detail. GitHub returns the full label object; only
+   *  `name` is load-bearing for the automation filter (allow/deny/draft/label).
+   *  Optional: absent on v1 state files and on details fetched before this field
+   *  existed. The minimal `{ name }` projection is structurally compatible with
+   *  GitHub's wider shape (extra keys ignored). */
+  labels?: Array<{ name: string }>;
   auto_merge?: { enabled?: boolean } | null;
   head?: {
     ref?: string;
