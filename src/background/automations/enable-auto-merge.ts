@@ -1,6 +1,8 @@
 // Story 2.7 — flip auto-merge on for authored PRs that don't have it set.
 // Story 5.4 — pick the first user-preferred method that the repo allows.
 
+import type { PlannedAction } from './planned-action';
+
 export type MergeMethod = 'SQUASH' | 'MERGE' | 'REBASE';
 
 export interface RepoAllowedMethods {
@@ -23,6 +25,8 @@ export interface EnableAutoMergeSettings {
 /** Minimal shape — the wiring layer derives these from PRRecord + raw API data. */
 export interface EligiblePR {
   id: number;
+  /** PR number — carried so `decideEnableAutoMerge` can populate the PlannedAction (PREVIEW-1). */
+  number: number;
   /** GraphQL node_id */
   nodeId: string;
   repo: string;
@@ -75,6 +79,46 @@ export function resolveMergeMethod(
   return null;
 }
 
+/**
+ * PREVIEW-1 — the per-PR enable decision, the SINGLE shared predicate behind both
+ * `decideEnableAutoMerge` (preview) and `runEnableAutoMerge` (execute). Pure.
+ * `optOut` is the caller's pre-built Set (avoids rebuilding it per PR).
+ * Note: previously-unsupported PRs are re-evaluated each poll so that when the
+ * underlying condition changes the orchestrator can log the new state.
+ */
+type EnablePRDecision =
+  | { kind: 'skip' }
+  | { kind: 'no-method' }
+  | { kind: 'enable'; action: Extract<PlannedAction, { kind: 'enable-auto-merge' }> };
+
+function decideEnablePR(pr: EligiblePR, settings: EnableAutoMergeSettings, optOut: Set<string>): EnablePRDecision {
+  if (pr.isDraft || pr.mergeableState === 'dirty' || pr.autoMergeEnabled || optOut.has(pr.repo)) {
+    return { kind: 'skip' };
+  }
+  const method = resolveMergeMethod(settings.mergeMethodPreference, pr.allowedMethods);
+  if (method === null) return { kind: 'no-method' };
+  return {
+    kind: 'enable',
+    action: { kind: 'enable-auto-merge', prId: pr.id, nodeId: pr.nodeId, repo: pr.repo, number: pr.number, method },
+  };
+}
+
+/**
+ * PREVIEW-1 — pure: the PlannedActions `runEnableAutoMerge` WOULD apply (one per
+ * PR that would call `deps.enable`). Skipped + no-allowed-method PRs yield no
+ * action. Same per-PR predicate the execute path uses, so the two cannot drift.
+ */
+export function decideEnableAutoMerge(prs: EligiblePR[], settings: EnableAutoMergeSettings): PlannedAction[] {
+  if (!settings.enabled) return [];
+  const optOut = new Set(settings.optOutRepos);
+  const actions: PlannedAction[] = [];
+  for (const pr of prs) {
+    const d = decideEnablePR(pr, settings, optOut);
+    if (d.kind === 'enable') actions.push(d.action);
+  }
+  return actions;
+}
+
 export async function runEnableAutoMerge(
   prs: EligiblePR[],
   settings: EnableAutoMergeSettings,
@@ -98,27 +142,17 @@ export async function runEnableAutoMerge(
   const optOut = new Set(settings.optOutRepos);
 
   for (const pr of prs) {
-    if (
-      pr.isDraft ||
-      pr.mergeableState === 'dirty' ||
-      pr.autoMergeEnabled ||
-      optOut.has(pr.repo)
-    ) {
+    const decision = decideEnablePR(pr, settings, optOut);
+    if (decision.kind === 'skip') {
       result.skipped++;
       continue;
     }
-    // Note: previously-unsupported PRs are re-evaluated each poll so that
-    // when the underlying condition changes (repo settings flipped, PR no
-    // longer in clean status, etc.) the orchestrator can log the new state.
-    // The orchestrator uses `autoMergeUnsupportedReason` to suppress dup
-    // activity entries when the reason text is unchanged.
-
-    const method = resolveMergeMethod(settings.mergeMethodPreference, pr.allowedMethods);
-    if (method === null) {
+    if (decision.kind === 'no-method') {
       result.noAllowedMethodPRs.push(pr.id);
       continue;
     }
 
+    const { method } = decision.action;
     try {
       const out = await deps.enable(pr.nodeId, method);
       if (out.unsupported) {

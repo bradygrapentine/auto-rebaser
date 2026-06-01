@@ -1,5 +1,7 @@
 // Story 2.8 — resolve review threads whose anchor line no longer exists.
 
+import type { PlannedAction } from './planned-action';
+
 export interface ResolveObsoleteThreadsSettings {
   enabled: boolean;
   /** "owner/repo" repos that should NOT have outdated threads auto-resolved. */
@@ -39,6 +41,48 @@ export interface ResolveObsoleteThreadsResult {
   failedEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
 }
 
+/**
+ * PREVIEW-1 — the obsolete-thread predicate, the SINGLE shared decision behind
+ * both `decideResolveObsoleteThreads` (preview) and `runResolveObsoleteThreads`
+ * (execute). A thread is obsolete iff it is unresolved, outdated, its anchor line
+ * is gone, and we have not already auto-resolved it (per `store`).
+ */
+function isThreadObsolete(t: ReviewThread, store: ResolvedThreadsStore): boolean {
+  return !t.isResolved && t.isOutdated && t.line === null && !store[t.id];
+}
+
+/**
+ * PREVIEW-1 — read-only (`listThreads` only): the `resolve-thread` actions the
+ * execute path WOULD apply. Opt-out PRs and `listThreads` failures yield no
+ * actions (preview omits the undeterminable). Evaluated against the INPUT store.
+ */
+export async function decideResolveObsoleteThreads(
+  prs: PRRef[],
+  settings: ResolveObsoleteThreadsSettings,
+  store: ResolvedThreadsStore,
+  deps: Pick<ResolveObsoleteThreadsDeps, 'listThreads'>,
+): Promise<PlannedAction[]> {
+  if (!settings.enabled) return [];
+  const optOut = new Set(settings.optOutRepos);
+  const actions: PlannedAction[] = [];
+  for (const pr of prs) {
+    if (optOut.has(pr.repo)) continue;
+    const [owner, name] = pr.repo.split('/');
+    let threads: ReviewThread[];
+    try {
+      threads = await deps.listThreads(owner, name, pr.number);
+    } catch {
+      continue; // preview: undeterminable → omit (execute records as failed)
+    }
+    for (const t of threads) {
+      if (isThreadObsolete(t, store)) {
+        actions.push({ kind: 'resolve-thread', threadId: t.id, repo: pr.repo, prNumber: pr.number });
+      }
+    }
+  }
+  return actions;
+}
+
 export async function runResolveObsoleteThreads(
   prs: PRRef[],
   settings: ResolveObsoleteThreadsSettings,
@@ -74,9 +118,7 @@ export async function runResolveObsoleteThreads(
     }
 
     for (const t of threads) {
-      const obsolete =
-        !t.isResolved && t.isOutdated && t.line === null && !result.resolvedStore[t.id];
-      if (!obsolete) {
+      if (!isThreadObsolete(t, result.resolvedStore)) {
         result.skipped++;
         continue;
       }

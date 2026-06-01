@@ -26,6 +26,7 @@ function makeDeps(
 
 const pr = (over: Partial<EligiblePR> = {}): EligiblePR => ({
   id: 1,
+  number: 1,
   nodeId: 'PR_1',
   repo: 'octo/r',
   isDraft: false,

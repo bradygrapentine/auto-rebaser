@@ -18,6 +18,7 @@ const ALL: RepoAllowedMethods = { squash: true, merge: true, rebase: true };
 function pr(over: Partial<EligiblePR> = {}): EligiblePR {
   return {
     id: 1,
+    number: 1,
     nodeId: 'node1',
     repo: 'owner/repo',
     isDraft: false,

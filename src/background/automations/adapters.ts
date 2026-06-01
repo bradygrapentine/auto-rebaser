@@ -75,6 +75,7 @@ export function toEligiblePR(
   const extended = pr as PRRecord & { autoMergeUnsupported?: boolean; autoMergeEnabled?: boolean };
   return {
     id: pr.id,
+    number: pr.number,
     nodeId: detail.node_id ?? '',
     repo: pr.repo,
     isDraft: detail.draft ?? false,
