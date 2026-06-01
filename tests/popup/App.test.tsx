@@ -228,7 +228,9 @@ describe('App', () => {
     };
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
       prs: [stalePR],
-      lastPollAt: null,
+      // Fresh poll time so returning to the list doesn't trigger the auto-poll
+      // spin (which transiently relabels the Poll-now button to "Polling").
+      lastPollAt: Date.now(),
     });
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...AUTOMATION_DEFAULTS,
@@ -272,7 +274,9 @@ describe('App', () => {
     };
     (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
       prs: [stalePR],
-      lastPollAt: null,
+      // Fresh poll time so returning to the list doesn't trigger the auto-poll
+      // spin (which transiently relabels the Poll-now button to "Polling").
+      lastPollAt: Date.now(),
     });
     (getAutomationSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...AUTOMATION_DEFAULTS,

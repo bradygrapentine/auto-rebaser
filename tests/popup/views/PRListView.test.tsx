@@ -76,10 +76,46 @@ describe('PRListView', () => {
   });
 
   it('Poll now button sends POLL_NOW message', () => {
-    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+    // Fresh data → no auto-poll on mount, so the button stays in its clickable
+    // "Poll now" state (not the disabled "Polling" spin) — isolates the click.
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+      prs: [], lastPollAt: Date.now(), pollInProgress: false,
+    });
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /poll now/i }));
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
+  });
+
+  it('auto-polls AND engages the spinner on open when data is stale', () => {
+    vi.useFakeTimers();
+    try {
+      // emptyStore has lastPollAt: null → stale → should auto-poll on mount.
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+      render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+      // The auto-poll fires POLL_NOW...
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
+      // ...and engages the 500ms optimistic spin-hold (a pending timer), so the
+      // refresh icon animates even though the real pollInProgress flag flips too
+      // fast to render on a zero-PR cycle. Without this the icon never spins.
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not auto-poll on open when data is fresh', () => {
+    vi.useFakeTimers();
+    try {
+      // A poll within the last 60s → not stale → no auto-poll, no spin.
+      (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+        prs: [], lastPollAt: Date.now(), pollInProgress: false,
+      });
+      render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
+      expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith({ type: 'POLL_NOW' });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clears the poll-spinner timeout on unmount (no setState after teardown)', () => {
@@ -87,15 +123,13 @@ describe('PRListView', () => {
     try {
       (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
       const { unmount } = render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
-      const before = vi.getTimerCount();
-      // Clicking Poll Now schedules the 500ms optimistic-spin-hold timer.
-      fireEvent.click(screen.getByRole('button', { name: /poll now/i }));
-      expect(vi.getTimerCount()).toBe(before + 1);
+      // Stale data → auto-poll on mount schedules the one 500ms spin-hold timer.
+      expect(vi.getTimerCount()).toBe(1);
       // Unmount must clear it — otherwise the callback fires setOptimisticPolling
       // on an unmounted component (the intermittent "window is not defined"
       // unhandled error after the test env tears down).
       unmount();
-      expect(vi.getTimerCount()).toBe(before);
+      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
     }
@@ -122,7 +156,10 @@ describe('PRListView', () => {
   });
 
   it('shows refresh icon button in header that sends POLL_NOW', () => {
-    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue(emptyStore);
+    // Fresh data so the header button is clickable, not mid-spin.
+    (usePRStore as ReturnType<typeof vi.fn>).mockReturnValue({
+      prs: [], lastPollAt: Date.now(), pollInProgress: false,
+    });
     render(<PRListView onSettings={vi.fn()} onSignOut={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /poll now/i }));
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'POLL_NOW' });
