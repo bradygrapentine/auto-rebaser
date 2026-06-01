@@ -1,5 +1,7 @@
 import type { PRRecord, PRState, PRStore, PullRequest } from '../core/types';
 import type { AutomationSettings, PRRecordPhaseTwo } from '../core/automations-types';
+import { DEFAULT_AUTOMATION_SETTINGS } from '../core/automations-types';
+import { evaluateAutoActionFilter } from '../core/automations-filter';
 import { computeIdleDays, resolveThreshold } from '../core/staleness';
 import { getAuth, setInstallations } from '../core/auth-store';
 import { AccountScope } from '../core/account-scope';
@@ -292,14 +294,26 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
     let finalState: PRState = nextState;
     let errorMessage: string | undefined;
 
+    // CT-3: the GLOBAL auto-action filter. One pure verdict per PR, fed once,
+    // consulted at the two enforcement seams (rebase below + automations
+    // candidate filter at Step 4.5). Fail OPEN exactly like the `staleSettings?.`
+    // reads below: a null staleSettings defaults to DEFAULT_AUTOMATION_SETTINGS
+    // (all-inert), so the gate never filters unless the user configured it.
+    const filterVerdict = evaluateAutoActionFilter(
+      { repo: fullName, draft: pr.draft, labels: pr.labels },
+      staleSettings ?? DEFAULT_AUTOMATION_SETTINGS,
+    );
+
     // REBASE-OPT-OUT: skip the rebase API call when the global toggle is off
-    // OR the repo is in the per-automation skip list. PR remains in 'behind'
-    // state so the popup surfaces it visibly without our extension acting.
+    // OR the repo is in the per-automation skip list OR the global CT-3 filter
+    // suppresses this PR. PR remains in 'behind' state so the popup surfaces it
+    // visibly without our extension acting (identical fall-through to CT-2 ciRed).
     const rebaseSkipped =
       action === 'rebase'
       && (
         staleSettings?.autoRebaseEnabled === false
         || (staleSettings?.autoRebaseOptOutRepos ?? []).includes(fullName)
+        || filterVerdict.suppressed
       );
 
     // CT-1: conflict-aware backoff. GitHub already rejected the rebase last
@@ -482,6 +496,14 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
         ? { sameRepo: pr.head.repo.full_name === fullName }
         : {}),
       ...(pr.draft !== undefined ? { isDraft: pr.draft } : {}),
+      // CT-3: persist name-only labels from THIS poll's truth. ALWAYS-SET (not a
+      // `pr.labels !== undefined` conditional like isDraft): `...phaseTwoCarry`
+      // above spreads every surviving prior field, so a conditional skip would
+      // leave a STALE prior-poll `labels` carried forward when a later getPR
+      // omits them — and the filter would then gate on stale data. Setting it
+      // unconditionally (absent → `[]`) makes the current poll authoritative.
+      // Only { name } persisted (drop color/id/url) to bound per-record growth.
+      labels: (pr.labels ?? []).map((l) => ({ name: l.name })),
       ...computeStalenessPatch(pr, fullName, staleSettings),
       ...(pr.requested_reviewers !== undefined
         ? { requestedReviewers: pr.requested_reviewers.map((r) => r.login) }
@@ -626,9 +648,16 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
   // Step 4.5: phase-2 automations (best-effort; never blocks the next poll)
   // Story 4.5 — suspended-installation PRs display but never write. Filter
   // them out before the orchestrator runs.
-  const automationCandidates = processedPRs.filter((pr) => {
+  const automationCandidates = processedPRs.filter((pr: PRRecord & Partial<PRRecordPhaseTwo>) => {
     const [owner] = pr.repo.split('/');
-    return !suspendedOwnerSet.has(owner.toLowerCase());
+    if (suspendedOwnerSet.has(owner.toLowerCase())) return false;
+    // CT-3 Seam 2: exclude PRs the global filter suppresses, computed from the
+    // PERSISTED record (the Phase-2 source of truth) so the orchestrator sees
+    // exactly what the store carries. Fail open via DEFAULT_AUTOMATION_SETTINGS.
+    return !evaluateAutoActionFilter(
+      { repo: pr.repo, draft: pr.isDraft, labels: pr.labels },
+      staleSettings ?? DEFAULT_AUTOMATION_SETTINGS,
+    ).suppressed;
   });
   // Story 2.4 — newly-idle PR ids: had no staleness on the previous cycle and
   // do on this one. Used by the notification dispatch in runAutomationsPass.
