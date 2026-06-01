@@ -1147,6 +1147,8 @@ async function runAutomationsPass(
         await notify(
           { event, repo: e.repo, prNumber: e.prNumber, prTitle: e.prTitle, url: e.prUrl },
           settings,
+          undefined, // now defaults to Date.now()
+          scope, // CT-5: account-scope the throttle (SW iterates accounts)
         );
       }
       for (const id of newlyIdlePRIds) {
@@ -1155,6 +1157,8 @@ async function runAutomationsPass(
         await notify(
           { event: 'idle', repo: pr.repo, prNumber: pr.number, prTitle: pr.title, url: pr.url },
           settings,
+          undefined, // now defaults to Date.now()
+          scope, // CT-5: account-scope the throttle (SW iterates accounts)
         );
       }
     } catch (err) {
