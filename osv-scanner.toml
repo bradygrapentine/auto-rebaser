@@ -1,16 +1,25 @@
 # OSV Scanner allowlist — consumed by the `osv` job in .github/workflows/security.yml
 # via `--config=osv-scanner.toml`.
 #
-# No active suppressions. The three dev-only advisories that previously lived
-# here (vite GHSA-4w7w-66w2-5vf9, esbuild GHSA-67mh-4wv8-2f99, ws
-# GHSA-58qx-3vcg-4xpx) were the forcing function for OPS-2 and are now
-# genuinely fixed — not suppressed — by OPS-2 stage (c) (PR for vite 5 -> 6.4.2,
-# which pulls esbuild >= 0.25 + rollup >= 4.59, plus ws 8.20.0 -> 8.21.0 under
-# jsdom). OSV is now GREEN on main with zero exceptions and can be promoted to
-# OPS-1's branch-protection required-checks set (a separate ruleset step).
+# HISTORY: the three dev-only advisories that previously lived here (vite
+# GHSA-4w7w-66w2-5vf9, esbuild GHSA-67mh-4wv8-2f99, ws GHSA-58qx-3vcg-4xpx) were
+# the forcing function for OPS-2 and are genuinely fixed (not suppressed) by
+# OPS-2 stage (c) (vite 5 -> 6.4.2 + ws 8.20.0 -> 8.21.0). OSV was then promoted
+# to OPS-1's required-checks set (OPS-4).
 #
-# The file is intentionally kept (with the `--config` flag) so any future
-# time-boxed exception has a home and a documented forcing-function pattern:
-# add an ignore block (per the osv-scanner config docs) with an ignoreUntil +
-# reason, and keep OSV off the required-checks list while any expiry exists so a
-# lapse cannot block merges.
+# The file is kept (with the `--config` flag) as the home + documented pattern
+# for any time-boxed exception: an [[IgnoredVulns]] block with an ignoreUntil +
+# reason.
+
+# ── OPS-5 (active time-box) — vitest dev-only Critical, pending the 3 -> 4 upgrade ──
+# GHSA-5xrq-8626-4rwp (CVSS 9.8) was published 2026-06-01 against vitest 3.2.4,
+# fixed in 4.1.0. vitest is a DEV/TEST dependency only — it is NOT in the shipped
+# MV3 extension bundle (build:all bundles src/ via vite, not the test runner), so
+# the runtime risk to users is nil. Time-boxed to unblock the required OSV gate
+# (it turned main red the moment the advisory was indexed, blocking all PRs)
+# while the durable fix — bump vitest 3.2.4 -> 4.1.0 — lands as the OPS-5 upgrade
+# PR. Remove this block once that upgrade is on main.
+[[IgnoredVulns]]
+id = "GHSA-5xrq-8626-4rwp"
+ignoreUntil = 2026-07-01
+reason = "vitest dev-only (not in shipped bundle); time-boxed pending the vitest 3->4 upgrade (OPS-5). Remove when vitest >= 4.1.0 is on main."
