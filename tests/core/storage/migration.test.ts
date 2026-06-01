@@ -90,6 +90,8 @@ describe('runMigrationIfNeeded — full v1 → v2', () => {
     automation_settings: {
       ignoredRepos: ['org/ignored'],
       enableKeyboardShortcuts: false,
+      enableIgnoredRepos: false, // OPS-3 — a v1 user who disabled the ignore feature
+
       autoRebaseEnabled: true,
       autoRebaseOptOutRepos: ['org/skip-rebase'],
       autoDeleteMergedBranch: true,
@@ -171,6 +173,17 @@ describe('runMigrationIfNeeded — full v1 → v2', () => {
     // Global keys must NOT appear in per-account.
     expect(perAccount.ignoredRepos).toBeUndefined();
     expect(perAccount.enableKeyboardShortcuts).toBeUndefined();
+  });
+
+  it('OPS-3: promotes a disabled enableIgnoredRepos to global (not per-account)', async () => {
+    await runMigrationIfNeeded();
+    const global = sync.data[STORAGE_KEYS_V2.globalSettings] as Record<string, unknown>;
+    const perAccountKey = `${STORAGE_KEYS_V2.perAccountSettingsPrefix}gh_github_acme_corp_octocat`;
+    const perAccount = sync.data[perAccountKey] as Record<string, unknown>;
+    // The bug: stripGlobalKeys/promotion omitted enableIgnoredRepos, so it stayed
+    // in per-account where the next save would drop it. It must now land in global.
+    expect(global.enableIgnoredRepos).toBe(false);
+    expect(perAccount.enableIgnoredRepos).toBeUndefined();
   });
 
   it('populates per_account_settings_index', async () => {

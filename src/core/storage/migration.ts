@@ -7,6 +7,7 @@
 import { request } from '../../github/http';
 import type { Auth } from '../auth-store';
 import type { AutomationSettings } from '../automations-types';
+import { GLOBAL_AUTOMATION_KEYS } from '../automations-store';
 import {
   STORAGE_KEYS_V2,
   STORAGE_VERSION,
@@ -99,9 +100,11 @@ export async function runMigrationIfNeeded(): Promise<void> {
   if (v1Settings.intervalMinutes !== undefined) {
     globalSettings.intervalMinutes = v1Settings.intervalMinutes;
   }
-  if (v1Auto.ignoredRepos !== undefined) globalSettings.ignoredRepos = v1Auto.ignoredRepos;
-  if (v1Auto.enableKeyboardShortcuts !== undefined) {
-    globalSettings.enableKeyboardShortcuts = v1Auto.enableKeyboardShortcuts;
+  // OPS-3 — promote EVERY automation-global key from the single tuple (incl.
+  // enableIgnoredRepos, which the old hand-listed pair dropped → a v1 user who
+  // disabled it lost it on their next save).
+  for (const k of GLOBAL_AUTOMATION_KEYS) {
+    if (v1Auto[k] !== undefined) (globalSettings as Record<string, unknown>)[k] = v1Auto[k];
   }
   if (v1Settings.enterpriseHost !== undefined) {
     globalSettings.enterpriseHost = v1Settings.enterpriseHost;
@@ -146,8 +149,11 @@ export async function runMigrationIfNeeded(): Promise<void> {
 }
 
 function stripGlobalKeys(auto: Partial<AutomationSettings>): Partial<PerAccountSettings> {
-  const { ignoredRepos: _ignored, enableKeyboardShortcuts: _kb, ...rest } = auto;
-  return rest;
+  // OPS-3 — strip EXACTLY the global tuple keys (so enableIgnoredRepos lands in
+  // the global blob, not per-account where saveAutomationSettings would drop it).
+  const rest: Record<string, unknown> = { ...auto };
+  for (const k of GLOBAL_AUTOMATION_KEYS) delete rest[k];
+  return rest as Partial<PerAccountSettings>;
 }
 
 function byteLength(s: string): number {
