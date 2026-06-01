@@ -28,11 +28,29 @@ function migrateMergeMethod(stored: Record<string, unknown>): MergeMethod[] | un
   return [legacy, ...rest];
 }
 
-const GLOBAL_KEYS = ['ignoredRepos', 'enableIgnoredRepos', 'enableKeyboardShortcuts'] as const;
-type GlobalKey = typeof GLOBAL_KEYS[number];
+// OPS-3 — the SINGLE source of truth for which automation settings live in the
+// shared global blob (vs per-account). isGlobalKey, the save loop, both read
+// paths, AND migration's strip + promotion all derive from this tuple — so
+// adding/removing a global key is a one-line change with no drift. (The
+// `Settings`-sourced globals — intervalMinutes/enterpriseHost/enterpriseClientId
+// — are deliberately NOT here; they have their own save path.)
+export const GLOBAL_AUTOMATION_KEYS = ['ignoredRepos', 'enableIgnoredRepos', 'enableKeyboardShortcuts'] as const;
+type GlobalKey = typeof GLOBAL_AUTOMATION_KEYS[number];
 
 function isGlobalKey(k: string): k is GlobalKey {
-  return (GLOBAL_KEYS as readonly string[]).includes(k);
+  return (GLOBAL_AUTOMATION_KEYS as readonly string[]).includes(k);
+}
+
+// Read every global automation key into a partial (only the ones actually
+// stored). Used by both getAutomationSettings and getAutomationSettingsFor so
+// the global read set can never drift from the write set.
+async function readGlobalAutomationSettings(): Promise<Partial<AutomationSettings>> {
+  const out: Partial<AutomationSettings> = {};
+  for (const k of GLOBAL_AUTOMATION_KEYS) {
+    const v = await getGlobalSetting(k);
+    if (v !== undefined) (out as Record<string, unknown>)[k] = v;
+  }
+  return out;
 }
 
 async function readPerAccountSettings(): Promise<Partial<PerAccountSettings>> {
@@ -67,14 +85,12 @@ export async function getAutomationSettings(): Promise<AutomationSettings> {
   if (id) {
     // v2 split shape — perAccount is the source of truth, with globals
     // (ignoredRepos, enableKeyboardShortcuts) shared across accounts.
-    const ignoredRepos = await getGlobalSetting('ignoredRepos');
-    const enableKeyboardShortcuts = await getGlobalSetting('enableKeyboardShortcuts');
     const perAccount = await readPerAccountSettings();
+    const globals = await readGlobalAutomationSettings();
     const merged: AutomationSettings = {
       ...DEFAULT_AUTOMATION_SETTINGS,
       ...perAccount,
-      ...(ignoredRepos !== undefined ? { ignoredRepos } : {}),
-      ...(enableKeyboardShortcuts !== undefined ? { enableKeyboardShortcuts } : {}),
+      ...globals, // globals overlay perAccount (and a migrated perAccount value survives until promoted)
     };
     return merged;
   }
@@ -111,9 +127,15 @@ export async function saveAutomationSettings(s: AutomationSettings): Promise<voi
     return;
   }
 
-  // v2 path: split into global + per-account writes.
-  await setGlobalSetting('ignoredRepos', s.ignoredRepos);
-  await setGlobalSetting('enableKeyboardShortcuts', s.enableKeyboardShortcuts);
+  // v2 path: split into global + per-account writes. Write EVERY global key from
+  // the single tuple (incl. enableIgnoredRepos — the OPS-3 bug was it being
+  // listed as global but never written, so it reverted to its default on read).
+  for (const k of GLOBAL_AUTOMATION_KEYS) {
+    // GlobalSettings[k] === AutomationSettings[k] for every tuple key (see the
+    // GlobalSettings interface); TS can't correlate the union index across the
+    // two types in a loop, so the value is asserted to the key's global type.
+    await setGlobalSetting(k, s[k] as never);
+  }
 
   const perAccount: Partial<PerAccountSettings> = {};
   for (const [k, v] of Object.entries(s)) {
@@ -138,16 +160,14 @@ export async function saveResolvedThreads(s: ResolvedThreadsStore): Promise<void
  * directly. Skips the legacy single-key v1 fallback (that path is popup-only).
  */
 export async function getAutomationSettingsFor(accountId: string): Promise<AutomationSettings> {
-  const ignoredRepos = await getGlobalSetting('ignoredRepos');
-  const enableKeyboardShortcuts = await getGlobalSetting('enableKeyboardShortcuts');
   const key = `${STORAGE_KEYS_V2.perAccountSettingsPrefix}${accountId}`;
   const result = await chrome.storage.sync.get(key);
   const perAccount = ((result ?? {})[key] ?? {}) as Partial<PerAccountSettings>;
+  const globals = await readGlobalAutomationSettings();
   return {
     ...DEFAULT_AUTOMATION_SETTINGS,
     ...perAccount,
-    ...(ignoredRepos !== undefined ? { ignoredRepos } : {}),
-    ...(enableKeyboardShortcuts !== undefined ? { enableKeyboardShortcuts } : {}),
+    ...globals,
   };
 }
 

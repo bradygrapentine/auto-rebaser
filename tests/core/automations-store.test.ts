@@ -267,6 +267,44 @@ describe('automations-store', () => {
     ).toBe(false);
   });
 
+  // ── OPS-3 — global-partition single-source (enableIgnoredRepos persistence) ──
+
+  // A stateful sync store so save -> read actually round-trips (set writes back,
+  // get reads the latest). setGlobalSetting read-modify-writes the blob.
+  function statefulSync(initial: Record<string, unknown> = {}) {
+    const sync = { ...initial };
+    chrome.storage.sync.get = vi.fn(async (keys: unknown) => {
+      if (keys == null) return { ...sync };
+      const want = Array.isArray(keys) ? (keys as string[]) : [keys as string];
+      const out: Record<string, unknown> = {};
+      for (const k of want) if (k in sync) out[k] = sync[k];
+      return out;
+    }) as typeof chrome.storage.sync.get;
+    chrome.storage.sync.set = vi.fn(async (obj: Record<string, unknown>) => {
+      Object.assign(sync, obj);
+    }) as unknown as typeof chrome.storage.sync.set;
+    return sync;
+  }
+
+  it('OPS-3: enableIgnoredRepos=false survives save -> read on the v2 path', async () => {
+    chrome.storage.local.get = vi.fn().mockResolvedValue({ active_account_id: 'gh_octocat' });
+    statefulSync();
+    await saveAutomationSettings({ ...DEFAULT_AUTOMATION_SETTINGS, enableIgnoredRepos: false });
+    const round = await getAutomationSettings();
+    expect(round.enableIgnoredRepos).toBe(false);
+  });
+
+  it('OPS-3: the v2 save writes exactly the global tuple keys into global_settings', async () => {
+    chrome.storage.local.get = vi.fn().mockResolvedValue({ active_account_id: 'gh_octocat' });
+    const sync = statefulSync();
+    await saveAutomationSettings({ ...DEFAULT_AUTOMATION_SETTINGS, enableIgnoredRepos: false });
+    // Hard-literal key set — guards against the global write set drifting from
+    // the tuple (the OPS-3 bug was enableIgnoredRepos missing here).
+    expect(Object.keys(sync.global_settings as Record<string, unknown>).sort()).toEqual(
+      ['enableIgnoredRepos', 'enableKeyboardShortcuts', 'ignoredRepos'],
+    );
+  });
+
   // ── getResolvedThreads ─────────────────────────────────────────────────────
 
   it('returns {} when nothing stored', async () => {
