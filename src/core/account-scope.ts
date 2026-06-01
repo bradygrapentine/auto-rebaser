@@ -8,7 +8,7 @@
 // — migrating the popup is a future pass.
 
 import type { AccountId } from './storage/multi-account';
-import { setAccountState } from './storage/multi-account';
+import { setAccountState, readAccountKeyFor, writeAccountKeyFor } from './storage/multi-account';
 import type { PRRecord, PRStore } from './types';
 import type { ActivityEntry } from './activity-log-types';
 import type { Auth } from './auth-store';
@@ -75,6 +75,11 @@ export class AccountScope {
   recordPing(prId: number, now?: number): Promise<void> { return recordPingFor(this.id, prId, now); }
   getRerequestStore(): Promise<RerequestStore> { return getRerequestStoreFor(this.id); }
   recordRerequest(prId: number, now?: number): Promise<void> { return recordRerequestFor(this.id, prId, now); }
+  // CT-5 — notification throttle, scoped to THIS account (not the implicit active
+  // account). The SW poll cycle iterates accounts, so the throttle must key off
+  // the explicit scope id or account B's writes clobber account A's map.
+  async readNotifThrottle(): Promise<Record<string, number>> { return (await readAccountKeyFor(this.id, 'notif_throttle')) ?? {}; }
+  writeNotifThrottle(v: Record<string, number>): Promise<void> { return writeAccountKeyFor(this.id, 'notif_throttle', v); }
 
   // ── Misc per-account ────────────────────────────────────────────────────
   appendActivity(entries: ActivityEntry[]): Promise<void> { return appendActivityFor(this.id, entries); }

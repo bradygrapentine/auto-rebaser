@@ -11,6 +11,7 @@
 
 import type { AutomationSettings } from '../core/automations-types';
 import { readAccountKey, writeAccountKey } from '../core/storage/multi-account';
+import type { AccountScope } from '../core/account-scope';
 
 export type NotifEvent =
   | 'rebased'
@@ -77,8 +78,10 @@ function defaultMessage(p: NotifPayload): string {
   }
 }
 
-function throttleKey(prNumber: number, event: NotifEvent): string {
-  return `${prNumber}:${event}`;
+function throttleKey(repo: string, prNumber: number, event: NotifEvent): string {
+  // CT-5 — repo-qualified so the same PR number in two repos gets independent
+  // throttle slots (mirrors the activity-log dedup key `${repo}#${number}`).
+  return `${repo}#${prNumber}:${event}`;
 }
 
 /**
@@ -117,6 +120,11 @@ export async function notify(
     | 'notifyOnPingConfirmed'
   >,
   now: number = Date.now(),
+  // CT-5 — when the SW poll cycle calls notify() it MUST pass the iterating
+  // account's `scope` so the throttle keys off the explicit account id, not the
+  // implicit active account (which would let account B clobber account A's map).
+  // `undefined` (popup/test back-compat) keeps the deprecated implicit-id path.
+  scope?: AccountScope,
 ): Promise<boolean> {
   if (!settings.notificationsEnabled) return false;
   if (!settings[SETTING_KEYS[payload.event]]) return false;
@@ -124,8 +132,8 @@ export async function notify(
   if (typeof chrome === 'undefined' || !chrome.notifications?.create) return false;
 
   // Throttle window check.
-  const throttle = (await readAccountKey('notif_throttle')) ?? {};
-  const key = throttleKey(payload.prNumber, payload.event);
+  const throttle = (scope ? await scope.readNotifThrottle() : await readAccountKey('notif_throttle')) ?? {};
+  const key = throttleKey(payload.repo, payload.prNumber, payload.event);
   const last = throttle[key];
   if (typeof last === 'number' && now - last < THROTTLE_MS) return false;
 
@@ -165,7 +173,8 @@ export async function notify(
     if (k !== key && typeof v === 'number' && v >= cutoff) next[k] = v;
   }
   try {
-    await writeAccountKey('notif_throttle', next);
+    if (scope) await scope.writeNotifThrottle(next);
+    else await writeAccountKey('notif_throttle', next);
   } catch {
     // If the write fails, the next call will re-evaluate from whatever was
     // stored before — at worst the user gets one extra notification.

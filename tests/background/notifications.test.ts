@@ -79,6 +79,19 @@ const payload = (over: Partial<Parameters<typeof notify>[0]> = {}): Parameters<t
   ...over,
 });
 
+// CT-5 — a minimal AccountScope stand-in backed by its OWN in-memory throttle
+// store, so two scopes can be proven isolated (notify() only calls
+// read/writeNotifThrottle on the scope).
+type Scope4 = Parameters<typeof notify>[3];
+function fakeScope(initial: Record<string, number> = {}) {
+  let store: Record<string, number> = { ...initial };
+  const scope = {
+    readNotifThrottle: async () => ({ ...store }),
+    writeNotifThrottle: async (v: Record<string, number>) => { store = { ...v }; },
+  } as unknown as Scope4;
+  return { scope, snapshot: () => store };
+}
+
 describe('hasNotificationsPermission', () => {
   it('returns true when chrome.permissions.contains says granted', async () => {
     setPermissionGranted(true);
@@ -156,7 +169,39 @@ describe('notify', () => {
   it('persists throttle entries under the active account state', async () => {
     await notify(payload(), NOTIF_SETTINGS, 1_000_000);
     const accounts = local.data[STORAGE_KEYS_V2.accounts] as Record<string, { notif_throttle?: Record<string, number> }>;
-    expect(accounts.gh_octocat.notif_throttle).toEqual({ '42:rebased': 1_000_000 });
+    expect(accounts.gh_octocat.notif_throttle).toEqual({ 'org/repo#42:rebased': 1_000_000 });
+  });
+
+  // ── CT-5 — account-scoped throttle (cross-account isolation) ──
+  it('CT-5: account A throttle does NOT suppress account B, and B does not clobber A', async () => {
+    const t0 = 1_000_000;
+    const a = fakeScope();
+    const b = fakeScope();
+    const p = payload({ event: 'rebased', repo: 'o/r', prNumber: 42 });
+    await notify(p, NOTIF_SETTINGS, t0, a.scope);
+    await notify(p, NOTIF_SETTINGS, t0 + 1, b.scope); // within THROTTLE_MS of A
+    // B fired despite A's recent throttle entry → 2 notifications total.
+    expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+    // A's slot is intact and NOT mutated by B's write.
+    expect(a.snapshot()).toEqual({ 'o/r#42:rebased': t0 });
+    expect(b.snapshot()).toEqual({ 'o/r#42:rebased': t0 + 1 });
+  });
+
+  it('CT-5: repo-qualified key — same PR number in two repos gets independent slots', async () => {
+    const t0 = 1_000_000;
+    const s = fakeScope();
+    await notify(payload({ repo: 'org/a', prNumber: 42 }), NOTIF_SETTINGS, t0, s.scope);
+    await notify(payload({ repo: 'org/b', prNumber: 42 }), NOTIF_SETTINGS, t0 + 1, s.scope);
+    expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+    expect(s.snapshot()).toEqual({ 'org/a#42:rebased': t0, 'org/b#42:rebased': t0 + 1 });
+  });
+
+  it('CT-5: same repo+pr+event within the window is still throttled (scoped path)', async () => {
+    const t0 = 1_000_000;
+    const s = fakeScope();
+    await notify(payload(), NOTIF_SETTINGS, t0, s.scope);
+    await notify(payload(), NOTIF_SETTINGS, t0 + 1, s.scope);
+    expect(chrome.notifications.create).toHaveBeenCalledTimes(1);
   });
 
   it('uses the right title per event', async () => {
