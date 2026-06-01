@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (v1.1 wave complete; **release-readiness pre-release chunk shipped** — CT-5 #251 (notify scope leak), OPS-3-audit #252 (settings partition revert), TEST-1-audit #253 (CT-3 test gaps) — all merged, integrated main 1103 suite green. **Ready=0. Shipped=80.** §5: SEC-11/CT-6/CT-7/CT-3c follow-ups + 11 audit nits, flaky-e2e (unfiled). Next work needs v1.2 product scoping.)_
+_Last `/backlog-sync`: 2026-06-01 (release-readiness chunk shipped — CT-5 #251, OPS-3-audit #252, TEST-1-audit #253. **v1.2 "PR command center" filed** from the feature assessment: **Ready=3** — TRIAGE-1 (needs-you surface), TRIAGE-2 (CI-failure reason), SPIKE-1 (deferred-feature investigation); **Blocked=5** — PREVIEW-1/DIGEST-1/OPS-5/REVIEWER-3/REVIEWER-4 gated on SPIKE-1. **Shipped=80.** §5: SEC-11/CT-6/CT-7/CT-3c + 11 audit nits, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,10 +9,10 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 0 |
+| 🟢 Ready | 3 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
-| 🚧 Blocked | 0 |
+| 🚧 Blocked | 5 |
 | ⏸ Held | 0 |
 | ✅ Shipped | 80 |
 | 🧊 Deferred / dropped | 3 |
@@ -21,7 +21,25 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 ## §1 Ready
 
-_(none — the 2026-06-01 release-readiness pre-release chunk shipped: CT-5 #251, OPS-3-audit #252, TEST-1-audit #253. Next work needs v1.2 product scoping; §5 holds spec'd-but-unscheduled follow-ups.)_
+_v1.2 "PR command center" direction — scoped from the 2026-06-01 feature assessment. TRIAGE-1/TRIAGE-2 are the ready pair (read-only, surface data the engine already computes); SPIKE-1 gates the 5 lower-confidence ideas in §4._
+
+### TRIAGE-1 — "Needs you" PR triage surface
+**Status:** 🟢 Ready
+**Why:** The tool auto-acts on the easy 80%; its differentiated value is the last-mile it *can't* auto-resolve — today surfaced only as an action-dot. `isPRActionable` (`src/core/actionable-pr.ts`) already classifies attention-needing PRs (conflict / needs-manual / rebase-rejected / behind-when-auto-off / stale-approval) and the count is persisted per account. This promotes that to a first-class surface.
+**How:** Add a "Needs you" section/view in the popup listing actionable PRs, each with its single next action + a deep link derived from the state (conflict → PR conflicts view; rebase-rejected → resolve-conflict; stale-approval → re-request review; behind+auto-off → manual rebase). Read-only; reuses the existing predicate + persisted state — no new GitHub writes.
+**Done when:** actionable PRs render in a dedicated surface with a correct per-reason next-action + deep link; the mapping is exhaustive over `isPRActionable`'s true-cases; no new write endpoint introduced.
+
+### TRIAGE-2 — Surface the CI-failure reason on skipped PRs
+**Status:** 🟢 Ready
+**Why:** CT-2 silently skips auto-rebase on CI-red PRs (`getPRStatusRollup` → FAILURE/ERROR); the user can't see *which* check is red, so the silent inaction reads as a bug and undercuts the trust CT-2 was meant to build. Feeds TRIAGE-1's "fix this check" next-action content.
+**How:** Extend the `getPRStatusRollup` GraphQL (`src/github/endpoints/status-check-rollup.ts`) to also return the failing check-run name(s) + URL; persist a bounded summary on the record (same name-only/bounded discipline as the CT-3 labels carry); render the failing check + link in `PRRow` / the TRIAGE-1 surface.
+**Done when:** a CI-red PR shows the failing check name + a deep link; the persisted field is bounded; fails open (no rollup detail → today's behavior unchanged).
+
+### SPIKE-1 — Investigate the 5 deferred v1.2 features (utility vs cost)
+**Status:** 🟢 Ready
+**Why:** PREVIEW-1, DIGEST-1, OPS-5, REVIEWER-3, REVIEWER-4 each carry real but uncertain value-vs-effort (per the 2026-06-01 feature assessment). Don't plan/build them blind — investigate each for utility vs cost first.
+**How:** Read-only investigation. For each of the 5: confirm client-side feasibility (no-backend constraint), estimate effort against the current orchestrator/popup architecture, identify redundancy with shipped features, rate value × risk. Output a short decision doc (`docs/decisions/`) with a build / defer / drop verdict per feature.
+**Done when:** a written per-feature verdict exists; each of the 5 §4 rows gets a build/defer/drop recommendation and is unblocked (→ Ready or → 🧊 Deferred) accordingly.
 
 ## §2 In progress
 _(none)_
@@ -30,7 +48,39 @@ _(none)_
 _(none)_
 
 ## §4 Blocked
-_(none)_
+
+_All five gated on **SPIKE-1** (utility-vs-cost investigation). Each carries the assessment's preliminary read; the spike confirms build / defer / drop before any planning._
+
+### PREVIEW-1 — Dry-run / preview mode for automations
+**Status:** 🚧 Blocked
+**Blocked by:** SPIKE-1
+**Why:** "Show what would happen without acting" is the trust unlock that lets cautious users enable the aggressive automations already built (direct-merge, auto-delete-branch). But it needs a decision/execution split in the orchestrator (so preview and execution share one predicate) — a real refactor, not just UI. Highest indirect value of the five; spike the refactor cost.
+**How (sketch):** Factor each automation's decision from its execution; run the orchestrator in explain-only mode; render projected actions. Read-only.
+**Done when:** (post-spike — scope set by SPIKE-1 verdict).
+
+### DIGEST-1 — Activity history / weekly digest view
+**Status:** 🚧 Blocked
+**Blocked by:** SPIKE-1
+**Why:** Makes invisible work visible ("saved you N manual rebases this week") — trust/retention lever; the activity-log data already exists, so it's mostly aggregate + UI. But it changes no outcomes (visibility-only) — confirm it's worth the popup surface vs feature-bloat risk.
+**Done when:** (post-spike).
+
+### OPS-5 — Quiet hours / rate-aware polling
+**Status:** 🚧 Blocked
+**Blocked by:** SPIKE-1
+**Why:** Respects per-token GitHub rate limits (multi-account multiplies pressure) and trims off-hours noise. But the poll interval is already user-configurable and quiet-hours brings timezone edge cases — marginal visible value. Spike to confirm the rate-limit pain is real before building.
+**Done when:** (post-spike).
+
+### REVIEWER-3 — Auto-request reviewers from CODEOWNERS
+**Status:** 🚧 Blocked
+**Blocked by:** SPIKE-1
+**Why:** Removes a manual step, but **writes to GitHub on the user's behalf** (social blast if mis-fired), needs a real CODEOWNERS glob/team/precedence parser, and is **often redundant** with branch-protection's own CODEOWNERS auto-request. Spike to confirm net-new value before committing to the parser + write path.
+**Done when:** (post-spike).
+
+### REVIEWER-4 — Nudge-stale-PR comment
+**Status:** 🚧 Blocked
+**Blocked by:** SPIKE-1
+**Why:** Auto public "bump" comments read as spam (high social blast), and reviewer-ping already covers "this is stale" with less cost. The assessment recommends *not* building it; spike confirms drop vs a lower-blast variant (e.g. a local-only nudge reminder).
+**Done when:** (post-spike).
 
 ## §5 Future / unscoped
 _Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
