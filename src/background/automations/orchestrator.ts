@@ -5,9 +5,10 @@ import type {
   PRRecordPhaseTwo,
   PollSummary,
 } from '../../core/automations-types';
-import { runEnableAutoMerge, resolveMergeMethod, type MergeMethod } from './enable-auto-merge';
+import { runEnableAutoMerge, type MergeMethod } from './enable-auto-merge';
 import { runDeleteMergedBranch } from './delete-merged-branch';
 import { runResolveObsoleteThreads } from './resolve-obsolete-threads';
+import { decideDirectMerge } from './merge-clean';
 import {
   toEligiblePR,
   toMergedPRInput,
@@ -182,74 +183,52 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
           const reason = result.unsupportedReasons[prId] ?? '';
           if (/clean status/i.test(reason)) cleanIds.add(prId);
         }
-        const mergeCleanSkipSet = new Set(settings.mergeCleanPRsOptOutRepos ?? []);
+        // PREVIEW-1 — the direct-merge DECISION (which PRs, which method) is the
+        // shared `decideDirectMerge` predicate; the EXECUTION (mergePR + result
+        // handling + dedup + E3 suppression) stays here. `cleanIds` is computed
+        // above from the live enable-auto-merge output and passed in.
+        //
+        // No execution-side cooldown: the REST `mergePR` helper maps 405
+        // generically, so a 405 can mask a transient condition that resolves
+        // later. Re-attempt every poll; log dedup belongs at the activity layer.
+        // decideDirectMerge picks ONE method up-front (mirrors resolveMergeMethod
+        // discipline) so a transient 405 never silently shifts to a lower method.
+        const directMergeActions = decideDirectMerge(eligiblePRs, prDetails, prs, settings, cleanIds);
         const consumedSkipIds = new Set<number>();
-        for (const eligible of eligiblePRs) {
-          if (!cleanIds.has(eligible.id)) continue;
-          if (mergeCleanSkipSet.has(eligible.repo)) continue;
-          const detail = prDetails.get(eligible.id);
-          const headSha = detail?.head?.sha;
-          if (!headSha) continue;
-          const [owner, name] = eligible.repo.split('/');
-          if (!owner || !name) continue;
-          const pr = prs.find((p) => p.id === eligible.id);
-          if (!pr) continue;
-
-          // No execution-side cooldown: the REST `mergePR` helper maps 405
-          // generically (not "this merge method specifically"), so a 405
-          // can mask a transient repo/branch-protection condition that
-          // resolves later. Skipping based on a prior failed SHA would
-          // strand the PR indefinitely. Re-attempt every poll; log dedup
-          // (if needed) belongs at the activity-entry layer, not here.
-          //
-          // Pick a SINGLE method up-front from the repo's allowed-methods
-          // intersected with the user's preference list. If we used the
-          // raw preference and let 405 cascade to the next method, a
-          // transient generic 405 ("merge cannot be performed right now")
-          // would silently shift the user to a lower-preference method
-          // on the next attempt — irreversible once it lands. Mirror the
-          // upstream `resolveMergeMethod` discipline: one method per
-          // attempt, fail loudly if it errors.
-          const chosenMethod = resolveMergeMethod(
-            settings.mergeMethodPreference,
-            eligible.allowedMethods,
-          );
+        for (const action of directMergeActions) {
+          const { prId, owner, name, sha: headSha, method: chosenMethod } = action;
 
           let merged = false;
           let lastError: string | undefined;
           let usedMethod: MergeMethod | null = null;
-          if (chosenMethod === null) {
-            lastError = 'NO_ALLOWED_MERGE_METHOD';
-          } else {
-            const restMethod = chosenMethod.toLowerCase() as 'squash' | 'rebase' | 'merge';
-            try {
-              const apiResult = await github.mergePR(owner, name, pr.number, {
-                sha: headSha,
-                merge_method: restMethod,
-              });
-              // GitHub's PUT /merge can resolve with 200 + `merged: false` for
-              // edge cases (e.g. unstable branch protection check). Trust the
-              // payload, not just the absence of a thrown error.
-              if (apiResult.merged === true) {
-                merged = true;
-                usedMethod = chosenMethod;
-              } else {
-                lastError = 'NOT_MERGED';
-              }
-            } catch (err) {
-              lastError = err instanceof Error ? err.message : String(err);
+          const restMethod = chosenMethod.toLowerCase() as 'squash' | 'rebase' | 'merge';
+          try {
+            const apiResult = await github.mergePR(owner, name, action.number, {
+              sha: headSha,
+              merge_method: restMethod,
+            });
+            // GitHub's PUT /merge can resolve with 200 + `merged: false` for
+            // edge cases (e.g. unstable branch protection check). Trust the
+            // payload, not just the absence of a thrown error.
+            if (apiResult.merged === true) {
+              merged = true;
+              usedMethod = chosenMethod;
+            } else {
+              lastError = 'NOT_MERGED';
             }
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : String(err);
           }
 
           if (merged && usedMethod) {
-            mergedNowEntries.push({ prId: eligible.id, method: usedMethod, result: 'success' });
-            consumedSkipIds.add(eligible.id);
+            mergedNowEntries.push({ prId, method: usedMethod, result: 'success' });
+            consumedSkipIds.add(prId);
             // Update local PR state to reflect the merge: clear the
             // unsupported flag + dedup marker, mark merged, stamp
             // mergedAt. Same-cycle branch-delete cleanup is a known
             // follow-up.
             prUpdates.push({
-              prId: eligible.id,
+              prId,
               patch: {
                 state: 'merged',
                 mergedAt: Date.now(),
@@ -261,25 +240,23 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
             });
           } else {
             const failureReason = lastError ?? 'NO_ALLOWED_MERGE_METHOD';
-            // The activity log records the method we ACTUALLY attempted
-            // (or the resolved-but-errored choice). When the preference
-            // list yielded no allowed method, fall back to the first
-            // preference for display purposes only.
-            const reportedMethod: MergeMethod =
-              chosenMethod ?? settings.mergeMethodPreference[0] ?? 'SQUASH';
+            // The activity log records the method we attempted. `chosenMethod`
+            // is always non-null here (decideDirectMerge omits null-method PRs).
+            const reportedMethod: MergeMethod = chosenMethod;
             // Log dedup keyed on { sha, method, error } so a different
             // failure mode (different status, or different attempted
             // method after a settings change) emits a fresh entry.
             // Network retry still runs every poll; aggregate error count
             // still increments. Mirrors autoMergeUnsupportedReason dedup.
-            const prev = (pr as PRRecord & PRRecordPhaseTwo).lastDirectMergeFailure;
+            const pr = prs.find((p) => p.id === prId);
+            const prev = (pr as (PRRecord & PRRecordPhaseTwo) | undefined)?.lastDirectMergeFailure;
             const isNewFailure =
               prev?.sha !== headSha ||
               prev?.error !== failureReason ||
               prev?.method !== reportedMethod;
             if (isNewFailure) {
               mergedNowEntries.push({
-                prId: eligible.id,
+                prId,
                 method: reportedMethod,
                 result: 'failed',
                 error: failureReason,
@@ -290,7 +267,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
               // in PRRow. The actual failure mode is now expressed via
               // `lastDirectMergeFailure` + its dedicated badge.
               prUpdates.push({
-                prId: eligible.id,
+                prId,
                 patch: {
                   autoMergeUnsupported: false,
                   autoMergeUnsupportedReason: undefined,
@@ -307,7 +284,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
             // failure still happened on the wire and the summary should
             // reflect it.
             errors++;
-            consumedSkipIds.add(eligible.id);
+            consumedSkipIds.add(prId);
           }
         }
 

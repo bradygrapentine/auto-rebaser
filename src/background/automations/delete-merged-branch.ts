@@ -4,6 +4,8 @@
 // real PR store, settings, and GitHub client. Local types deliberately do NOT
 // import from v1's core/types — folded together at merge.
 
+import type { DecideDeleteOutcome } from './planned-action';
+
 export interface DeleteMergedBranchSettings {
   enabled: boolean;
   /** "owner/repo" repos that should NOT have branches auto-deleted. */
@@ -41,6 +43,56 @@ export interface DeleteMergedBranchResult {
   branchDeletedPRs: number[];
 }
 
+/**
+ * PREVIEW-1 — the per-PR delete decision GIVEN the repo's auto-delete setting.
+ * Does the async `getRepo` read (may throw — callers wrap per-PR). The SINGLE
+ * shared predicate behind both `decideDeleteMergedBranch` (preview) and the
+ * `runDeleteMergedBranch` apply loop (execute). Assumes the fork/opt-out gate
+ * already passed (those PRs are dropped before this call by both callers).
+ */
+async function decideDeleteOne(
+  pr: MergedPRInput,
+  owner: string,
+  name: string,
+  getRepo: DeleteMergedBranchDeps['getRepo'],
+): Promise<DecideDeleteOutcome> {
+  const repoMeta = await getRepo(owner, name);
+  if (repoMeta?.delete_branch_on_merge) {
+    // GitHub already deletes (or will) — terminal, no deleteRef planned.
+    return { kind: 'already-handled', prId: pr.id };
+  }
+  return {
+    kind: 'delete-branch',
+    action: { kind: 'delete-branch', prId: pr.id, owner, name, headRef: pr.headRef, repo: pr.repo, number: pr.number },
+  };
+}
+
+/**
+ * PREVIEW-1 — read-only (`getRepo` only): the delete outcomes the execute path
+ * WOULD produce. Fork/opt-out PRs yield no outcome (their `skipped++` lives in the
+ * run wrapper). A getRepo failure means preview cannot determine the outcome → that
+ * PR is silently omitted (execute records it as `failed`).
+ */
+export async function decideDeleteMergedBranch(
+  prs: MergedPRInput[],
+  settings: DeleteMergedBranchSettings,
+  deps: Pick<DeleteMergedBranchDeps, 'getRepo'>,
+): Promise<DecideDeleteOutcome[]> {
+  if (!settings.enabled) return [];
+  const optOut = new Set(settings.optOutRepos);
+  const outcomes: DecideDeleteOutcome[] = [];
+  for (const pr of prs) {
+    if (!pr.sameRepo || optOut.has(pr.repo)) continue;
+    const [owner, name] = pr.repo.split('/');
+    try {
+      outcomes.push(await decideDeleteOne(pr, owner, name, deps.getRepo));
+    } catch {
+      // preview: undeterminable → omit (execute would surface this as failed)
+    }
+  }
+  return outcomes;
+}
+
 export async function runDeleteMergedBranch(
   prs: MergedPRInput[],
   settings: DeleteMergedBranchSettings,
@@ -68,15 +120,17 @@ export async function runDeleteMergedBranch(
 
     const [owner, name] = pr.repo.split('/');
     try {
-      const repoMeta = await deps.getRepo(owner, name);
-      if (repoMeta?.delete_branch_on_merge) {
-        // GitHub already deleted (or will). Treat as terminal success.
+      // Decision (shared with preview's decideDeleteMergedBranch); apply below.
+      const decision = await decideDeleteOne(pr, owner, name, deps.getRepo);
+      if (decision.kind === 'already-handled') {
+        // GitHub already deleted (or will). Terminal: skip the deleteRef, but
+        // both bookkeeping effects (skipped++ AND branchDeletedPRs) still fire.
         result.skipped++;
         result.branchDeletedPRs.push(pr.id);
         continue;
       }
 
-      const outcome = await deps.deleteRef(owner, name, pr.headRef);
+      const outcome = await deps.deleteRef(owner, name, decision.action.headRef);
       if (outcome === 'deleted' || outcome === 'already-gone') {
         result.deleted++;
         result.branchDeletedPRs.push(pr.id);
