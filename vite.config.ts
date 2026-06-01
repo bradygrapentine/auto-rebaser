@@ -67,17 +67,21 @@ export default defineConfig({
         '**/*.d.ts',
         '**/worktrees/**',
       ],
-      // Calibrated 2026-05-30 against @vitest/coverage-v8 3's AST-aware remap
-      // (COVERAGE-1). v8 3 measures the same source more strictly than v8 1 did,
-      // so these are the honest measured floors (set at/just below the real
-      // globals), NOT a relaxed bar — `branches` is unchanged. If `test:coverage`
-      // is ever promoted to a required CI check, RE-DERIVE these, don't inherit.
+      // Re-calibrated 2026-06-01 against @vitest/coverage-v8 4's remap (OPS-5,
+      // vitest 3 -> 4). Like the v8-1 -> v8-3 jump (COVERAGE-1, 2026-05-30), the
+      // v8-4 instrumentation measures the SAME source differently — notably
+      // branch counting got stricter (measured globals moved from
+      // 92.38/88.59/88.67/92.38 on v8-3 to 90.96/88.21/81.73/88.89 on v8-4 with
+      // ZERO source change, only the coverage tool's major version). These are
+      // the honest v8-4 measured floors (set at/just below the real globals),
+      // NOT a relaxed bar. `test:coverage` is NOT a required CI check (CI runs
+      // `vitest run`); if it is ever promoted, RE-DERIVE these, don't inherit.
       // Re-measure before lowering.
       thresholds: {
-        lines: 92,
+        lines: 90,
         functions: 88,
-        branches: 88,
-        statements: 92,
+        branches: 81,
+        statements: 88,
       },
     },
   },
