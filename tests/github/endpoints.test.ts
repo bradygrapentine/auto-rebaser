@@ -48,6 +48,37 @@ describe('endpoints', () => {
       const result = await searchAuthoredPRs();
       expect(result).toEqual({ items: [{ id: 1 }] });
     });
+
+    // CT-7 — per-page error isolation.
+    it('flags partial + returns page-1 items when a LATER page throws transiently', async () => {
+      vi.mocked(request)
+        .mockResolvedValueOnce({ items: Array.from({ length: 100 }, (_, i) => ({ id: i + 1 })) })
+        .mockRejectedValueOnce(new Error('HTTP_502')); // page 2 transient 5xx
+      const result = await searchAuthoredPRs();
+      expect(result.partial).toBe(true);
+      expect(result.items).toHaveLength(100); // page-1 aggregate, not blanked
+    });
+
+    it('does NOT flag partial on a complete walk', async () => {
+      vi.mocked(request).mockResolvedValue({ items: [{ id: 1 }] });
+      const result = await searchAuthoredPRs();
+      expect(result.partial).toBeUndefined();
+    });
+
+    it('propagates a PAGE-1 failure (caller aborts the cycle unchanged)', async () => {
+      vi.mocked(request).mockRejectedValueOnce(new Error('HTTP_502'));
+      await expect(searchAuthoredPRs()).rejects.toThrow('HTTP_502');
+    });
+
+    it.each(['RATE_LIMITED', 'AUTH_ERROR', 'NOT_AUTHENTICATED', 'FORBIDDEN', 'HTTP_403'])(
+      're-throws account-fatal %s even on a later page (never partial)',
+      async (msg) => {
+        vi.mocked(request)
+          .mockResolvedValueOnce({ items: Array.from({ length: 100 }, (_, i) => ({ id: i + 1 })) })
+          .mockRejectedValueOnce(new Error(msg));
+        await expect(searchAuthoredPRs()).rejects.toThrow(msg);
+      },
+    );
   });
 
   describe('getPR', () => {

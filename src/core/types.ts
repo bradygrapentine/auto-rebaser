@@ -87,6 +87,10 @@ export interface SearchPRItem {
 
 export interface SearchResult {
   items: SearchPRItem[];
+  /** CT-7 — true when a transient failure on a page after the first cut the
+   *  walk short: `items` is incomplete, so a PR's absence is NOT authoritative
+   *  and the caller must skip open→closed transition detection this cycle. */
+  partial?: boolean;
 }
 
 /**

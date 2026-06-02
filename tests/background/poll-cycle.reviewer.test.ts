@@ -205,6 +205,45 @@ describe('poll-cycle — reviewer phase', () => {
     expect(enablePullRequestAutoMerge).not.toHaveBeenCalled();
   });
 
+  // CT-6 — a transient fetch that drops `head.sha` to undefined must NOT read as
+  // a head change: the armed flag carries forward (no re-fire, no spurious entry).
+  it('does NOT re-fire enableAutoMerge when the incoming head SHA is undefined (transient fetch)', async () => {
+    withSettings({
+      enableReviewerTab: true,
+      enableReviewerAutoMerge: true,
+      autoMergeReviewerOptInRepos: ['org/api'],
+    });
+    withReviewerStore([
+      {
+        id: 42,
+        number: 42,
+        title: 'reviewer PR',
+        repo: 'org/api',
+        url: 'https://github.com/org/api/pull/42',
+        state: 'current',
+        lastUpdated: 0,
+        lastSeenHeadSha: 'sha-CUR',
+        reviewerAutoMergeArmed: { at: Date.now() - 60_000 },
+      } as PRRecord & PRRecordPhaseTwo,
+    ]);
+    (searchReviewerPRs as ReturnType<typeof vi.fn>).mockResolvedValue(reviewerSearch(42));
+    // head present but sha undefined — the partial-fetch case.
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePR({ head: { ref: 'feat', repo: { full_name: 'org/api' }, sha: undefined } as PullRequest['head'] }),
+    );
+    (listReviews as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { login: 'alice', state: 'APPROVED', submittedAt: Date.now() - 60_000 },
+    ]);
+    (getPRReviewDecision as ReturnType<typeof vi.fn>).mockResolvedValue('APPROVED');
+
+    await runPollCycle();
+
+    expect(enablePullRequestAutoMerge).not.toHaveBeenCalled();
+    // armed flag carried forward unchanged
+    const upserted = (upsertReviewerPRs as ReturnType<typeof vi.fn>).mock.calls[0][0][0];
+    expect(upserted.reviewerAutoMergeArmed).toMatchObject({ at: expect.any(Number) });
+  });
+
   it('clears reviewerAutoMergeArmed when head SHA changes (new push after arm)', async () => {
     withSettings({
       enableReviewerTab: true,
