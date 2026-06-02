@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-02 (**Release-prep sprint shipped** — live-test PASSED → 3 serial-direct tracks: **REMOVE-PREVIEW** #277 (dry-run/preview USER SURFACE removed entirely; the decide*/shared-adapter machinery the execute path depends on KEPT; char wall 36/36 byte-identical), **NEEDS-YOU-FIX** #278 (conflicts link `${pr.url}/conflicts`→`pr.url` in BOTH triage-actions + PRRow; needs-you top spacing −4px), **RELEASE-NOTES** #279 (`docs/release-notes/v2.1.0.md` from the post-v2.0.0-closeout wave). **Ready=0.** **Blocked=0.** **Shipped=91.** **Release status:** dry-run REMOVED, DIGEST hidden, TRIAGE frozen; v2.1.0 notes drafted. **Next: bump manifest 2.0.0→2.1.0 → store submission** (Chrome + Firefox) — the only remaining release step. Remaining §5 candidates: TRIAGE-POLISH (+N-more dedup, NeedsYou CI-cap boundary test) + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-02 (**§5 polish/reliability sweep shipped** — baseline `/sprint`, 4 serial-direct tracks (opus-on-opus 2 cycles, 3 must-fix caught at plan time): **CT-3c** #283 (label-filter `<datalist>` autocomplete via `useKnownLabels`), **SEC-11** #284 (notification click-target URL guard at persist+sink, GHES-only), **CT-6+CT-7** #282 (reviewer headSha guard + `searchAuthoredPRs` partial-search isolation; CT-7 gained a preserve-on-partial fix beyond plan — `pruneStale` would else evict the absent PRs), **TRIAGE-POLISH** #285 (attention-dot `role`, shared `capCiList` helper, boundary test, N13b comment). **Ready=0.** **Blocked=0.** **Shipped=96.** Char wall 36/36 byte-identical. **OPS-2 confirmed already shipped** (#221/#223/#225+#227); **11 of 13 gate nits dead** (deleted preview files) — only N13b shipped, N7 dropped (mis-anchored); capture-first StatusContext fixture deferred. **Release status unchanged: bump manifest 2.0.0→2.1.0 → store submission** is the only remaining release step.)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -21,7 +21,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 ## §1 Ready
 
-_**§1 is empty by design after the 2026-06-01 scope trim.** A large batch of features sits on `main`, unreleased since v2.0.0 — that, not new features, is the priority: **live-test the post-v2.0.0 batch → bump version → submit to stores.** Scope trimmed: preview stays basic (PREVIEW-3/4/5/6/10 → 🧊), DIGEST hidden from the release, TRIAGE frozen (ship-as-is, no more triage work). Remaining §5 candidates are polish/audit follow-ups (TRIAGE-POLISH, SEC-11/CT-6/CT-7/CT-3c). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
+_**§1 is empty by design after the 2026-06-01 scope trim.** A large batch of features sits on `main`, unreleased since v2.0.0 — that, not new features, is the priority: **live-test the post-v2.0.0 batch → bump version → submit to stores.** Scope trimmed: preview stays basic (PREVIEW-3/4/5/6/10 → 🧊), DIGEST hidden from the release, TRIAGE frozen (ship-as-is, no more triage work). The §5 polish/reliability candidates (CT-3c, SEC-11, CT-6, CT-7, TRIAGE-POLISH) SHIPPED 2026-06-02 (§7). Remaining §5: capture-first StatusContext fixture (deferred — needs a real legacy-status `gh api` capture), flaky-e2e (unfiled). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
 
 ## §2 In progress
 _(none)_
@@ -36,28 +36,28 @@ _(none — SPIKE-1 cleared the queue: PREVIEW-1/DIGEST-1 → §1 Ready, OPS-5/RE
 _Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
 _**Scope decision 2026-06-01 — preview stays BASIC.** The dry-run preview ships as-is (just enough that users find the page and see what's there). No further preview work for now → **PREVIEW-3/4/5/6 and PREVIEW-10 deferred to 🧊** (dedicated-view/inline-badges, multi-account aggregate, persist-last-preview, opt-in direct-merge probe, execute-path per-PR `getRepo` degradation). The PREVIEW-7/8/9 gate-cluster follow-ups SHIPPED (§7); report `.claude/state/gate-cluster-review-preview-1-dry-run.md`._
-- _13 residual gate-report nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) — sweep opportunistically when nearby files are next touched; none block._
+- _~~13 residual gate-report nits~~ RESOLVED 2026-06-02: **11 of 13 were dead** (N1–N6, N8–N12 + most of N13 targeted `runPreview`/`PreviewView`/`usePreview`/`preview-gather`, all DELETED in #277). N13b (char-test "byte-identity" comment over-claim) shipped #285. N7 dropped — mis-described (comment at `merge-clean.ts:30`, not :42; `merge-clean.char.test.ts` exists, greps fine)._
 
 _**DIGEST-1 — hidden from the release (2026-06-01 scope trim).** Deemed not necessary for now. The `App.tsx` `onDigest` wiring is commented out so the "this week" footer button + `d` shortcut don't render; `DigestView`/`useDigest`/`computeDigest`/`'digest'` route all remain on main — re-enable by restoring the one prop._
 
 _**TRIAGE — frozen (2026-06-01 scope trim).** TRIAGE-1/2 ("Needs you" surface + skip-reason) ship as-is; NO further triage work and no commitment to the broader "command center" direction until deliberately revisited. (Flagged as serious long-term scope.)_
 
-_**CT-3c** (follow-up from CT-3, #248) — label-filter autocomplete. CT-3's include/exclude label inputs are free-text (a typo'd label just never matches — fails safe). Scoped 2026-06-01: source suggestions from the LOCAL PR store (CT-3 T3 already persists name-only `labels`) via a `useKnownLabels()` hook + a `<datalist>` on `LabelList` — no new GitHub endpoint/permission, mirrors `useKnownRepos`→`RepoOptOutList`. Low priority._
+_~~**CT-3c** — label-filter autocomplete~~ SHIPPED 2026-06-02 (#283 — see §7)._
 
 _**Audit follow-ups (2026-06-01 release-readiness audit, should-fix)** — file: `docs/audits/2026-06-01-release-readiness-audit.md`:_
-- _**SEC-11** — validate the CT-4 click-target URL before opening (`new URL()`, require `https:`, hostname ∈ {github.com, configured enterpriseHost} via `assertGithubOrigin`) at `persistClickTarget` so a hostile GHES can't return an arbitrary/`data:` URL. (github.com deployments safe; GHES-only exposure.)_
-- _**CT-6** — reviewer-phase missing-`headSha` guard: only compute `headChanged` when `headSha != null`, carry the armed flag when undefined (mirror poll-cycle.ts:429) so it doesn't re-fire `enableAutoMerge` + a spurious activity entry each cycle._
-- _**CT-7** — per-page error isolation in `searchAuthoredPRs`: let RATE_LIMITED/AUTH propagate, but on a transient error after page 1 return aggregated-so-far flagged partial (skip transition-detection) so one flaky page doesn't blank a whole account._
+- _~~**SEC-11** — validate the CT-4 click-target URL~~ SHIPPED 2026-06-02 (#284 — guard at persist+sink via `isSafeExternalUrl`; see §7)._
+- _~~**CT-6** — reviewer-phase missing-`headSha` guard~~ SHIPPED 2026-06-02 (#282 — see §7)._
+- _~~**CT-7** — per-page error isolation in `searchAuthoredPRs`~~ SHIPPED 2026-06-02 (#282 — partial flag + preserve-on-partial; see §7)._
 
 _The audit's 11 nits (a11y focus-visible/contrast, the orphaned `RepoFilter` dead code, stale comments, `PRRecordPhaseTwo` grab-bag) are recorded in the audit doc; promote individually if they become release-relevant._
 
-_**TRIAGE-POLISH** (post-wave review follow-up, 2026-06-01, should-fix/nit) — low priority:_
-- _**a11y (pre-existing)** — `PRRow` attention-dot uses `aria-label` on a bare roleless `<span>` (PRRow.tsx ~:89); add `role="img"` (or `sr-only` text) so the attention cue isn't color-only for AT users. Not introduced by the TRIAGE wave._
-- _**"+N more" dedup** — the render-cap string is duplicated in `NeedsYouSurface.tsx` and `PRRow.tsx`; extract a shared helper (repeated-copy rule)._
-- _**capture-first gap** — TRIAGE-2's `StatusContext` fixture branch is schema-sourced (this repo is all-GitHub-Actions); a single real `gh api` capture against any legacy-status repo would close it._
-- _**boundary test** — add a `NeedsYouSurface` CI-name-cap test at exactly 2 names (current test uses 3; off-by-one blind spot)._
+_**TRIAGE-POLISH** (post-wave review follow-up) — a/b/d SHIPPED 2026-06-02 (#285, §7); (c) deferred:_
+- _~~a11y attention-dot `role="img"`~~ SHIPPED #285._
+- _~~"+N more" dedup → `capCiList`~~ SHIPPED #285._
+- _**capture-first gap** (DEFERRED) — TRIAGE-2's `StatusContext` fixture branch is schema-sourced (this repo is all-GitHub-Actions); a single real `gh api` capture against any legacy-status repo would close it. Left parked: the schema-sourced fixture works today._
+- _~~`NeedsYouSurface` CI-cap boundary test at exactly 2~~ SHIPPED #285._
 
-_(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. Remaining: OPS-2 dev-dep major upgrade to clear residual OSV advisories.)_
+_(SEC-9 and SEC-10 shipped 2026-05-17 via PR #198 — see §7 below. OPS-2 SHIPPED 2026-05-29 via #221/#223/#225 (+OPS-4 #227): vite^6/vitest^4, all OSV `[[IgnoredVulns]]` cleared, OSV green + a required check. Nothing outstanding.)_
 
 _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 part 1 + SEC-1 regression fix shipped 2026-05-17 via #194/#195/#196/#197 — see §7 below. Remaining follow-ups: SEC-9 part 2 (workflow edit), SEC-10 (after dep-graph toggle).)_
 
@@ -66,6 +66,14 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-02 — §5 polish/reliability sweep (CT-3c, SEC-11, CT-6/7, TRIAGE-POLISH)
+_Baseline `/sprint`; plan `docs/plans/2026-06-02-ct3c-sec11-ct6-7-polish.md`. opus-on-opus 2 cycles — cycle 1 caught 3 must-fix at PLAN time (all premise errors, fixed before any code): SEC-11 threaded a non-existent in-scope `enterpriseHost` (→ `getGlobalSetting`), N7 mis-anchored, `useKnownLabels` read `.labels` off `PRRecord` which lacks it (→ `PRRecordPhaseTwo` widen). Cycle 2 clean. Diagnose-first pruning: OPS-2 dropped (already shipped), 11/13 gate nits dead (deleted preview files), N7 dropped, TRIAGE-POLISH(c) deferred. 4 serial-direct PRs, file-disjoint; +25 tests, char wall 36/36 byte-identical, integrated suite 1237._
+- **CT-3c** Label-filter autocomplete. New `useKnownLabels()` hook (distinct trimmed label names across `usePRStore().prs`, widened to `PRRecordPhaseTwo` for `.labels`, deduped case-insensitively, sorted) + a `<datalist>` on `LabelList` (optional `suggestions` prop, filters already-added values), mirroring `useKnownRepos`→`RepoOptOutList`. No new endpoint/permission. PR #283.
+- **SEC-11** Guard the CT-4 notification click-target URL through the existing `isSafeExternalUrl(url, enterpriseHost)` (https: + host ∈ {github.com, configured `enterpriseHost`}) at BOTH `persistClickTarget` (drop before store) AND `handleNotificationClick` (re-validate at the sink before `chrome.tabs.create`, purging a pre-guard/tampered entry). `enterpriseHost` via `getGlobalSetting`. github.com unaffected; closes the GHES-only data:/javascript:/off-host exposure. PR #284.
+- **CT-6** Reviewer-arming `headChanged` guarded with `headSha != null` so a transient undefined head no longer reads as "changed" → no per-cycle re-fire of `enableAutoMerge` + spurious activity entry (mirrors the authored path ~:437). PR #282.
+- **CT-7** `searchAuthoredPRs` isolates a transient failure on a page AFTER the first: returns aggregated-so-far flagged `partial: true` instead of throwing (account-fatal RATE_LIMITED/AUTH/403 + page-1 errors still propagate). Poll skips open→closed transition-detection on `partial` AND — **beyond the plan** — re-affirms the search-absent open PRs so `pruneStale` (keyed on `processedPRs` ids) doesn't EVICT them (without that preserve, a partial cycle would delete the PRs — worse than a false close). Pending-deletion runs regardless. PR #282.
+- **TRIAGE-POLISH** (a) PRRow attention-dot `role="img"` (color-only cue → AT-accessible); (b) extracted the duplicated "first-N + +K more" cap into `core/ci-format.ts` `capCiList<T>` (shares slice/overflow only — PRRow's per-name SEC-11 link-folding untouched); (d) NeedsYouSurface boundary test at exactly 2 names. N13b — clarified the `delete-branch.char.test.ts` "byte-identity gate" comment (a diff-review discipline, not an assertion). PR #285.
 
 ### 2026-06-02 — Release-prep (remove dry-run + needs-you fixes + v2.1.0 notes)
 _Baseline `/sprint`; plan `docs/plans/2026-06-02-remove-dryrun-needsyou-release.md`. opus-on-opus cycle 1 clean (0 must-fix / 2 should-fix / 3 nit; removal boundary verified — every removed symbol referenced only by deleted/edited files, char wall stays byte-identical). Serial-direct (opus-direct) T1→T2→T3; gated on a PASSING manual live-test of the post-v2.0.0 batch._
