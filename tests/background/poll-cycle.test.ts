@@ -741,6 +741,40 @@ describe('transition: closed PR absent from search whose getPR 404s', () => {
     expect(pr.state).toBe('closed');
   });
 
+  // CT-7 — on a partial search, a search-absent open PR must NOT be stamped
+  // closed AND must NOT be pruned; pending-deletion must still run.
+  it('partial search: preserves a search-absent open PR (no close, no getPR) but still runs pending-deletion', async () => {
+    const previousStore: PRStore = {
+      prs: [
+        // open last cycle, absent from the (partial) search now
+        { id: 1, number: 190, title: 'open pr', repo: 'org/repo',
+          url: 'https://github.com/org/repo/pull/190', state: 'needs-manual', lastUpdated: 1000 },
+        // merged, branch not yet deleted → cohort (b), must still process
+        { id: 2, number: 191, title: 'merged pr', repo: 'org/repo',
+          url: 'https://github.com/org/repo/pull/191', state: 'merged', lastUpdated: 1000,
+          branchDeleted: false } as PRRecord & PRRecordPhaseTwo,
+      ],
+      lastPollAt: 1000,
+    };
+    (loadStore as ReturnType<typeof vi.fn>).mockResolvedValue(previousStore);
+    // Partial search: empty items + partial flag (both PRs absent from search).
+    (searchAuthoredPRs as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [], partial: true });
+    (getPR as ReturnType<typeof vi.fn>).mockResolvedValue(makePR({ id: 2, number: 191 }));
+
+    await runPollCycle();
+
+    const activeIds = (pruneStale as ReturnType<typeof vi.fn>).mock.calls[0][0] as number[];
+    expect(activeIds).toContain(1); // preserved → NOT pruned
+    const upserted = (upsertPRs as ReturnType<typeof vi.fn>).mock.calls[0][0] as PRRecord[];
+    const open = upserted.find((p) => p.id === 1);
+    expect(open?.state).toBe('needs-manual'); // NOT stamped closed
+    // cohort (a) skip means we never re-fetched the absent open PR; the only
+    // getPR was the pending-deletion (id 2) re-fetch.
+    const getPRCalls = (getPR as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[2]);
+    expect(getPRCalls).toContain(191); // pending-deletion ran
+    expect(getPRCalls).not.toContain(190); // absent open PR NOT re-fetched
+  });
+
   it('preserves prior state on transient HTTP_503 (cap-safety: not a confirmed close)', async () => {
     const previousStore: PRStore = {
       prs: [{

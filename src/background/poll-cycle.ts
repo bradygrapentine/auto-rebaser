@@ -553,10 +553,20 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
   //  2. Pending deletions: previously detected as 'merged' but branch deletion
   //     hasn't yet succeeded — re-fetch and re-feed orchestrator until it does.
   //     Without this, a transient deleteRef 5xx becomes permanent failure.
-  const transitionedFromOpen = store.prs.filter(p =>
+  // Store PRs open last cycle but absent from THIS search.
+  const searchAbsentOpen = store.prs.filter(p =>
     p.state !== 'merged' && p.state !== 'closed' && !currentSearchIds.has(p.id)
       && !ignoredRepos.has(p.repo)
   );
+  // CT-7 — on a PARTIAL search (a transient later-page failure dropped some
+  // results), a PR's absence is NOT authoritative — it may be on a page we never
+  // fetched. Skip cohort (a) transition-detection so we don't stamp a still-open
+  // PR closed; instead PRESERVE those PRs unchanged below (else pruneStale, keyed
+  // on processedPRs ids, would evict them — blanking the account, the very thing
+  // CT-7 prevents). Cohort (b) pending-deletion is independent of search
+  // completeness, so it ALWAYS runs.
+  const transitionedFromOpen = searchResult.partial ? [] : searchAbsentOpen;
+  const partialPreserved = searchResult.partial ? searchAbsentOpen : [];
   const pendingDeletion = store.prs.filter(p =>
     p.state === 'merged' && !(p as PRRecord & PRRecordPhaseTwo).branchDeleted
       && !ignoredRepos.has(p.repo)
@@ -637,6 +647,12 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
         ? { sameRepo: detail.head.repo.full_name === prev.repo }
         : {}),
     } as PRRecord);
+  }
+
+  // CT-7 — on a partial search, re-affirm the search-absent open PRs (prior
+  // record, bumped time; no state change, no re-fetch) so pruneStale keeps them.
+  for (const prev of partialPreserved) {
+    processedPRs.push({ ...prev, lastUpdated: Date.now() } as PRRecord);
   }
 
   // Step 4: persist v1 rebase results
@@ -746,7 +762,13 @@ async function runReviewerPhase(settings: AutomationSettings, scope?: AccountSco
 
     const cached = existingById.get(item.id);
     const headSha = pr.head?.sha;
-    const headChanged = cached?.lastSeenHeadSha != null && cached.lastSeenHeadSha !== headSha;
+    // CT-6 — only treat the head as changed when we actually OBSERVED a new sha.
+    // A transient `headSha === undefined` (partial fetch) must NOT read as
+    // "changed" — otherwise carryArmed flips false and we re-fire enableAutoMerge
+    // + a spurious activity entry every cycle. Mirrors the authored path's outer
+    // `pr.head?.sha` guard (~:437).
+    const headChanged =
+      headSha != null && cached?.lastSeenHeadSha != null && cached.lastSeenHeadSha !== headSha;
     const carryArmed = !headChanged && cached?.reviewerAutoMergeArmed;
 
     // Compute my latest decisive review for the chip + gate input.
