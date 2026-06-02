@@ -8,9 +8,10 @@ import { ActivityLogView } from './views/ActivityLogView';
 import { HelpView } from './views/HelpView';
 import { PingConfirmView } from './views/PingConfirmView';
 import { RerequestConfirmView } from './views/RerequestConfirmView';
+import { PreviewView } from './views/PreviewView';
 import type { PRRecord } from '../core/types';
 
-type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'rerequest-confirm' | 'add-account';
+type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'rerequest-confirm' | 'add-account' | 'preview';
 
 export function App() {
   const auth = useAuth();
@@ -94,6 +95,8 @@ export function App() {
       );
     case 'help':
       return <HelpView onBack={() => setView('list')} />;
+    case 'preview':
+      return <PreviewView onBack={() => setView('list')} />;
     case 'add-account':
       return (
         <div className="popup-root">
@@ -156,6 +159,7 @@ export function App() {
           onSettings={() => setView('settings')}
           onSignOut={auth.signOut}
           onHelp={() => setView('help')}
+          onPreview={() => setView('preview')}
           onPing={(pr) => {
             setPingTarget(pr);
             setView('ping-confirm');

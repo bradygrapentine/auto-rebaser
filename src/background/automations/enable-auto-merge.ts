@@ -108,10 +108,13 @@ function decideEnablePR(pr: EligiblePR, settings: EnableAutoMergeSettings, optOu
  * PR that would call `deps.enable`). Skipped + no-allowed-method PRs yield no
  * action. Same per-PR predicate the execute path uses, so the two cannot drift.
  */
-export function decideEnableAutoMerge(prs: EligiblePR[], settings: EnableAutoMergeSettings): PlannedAction[] {
+export function decideEnableAutoMerge(
+  prs: EligiblePR[],
+  settings: EnableAutoMergeSettings,
+): Array<Extract<PlannedAction, { kind: 'enable-auto-merge' }>> {
   if (!settings.enabled) return [];
   const optOut = new Set(settings.optOutRepos);
-  const actions: PlannedAction[] = [];
+  const actions: Array<Extract<PlannedAction, { kind: 'enable-auto-merge' }>> = [];
   for (const pr of prs) {
     const d = decideEnablePR(pr, settings, optOut);
     if (d.kind === 'enable') actions.push(d.action);
