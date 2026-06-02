@@ -2,6 +2,8 @@
 
 _Paste target: Chrome Web Store "Description" + Firefox AMO "Description". Kept in sync with the live feature set; update on each release that changes user-visible behavior._
 
+**Store variants:** the body below is the Chrome version. For **Firefox AMO**, change the one storage reference in the PRIVACY section — "live in chrome.storage" → "live in browser storage" (everything else is identical). AMO Summary field limit is 250 chars; CWS has no per-version changelog field, so the Description is the only user-facing copy on both stores.
+
 ---
 
 **Short tagline**
