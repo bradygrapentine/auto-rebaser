@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAutomationSettings } from '../hooks/useAutomationSettings';
 import { useKnownRepos } from '../hooks/useKnownRepos';
+import { useKnownLabels } from '../hooks/useKnownLabels';
 import { RepoOptOutList } from './RepoOptOutList';
 import { LabelList } from './LabelList';
 import type { MergeMethod, StaleThresholdDays } from '../../core/automations-types';
@@ -170,6 +171,7 @@ function MergeMethodPreferenceEditor({
 export function AutomationsSettings() {
   const { settings, save } = useAutomationSettings();
   const knownRepos = useKnownRepos();
+  const knownLabels = useKnownLabels();
   const [expanded, setExpanded] = useState<Record<SubKey, boolean>>({
     ignored: true,
     autoRebase: true,
@@ -678,11 +680,13 @@ export function AutomationsSettings() {
               label="Only PRs with a label (include)"
               values={settings.includeLabels}
               onChange={(includeLabels) => save({ includeLabels })}
+              suggestions={knownLabels}
             />
             <LabelList
               label="Skip PRs with a label (exclude)"
               values={settings.excludeLabels}
               onChange={(excludeLabels) => save({ excludeLabels })}
+              suggestions={knownLabels}
             />
           </>
         )}
