@@ -151,10 +151,10 @@ describe('PRRow', () => {
       errorMessage: 'Rebase rejected by GitHub',
     };
 
-    it('renders conflict chip with link to /conflicts when state=rebase-rejected', () => {
+    it('renders conflict chip linking to the PR page when state=rebase-rejected', () => {
       render(<PRRow pr={rejectedPR} />);
       const chip = screen.getByTestId('rebase-rejected-chip');
-      expect(chip).toHaveAttribute('href', 'https://github.com/owner/repo/pull/42/conflicts');
+      expect(chip).toHaveAttribute('href', 'https://github.com/owner/repo/pull/42');
       expect(chip).toHaveAttribute('target', '_blank');
       expect(chip).toHaveAttribute('rel', 'noopener noreferrer');
     });

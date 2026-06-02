@@ -26,7 +26,7 @@ describe('NeedsYouSurface', () => {
     expect(screen.getByTestId('needs-you-surface')).toBeTruthy();
     expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
     const action = screen.getByTestId('needs-you-action') as HTMLAnchorElement;
-    expect(action.getAttribute('href')).toBe('https://github.com/org/r/pull/1/conflicts');
+    expect(action.getAttribute('href')).toBe('https://github.com/org/r/pull/1');
     expect(action.textContent).toBe('open conflicts');
     // Clicking the action must not bubble to the row (stopPropagation).
     fireEvent.click(action);

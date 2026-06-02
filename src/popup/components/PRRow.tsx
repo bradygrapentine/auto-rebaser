@@ -173,13 +173,13 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
         )}
         {pr.state === 'rebase-rejected' && (
           <a
-            href={`${pr.url}/conflicts`}
+            href={pr.url}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="pr-row__conflict-chip"
             data-testid="rebase-rejected-chip"
-            title="GitHub refused the rebase — open the conflict-resolution UI."
+            title="GitHub refused the rebase — open the PR to resolve conflicts."
           >
             ! conflict
           </a>

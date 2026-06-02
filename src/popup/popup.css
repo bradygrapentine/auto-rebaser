@@ -497,7 +497,7 @@ code, .mono {
 .pr-row__reviewer-chip--stale-push { color: var(--term-yellow, #c79a3a); border-color: rgba(199, 154, 58, 0.45); }
 
 /* CONFLICT-1 — chip surfaced when a rebase is refused by GitHub (HTTP_422).
- * Clickable link to the PR's /conflicts page. Red to match the badge. */
+ * Clickable link to the PR page (resolve-conflicts CTA). Red to match the badge. */
 .pr-row__conflict-chip {
   font-size: 10px;
   padding: 1px 4px;
@@ -640,6 +640,9 @@ code, .mono {
 .view-body > .empty-installations:first-child { margin-top: -4px; }
 .view-body > .migration-banner:first-child { margin-top: -4px; }
 .view-body > .pr-tabs:first-child { margin-top: -4px; }
+/* Negate the view-body 4px top padding so the gap above Needs-you matches its
+   uniform 8px side margin (top was 12px, sides 8px). */
+.view-body > .needs-you:first-child { margin-top: -4px; }
 .empty-installations p { margin: 0 0 8px 0; }
 .empty-installations__actions { display: flex; gap: 6px; }
 

@@ -70,12 +70,15 @@ export function triageActionFor(
   switch (reason) {
     case 'staleApproval':
       return { reason, label: 're-request review', href: pr.url };
+    // Link to the PR page (not `${pr.url}/conflicts`): the `/conflicts` web
+    // editor is only reachable for web-resolvable conflicts and otherwise
+    // 404s/redirects. The PR page natively surfaces the "Resolve conflicts" CTA.
     case 'conflict':
-      return { reason, label: 'open conflicts', href: `${pr.url}/conflicts` };
+      return { reason, label: 'open conflicts', href: pr.url };
     case 'needs-manual':
       return { reason, label: 'resolve manually', href: pr.url };
     case 'rebase-rejected':
-      return { reason, label: 'resolve conflict', href: `${pr.url}/conflicts` };
+      return { reason, label: 'resolve conflict', href: pr.url };
     case 'behind-auto-off':
       return { reason, label: 'rebase manually', href: pr.url };
     default: {
