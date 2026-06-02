@@ -10,6 +10,9 @@ import { useCallback, useEffect, useState } from 'react';
 import type { RuntimeResponse } from '../../core/types';
 import type { PreviewProjection } from '../../background/automations/planned-action';
 
+/** Fallback error surfaced when the dry-run fails without a specific message. */
+const PREVIEW_FAILED = 'PREVIEW_FAILED';
+
 export interface UsePreview {
   projection: PreviewProjection | null;
   loading: boolean;
@@ -32,10 +35,10 @@ export function usePreview(): UsePreview {
         if (res?.ok && res.data) {
           setProjection(res.data as PreviewProjection);
         } else {
-          setError(res?.error ?? 'PREVIEW_FAILED');
+          setError(res?.error ?? PREVIEW_FAILED);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'PREVIEW_FAILED');
+        setError(err instanceof Error ? err.message : PREVIEW_FAILED);
       } finally {
         setLoading(false);
       }

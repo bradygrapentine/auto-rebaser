@@ -18,6 +18,12 @@ vi.mock('../../../src/core/auth-store', () => ({ getAuth: vi.fn() }));
 vi.mock('../../../src/core/pr-store', () => ({ loadStore: vi.fn() }));
 vi.mock('../../../src/github/endpoints', () => ({ searchAuthoredPRs: vi.fn(), getPR: vi.fn() }));
 vi.mock('../../../src/github/endpoints/repos', () => ({ getRepo: vi.fn() }));
+// Mutating endpoints — gather wraps them into the deps object for type parity
+// but must NEVER invoke them. Mock so the no-mutation test can assert that.
+vi.mock('../../../src/github/endpoints/git-refs', () => ({ deleteRef: vi.fn() }));
+vi.mock('../../../src/github/endpoints/auto-merge', () => ({ enablePullRequestAutoMerge: vi.fn() }));
+vi.mock('../../../src/github/endpoints/review-threads', () => ({ listReviewThreads: vi.fn(), resolveReviewThread: vi.fn() }));
+vi.mock('../../../src/github/endpoints/merge-pr', () => ({ mergePR: vi.fn() }));
 
 import { gatherPreviewInputs } from '../../../src/background/automations/preview-gather';
 import { runAllAutomations } from '../../../src/background/automations/orchestrator';
@@ -32,6 +38,10 @@ import { getAuth } from '../../../src/core/auth-store';
 import { loadStore } from '../../../src/core/pr-store';
 import { searchAuthoredPRs, getPR } from '../../../src/github/endpoints';
 import { getRepo } from '../../../src/github/endpoints/repos';
+import { deleteRef } from '../../../src/github/endpoints/git-refs';
+import { enablePullRequestAutoMerge } from '../../../src/github/endpoints/auto-merge';
+import { resolveReviewThread } from '../../../src/github/endpoints/review-threads';
+import { mergePR } from '../../../src/github/endpoints/merge-pr';
 
 const pr = (o: Partial<PRRecord & { mergedAt?: number; branchDeleted?: boolean; isDraft?: boolean; headRef?: string }>): PRRecord =>
   ({ id: 0, number: 0, title: 't', repo: 'o/r', url: 'u', state: 'current', lastUpdated: 0, ...o } as PRRecord);
@@ -132,5 +142,24 @@ describe('gather/execute input-set PARITY (both divergence directions)', () => {
     const result = await runAllAutomations({ ...got, mode: 'preview' });
     const deletes = result.preview!.actions.filter((a) => a.kind === 'delete-branch');
     expect(deletes.map((a) => (a.kind === 'delete-branch' ? a.prId : -1))).toContain(6);
+  });
+});
+
+describe('gatherPreviewInputs — fires NO mutation', () => {
+  it('never invokes any mutating endpoint while assembling the opts', async () => {
+    vi.mocked(getAuth).mockResolvedValue(null);
+    vi.mocked(getAutomationSettings).mockResolvedValue(settings());
+    vi.mocked(loadStore).mockResolvedValue({ prs: [pr({ id: 1, number: 11, repo: 'o/a' })] } as never);
+    vi.mocked(searchAuthoredPRs).mockResolvedValue({ items: [{ id: 1, number: 11, title: 't', html_url: 'u', repository_url: 'https://api.github.com/repos/o/a' }] } as never);
+    vi.mocked(getPR).mockImplementation(async (_o: string, _r: string, n: number) => detail(n, 'o/a') as never);
+
+    await gatherPreviewInputs();
+
+    // The deps wrapper carries these for type parity with execute, but gather
+    // assembles read-only — none may be called.
+    expect(deleteRef).not.toHaveBeenCalled();
+    expect(enablePullRequestAutoMerge).not.toHaveBeenCalled();
+    expect(resolveReviewThread).not.toHaveBeenCalled();
+    expect(mergePR).not.toHaveBeenCalled();
   });
 });
