@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**PREVIEW-1 shipped** — dry-run/preview mode, 4-PR `--ultracode` wave #263/#264/#265/#266; post-wave `--deep` gate cluster verdict **ship-with-todo** 0 must-fix / 9 should-fix / 13 nit → 3 follow-up rows PREVIEW-7/8/9 filed in §5. **Ready=1** (DIGEST-1). **Blocked=0.** **Shipped=84.** §5: PREVIEW-3/4/5/6 (enhancements) + PREVIEW-7/8/9 (gate-cluster follow-ups) + TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (**DIGEST-1 shipped** — weekly activity digest view, #269, baseline `/sprint` (0 must-fix opus-on-opus + clean inline 7b–7f cluster). **Ready=0** — §1 queue empty; next work needs fresh scoping. **Blocked=0.** **Shipped=85.** §5: PREVIEW-3/4/5/6 (enhancements) + PREVIEW-7/8/9 (gate-cluster follow-ups, PREVIEW-8 now also covers DigestView's async-load live-region) + TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,26 +9,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 1 |
+| 🟢 Ready | 0 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 84 |
+| ✅ Shipped | 85 |
 | 🧊 Deferred / dropped | 6 |
 
 ---
 
 ## §1 Ready
 
-_v1.2 "PR command center" direction. TRIAGE-1/TRIAGE-2 shipped (#256–#259, see §7). SPIKE-1 shipped (verdict doc `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`) → both `build` verdicts promoted; **PREVIEW-1 shipped** (4-PR wave, see §7); DIGEST-1 remains. OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
-
-### DIGEST-1 — Activity history / weekly digest view
-**Status:** 🟢 Ready
-**Verdict source:** SPIKE-1 → **build** (lower priority than PREVIEW-1).
-**Why:** Cheap visibility/retention win — makes invisible work visible ("saved you N manual rebases this week"). Changes no outcomes (visibility-only); the only risk is popup feature-bloat, mitigated by the low surface cost.
-**How:** Aggregation pass over the **existing** activity-log data — `activity-log-types.ts:18 ActivityEntry {action,result,ts,prTitle}`, 200-entry/30-day store, `activity-log.ts:106 loadActivityAll()` — grouped by action/result over a time window, plus one popup view mirroring existing view/component patterns. No new types, endpoint, or permission.
-**Done when:** a digest view aggregates the activity log over a window (e.g. 7 days) and renders per-action counts in the popup; reuses existing storage (no new persisted field).
+_v1.2 "PR command center" direction. The SPIKE-1 build queue is fully shipped: **PREVIEW-1** (4-PR wave) and **DIGEST-1** (#269) both → §7. **§1 is empty** — the next sprint needs fresh scoping (candidates live in §5: PREVIEW enhancements 3/4/5/6, gate-cluster follow-ups PREVIEW-7/8/9, plus CT/SEC follow-ups). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
 
 ## §2 In progress
 _(none)_
@@ -50,7 +43,7 @@ _**PREVIEW enhancements (cut from PREVIEW-1 chunk, plan §6) — all read-only-s
 
 _**PREVIEW-1 post-wave `--deep` gate-cluster follow-ups (2026-06-01, ship-with-todo should-fix; report `.claude/state/gate-cluster-review-preview-1-dry-run.md`):**_
 - _**PREVIEW-7** — unify execute/preview input adapters + per-PR `getRepo` degradation. Route the execute path through `buildEligiblePRs`/`buildMergedPRInputs` instead of re-inlining the byte-equivalent build (oop S1: restores the shared-adapter invariant), drop the redundant `prs` param from `decideDirectMerge` (S2), and add a per-PR `getRepo` catch so one repo's 5xx degrades that PR instead of blanking the whole preview (robust S3) — pin with a `preview-mode` partial-failure test (S4). Same files/helper; one fix._
-- _**PREVIEW-8** — a11y: live-region the dry-run preview (`aria-live=polite` so async results AND the always-present DRY-RUN banner are announced — both WCAG 4.1.3) + `h3→h2` heading hierarchy (1.3.1) + visually-hidden destructive association (`PreviewView.tsx`)._
+- _**PREVIEW-8** — a11y: live-region the dry-run preview (`aria-live=polite` so async results AND the always-present DRY-RUN banner are announced — both WCAG 4.1.3) + `h3→h2` heading hierarchy (1.3.1) + visually-hidden destructive association (`PreviewView.tsx`). **Also covers `DigestView.tsx`** (DIGEST-1 inline cluster a11y nit): the digest headline is `role="status"` but the loading→loaded transition would benefit from the same `aria-live` treatment — fold into this one a11y sweep._
 - _**PREVIEW-9** — test the shipped-untested `usePreview` hook (`usePreview.test.ts`: ok / !ok / throw / mount-fires-once, covering the `PREVIEW_FAILED` default branch + extract it to a shared constant) and assert `gatherPreviewInputs` invokes none of `deleteRef`/`enableAutoMerge`/`resolveThread`/`mergePR`._
 - _13 residual nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) recorded in the gate report; sweep opportunistically when PREVIEW-7/8/9 touch the same files — none block._
 
@@ -78,6 +71,10 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — DIGEST-1 (weekly activity digest)
+_Baseline `/sprint` (judge-free single-pass plan; 1 opus-on-opus cycle — 0 must-fix, 3 should-fix + 3 nit folded pre-Gate-2; clean inline 7b–7f post-wave cluster, 0 must-fix). Plan: `docs/plans/2026-06-01-digest-1-weekly-digest.md`._
+- **DIGEST-1** Read-only "this week" popup view aggregating the EXISTING activity-log store into per-action counts over a rolling 7-day window, headlined "Auto-rebased N PRs this week". New pure `computeDigest(entries, {now})` (`src/core/activity-digest.ts`) — windowed grouping by action + success/failed/skipped tally, `now` injected (no clock read in core → deterministic), inclusive lower bound (`at >= since`), `byAction` sorted total-desc/action-asc with zero-count actions omitted; `useDigest` reuses `useActivityLog({scope:'account'})` + `computeDigest` at the `Date.now()` boundary (no settings hook / `usePRStore` → sidesteps the documented mock ripple); `DigestView` + App/PRListView wiring (footer "this week" button, `d` shortcut, `'digest'` route) + popup.css. NO new storage/type/endpoint/permission/persisted field. +18 tests (pure-core hard-literals/boundary/ordering, `useDigest` hook, `DigestView` render, App routing); suite 1228 green; both targets build. PR #269. _(Coverage `test:coverage` pre-existing-red on main from `usePreview.ts` 0% (#266 → PREVIEW-9); DIGEST raised funcs 87.55→87.73%; coverage is not a CI gate.)_
 
 ### 2026-06-01 — PREVIEW-1 (dry-run / preview mode)
 _Planned via `--ultracode` (judge-panel plan + refute panel; 1 must-fix CRITICAL-2 closed pre-gate — store-merged delete-branch under-report — + 8 should-fix/9 nit applied). Shipped as a strictly-serial 4-track wave (total file overlap forbade parallel). Post-wave `--deep` gate cluster (5 role-primed reviewers): **ship-with-todo, 0 must-fix / 9 should-fix / 13 nit** → 3 follow-up rows (PREVIEW-7/8/9, §5). Report: `docs/plans/2026-06-01-preview-1-dry-run.md`, gate artifacts `.claude/state/gate-cluster-review-preview-1-dry-run.md`._
