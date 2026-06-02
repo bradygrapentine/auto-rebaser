@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**DIGEST-1 shipped** — weekly activity digest view, #269, baseline `/sprint` (0 must-fix opus-on-opus + clean inline 7b–7f cluster). **Ready=0** — §1 queue empty; next work needs fresh scoping. **Blocked=0.** **Shipped=85.** §5: PREVIEW-3/4/5/6 (enhancements) + PREVIEW-7/8/9 (gate-cluster follow-ups, PREVIEW-8 now also covers DigestView's async-load live-region) + TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (**PREVIEW-7/8/9 shipped** — gate-cluster follow-ups: #272 shared adapters + preview-only `getRepo` degradation, #273 a11y live-region, #271 usePreview coverage (coverage gate green, funcs 88.17%); baseline `/sprint`, 3 opus cycles incl. Gate-2 "fix first" re-scope. **Ready=0** — §1 queue empty; next work needs fresh scoping. **Blocked=0.** **Shipped=88.** §5: PREVIEW-3/4/5/6 (enhancements) + PREVIEW-10 (deferred execute degradation) + TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -14,14 +14,14 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 85 |
+| ✅ Shipped | 88 |
 | 🧊 Deferred / dropped | 6 |
 
 ---
 
 ## §1 Ready
 
-_v1.2 "PR command center" direction. The SPIKE-1 build queue is fully shipped: **PREVIEW-1** (4-PR wave) and **DIGEST-1** (#269) both → §7. **§1 is empty** — the next sprint needs fresh scoping (candidates live in §5: PREVIEW enhancements 3/4/5/6, gate-cluster follow-ups PREVIEW-7/8/9, plus CT/SEC follow-ups). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
+_v1.2 "PR command center" direction. The SPIKE-1 build queue is fully shipped: **PREVIEW-1** (4-PR wave), **DIGEST-1** (#269), and the **PREVIEW-7/8/9** gate-cluster follow-ups (#271/#272/#273) all → §7. **§1 is empty** — the next sprint needs fresh scoping (candidates live in §5: PREVIEW enhancements 3/4/5/6, deferred PREVIEW-10, plus CT/SEC follow-ups). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
 
 ## §2 In progress
 _(none)_
@@ -41,11 +41,9 @@ _**PREVIEW enhancements (cut from PREVIEW-1 chunk, plan §6) — all read-only-s
 - _**PREVIEW-5** — Persist last preview + timestamp so re-opening the popup shows the prior projection without a re-poll (`usePreview` currently holds ephemeral state only)._
 - _**PREVIEW-6** — Opt-in "probe direct-merge eligibility": a deliberate user-initiated button that DOES fire `enableAutoMerge` (a write) to resolve clean-status, turning `directMergeCandidatePRIds` (surfaced as not-previewable in PREVIEW-1) into concrete `direct-merge` rows. Crosses the no-mutation boundary → own UX confirmation + SEC review._
 
-_**PREVIEW-1 post-wave `--deep` gate-cluster follow-ups (2026-06-01, ship-with-todo should-fix; report `.claude/state/gate-cluster-review-preview-1-dry-run.md`):**_
-- _**PREVIEW-7** — unify execute/preview input adapters + per-PR `getRepo` degradation. Route the execute path through `buildEligiblePRs`/`buildMergedPRInputs` instead of re-inlining the byte-equivalent build (oop S1: restores the shared-adapter invariant), drop the redundant `prs` param from `decideDirectMerge` (S2), and add a per-PR `getRepo` catch so one repo's 5xx degrades that PR instead of blanking the whole preview (robust S3) — pin with a `preview-mode` partial-failure test (S4). Same files/helper; one fix._
-- _**PREVIEW-8** — a11y: live-region the dry-run preview (`aria-live=polite` so async results AND the always-present DRY-RUN banner are announced — both WCAG 4.1.3) + `h3→h2` heading hierarchy (1.3.1) + visually-hidden destructive association (`PreviewView.tsx`). **Also covers `DigestView.tsx`** (DIGEST-1 inline cluster a11y nit): the digest headline is `role="status"` but the loading→loaded transition would benefit from the same `aria-live` treatment — fold into this one a11y sweep._
-- _**PREVIEW-9** — test the shipped-untested `usePreview` hook (`usePreview.test.ts`: ok / !ok / throw / mount-fires-once, covering the `PREVIEW_FAILED` default branch + extract it to a shared constant) and assert `gatherPreviewInputs` invokes none of `deleteRef`/`enableAutoMerge`/`resolveThread`/`mergePR`._
-- _13 residual nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) recorded in the gate report; sweep opportunistically when PREVIEW-7/8/9 touch the same files — none block._
+_**PREVIEW-1 post-wave `--deep` gate-cluster follow-ups (2026-06-01):** PREVIEW-7 (#272), PREVIEW-8 (#273), PREVIEW-9 (#271) all SHIPPED → §7. Report: `.claude/state/gate-cluster-review-preview-1-dry-run.md`. Remaining:_
+- _**PREVIEW-10** — execute-path per-PR `getRepo` degradation (deferred from PREVIEW-7). PREVIEW-7 scoped the per-PR `getRepo` catch to **preview only** (a `degradePerPR` flag on `buildEligiblePRs`, default `false`); execute keeps its all-or-nothing behavior byte-identical (the char wall PREVIEW-7 leans on). So execute still has the wart: one repo's `getRepo` 5xx aborts the WHOLE auto-enable step (the `autoEnableAutoMerge` outer `try/catch` swallows the rejected `Promise.all`, skipping every PR's enable, not just the failing one). PREVIEW-10 flips execute to `degradePerPR: true` (or equivalent per-PR isolation) so a single bad repo drops only that PR. **Real execute behavior change** → must update the T0 char wall deliberately; own plan + review. Low priority (transient-5xx-only exposure; self-heals next poll)._
+- _13 residual nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) recorded in the gate report; sweep opportunistically when nearby files are next touched — none block._
 
 _**CT-3c** (follow-up from CT-3, #248) — label-filter autocomplete. CT-3's include/exclude label inputs are free-text (a typo'd label just never matches — fails safe). Scoped 2026-06-01: source suggestions from the LOCAL PR store (CT-3 T3 already persists name-only `labels`) via a `useKnownLabels()` hook + a `<datalist>` on `LabelList` — no new GitHub endpoint/permission, mirrors `useKnownRepos`→`RepoOptOutList`. Low priority._
 
@@ -71,6 +69,12 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — PREVIEW-7/8/9 (gate-cluster follow-ups)
+_Baseline `/sprint` ("plan and backlog enhancement"); plan `docs/plans/2026-06-01-preview-7-8-9-followups.md`. 3 opus-on-opus cycles (cycle 1: 1 must-fix/3 should-fix/2 nit; cycle 2 clean; Gate-2 "fix first" re-scoped PREVIEW-7 to preview-only → cycle 3: 0 must-fix/1 should-fix/2 nit, all patched). Serial-direct (opus-direct) T3→T1→T2; post-wave verify on integrated main GREEN (coverage exit 0, funcs 88.17%)._
+- **PREVIEW-9** Covered the shipped-untested `usePreview` hook (`usePreview.test.ts`: ok / not-ok / no-data / Error-reject / non-Error-reject / fires-once-on-mount / `run()` re-fires; `'PREVIEW_FAILED'` extracted to a module const) + a no-mutation assertion in `preview-gather.test.ts` (none of `deleteRef`/`enablePullRequestAutoMerge`/`resolveReviewThread`/`mergePR` fire during gather). Cleared the coverage gate: functions 87.73→88.26% (>88 floor). PR #271.
+- **PREVIEW-7** Restored the shared-adapter invariant: execute now routes through `buildEligiblePRs`/`buildMergedPRInputs` (the byte-equivalent inline copies removed) so execute + preview feed `decide*` identical adapted objects. `buildEligiblePRs` gained a `degradePerPR` flag — **preview-only** (default `false`): preview drops a flaky repo's PR instead of blanking; execute keeps its all-or-nothing throw-propagation **byte-identical** (char wall 36/36 unchanged). `decideDirectMerge` dropped its redundant `prs` param (`number` rides on `eligible.number`, `adapters.ts:78`). New tests pin both preview-degrades and execute-unchanged (a path the char wall does NOT cover). Execute per-PR degradation deferred → **PREVIEW-10** (§5). PR #272.
+- **PREVIEW-8** a11y: `aria-live="polite"` results region in `PreviewView` (sibling of the DRY-RUN banner's `role="status"`, no double-announce) + group titles `h3→h2` (flat hierarchy, no `h1`) + `sr-only` destructive text association; `DigestView` body-wrapper `aria-live` for the loading→loaded swap; `.sr-only` clip-rect utility added to popup.css. PR #273.
 
 ### 2026-06-01 — DIGEST-1 (weekly activity digest)
 _Baseline `/sprint` (judge-free single-pass plan; 1 opus-on-opus cycle — 0 must-fix, 3 should-fix + 3 nit folded pre-Gate-2; clean inline 7b–7f post-wave cluster, 0 must-fix). Plan: `docs/plans/2026-06-01-digest-1-weekly-digest.md`._
