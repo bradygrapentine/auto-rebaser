@@ -30,6 +30,8 @@ interface Props {
   onSettings: () => void;
   onSignOut: () => void;
   onHelp?: () => void;
+  /** PREVIEW-1 — open the dry-run preview view. */
+  onPreview?: () => void;
   onPing?: (pr: PRRecord) => void;
   /** Story 5.2-A — invoked when a PR's `! re-review` badge is clicked. */
   onRerequest?: (pr: PRRecord, approvers: string[]) => void;
@@ -39,7 +41,7 @@ interface Props {
 }
 
 export function PRListView({
-  user, authMethod, installations, onSettings, onSignOut, onHelp, onPing, onRerequest, onOpenActivity, onAddAccount,
+  user, authMethod, installations, onSettings, onSignOut, onHelp, onPreview, onPing, onRerequest, onOpenActivity, onAddAccount,
 }: Props) {
   const { accounts, activeId, switchTo, signOut, signOutAll } = useAccounts();
   const authoredStore = usePRStore();
@@ -193,6 +195,7 @@ export function PRListView({
     bindings: {
       r: handlePollNow,
       s: onSettings,
+      p: () => onPreview?.(),
       '?': () => onHelp?.(),
       j: () => moveFocus(1),
       k: () => moveFocus(-1),
@@ -329,6 +332,17 @@ export function PRListView({
             Support the project
           </a>
         </div>
+        {onPreview && (
+          <button
+            type="button"
+            className="btn popup-footer__shortcuts-btn"
+            onClick={onPreview}
+            data-testid="preview-link"
+            aria-label="Preview automations (dry run)"
+          >
+            dry run
+          </button>
+        )}
         {onHelp && (
           <button
             type="button"

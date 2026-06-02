@@ -1,6 +1,8 @@
 import type { RuntimeMessage, RuntimeResponse } from '../core/types';
 import { runPollCycle } from './poll-cycle';
 import { setupAlarm } from './alarm';
+import { gatherPreviewInputs } from './automations/preview-gather';
+import { runAllAutomations } from './automations/orchestrator';
 import {
   beginDeviceFlow,
   beginDeviceFlowAddAccount,
@@ -49,6 +51,19 @@ export function handleMessage(
 
   if (msg.type === 'POLL_NOW') {
     void runPollCycle().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+
+  if (msg.type === 'PREVIEW_NOW') {
+    // PREVIEW-1 — read-only dry-run. All data-gathering lives in
+    // preview-gather.ts; here we just assemble opts + run the preview branch and
+    // return the projection. No mutation fires.
+    void gatherPreviewInputs()
+      .then((gathered) => runAllAutomations({ ...gathered, mode: 'preview' }))
+      .then((result) => sendResponse({ ok: true, data: result.preview }))
+      .catch((err: unknown) =>
+        sendResponse({ ok: false, error: err instanceof Error ? err.message : 'PREVIEW_FAILED' }),
+      );
     return true;
   }
 

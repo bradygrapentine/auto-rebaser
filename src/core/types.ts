@@ -162,7 +162,11 @@ export type RuntimeMessage =
   | { type: 'AUTH_BEGIN_DEVICE_FLOW_ADD' }
   | { type: 'AUTH_DEVICE_FLOW_STATUS' }
   | { type: 'AUTH_CANCEL_DEVICE_FLOW' }
-  | { type: 'AUTH_RESET_DEVICE_FLOW' };
+  | { type: 'AUTH_RESET_DEVICE_FLOW' }
+  // PREVIEW-1 — popup-triggered dry-run: gather read-only inputs and run the
+  // shared decide* predicates without firing any mutation. Response `data` is a
+  // PreviewProjection.
+  | { type: 'PREVIEW_NOW' };
 
 export interface RuntimeResponse {
   ok: boolean;

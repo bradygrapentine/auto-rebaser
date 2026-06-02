@@ -5,10 +5,11 @@ import type {
   PRRecordPhaseTwo,
   PollSummary,
 } from '../../core/automations-types';
-import { runEnableAutoMerge, type MergeMethod } from './enable-auto-merge';
-import { runDeleteMergedBranch } from './delete-merged-branch';
-import { runResolveObsoleteThreads } from './resolve-obsolete-threads';
+import { runEnableAutoMerge, decideEnableAutoMerge, type EligiblePR, type MergeMethod } from './enable-auto-merge';
+import { runDeleteMergedBranch, decideDeleteMergedBranch, type MergedPRInput } from './delete-merged-branch';
+import { runResolveObsoleteThreads, decideResolveObsoleteThreads } from './resolve-obsolete-threads';
 import { decideDirectMerge } from './merge-clean';
+import type { PlannedAction, PlannedActionKind, PreviewProjection } from './planned-action';
 import {
   toEligiblePR,
   toMergedPRInput,
@@ -48,6 +49,12 @@ export interface OrchestratorOpts {
   settings: AutomationSettings;
   resolvedThreads: ResolvedThreadsStore;
   github: OrchestratorDeps;
+  /**
+   * PREVIEW-1 — `'preview'` runs the shared `decide*` predicates and returns a
+   * `PreviewProjection` WITHOUT firing any mutation (strictly read-only). Default
+   * `'execute'` is the unchanged, behavior-preserving path.
+   */
+  mode?: 'execute' | 'preview';
 }
 
 export interface OrchestratorResult {
@@ -83,10 +90,142 @@ export interface OrchestratorResult {
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
   /** Story 2.8 — per-thread failure detail for activity-log entries. */
   failedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
+  /** PREVIEW-1 — populated ONLY when `mode === 'preview'`; undefined in execute. */
+  preview?: PreviewProjection;
+}
+
+/**
+ * Build the auto-merge-eligible PR list: one `getRepo` read per PR to attach its
+ * allowed merge methods. A READ (no mutation) — shared by the execute path and
+ * the preview branch (both must feed `decide*` the same adapted objects).
+ */
+async function buildEligiblePRs(
+  prs: PRRecord[],
+  prDetails: Map<number, PullRequestDetail>,
+  getRepo: OrchestratorDeps['getRepo'],
+): Promise<EligiblePR[]> {
+  return (
+    await Promise.all(
+      prs.map(async (pr) => {
+        const detail = prDetails.get(pr.id);
+        if (!detail) return null;
+        const [owner, name] = pr.repo.split('/');
+        if (!owner || !name) return null;
+        const repoInfo = await getRepo(owner, name);
+        if (!repoInfo) return null;
+        return toEligiblePR(pr, detail, {
+          squash: repoInfo.allow_squash_merge,
+          merge: repoInfo.allow_merge_commit,
+          rebase: repoInfo.allow_rebase_merge,
+        });
+      }),
+    )
+  ).filter((x): x is EligiblePR => x !== null);
+}
+
+/** The merged-this-cycle PRs the delete-branch automation targets (mergedAt set, branch not yet deleted). */
+function buildMergedPRInputs(prs: PRRecord[], prDetails: Map<number, PullRequestDetail>): MergedPRInput[] {
+  return prs
+    .filter((pr) => {
+      const extended = pr as PRRecord & PRRecordPhaseTwo;
+      return extended.mergedAt != null && !extended.branchDeleted;
+    })
+    .map((pr) => {
+      const detail = prDetails.get(pr.id);
+      return detail ? toMergedPRInput(pr, detail) : null;
+    })
+    .filter((x): x is MergedPRInput => x !== null);
+}
+
+/**
+ * PREVIEW-1 — the read-only preview path. Runs the shared `decide*` predicates and
+ * renders projected actions WITHOUT firing any mutation. Direct-merge is never
+ * previewable read-only (clean-status needs the enable mutation) — we set
+ * `directMergePreviewable:false` and list the would-enable candidate ids instead.
+ */
+async function runPreview(opts: OrchestratorOpts): Promise<PreviewProjection> {
+  const { prs, prDetails, settings, github } = opts;
+  const actions: PlannedAction[] = [];
+  let directMergeCandidatePRIds: number[] = [];
+
+  if (settings.autoEnableAutoMerge) {
+    // Reproduce the execute path's eligiblePRs build (getRepo reads) so the
+    // predicates receive identical adapted input.
+    const eligiblePRs = await buildEligiblePRs(prs, prDetails, github.getRepo);
+    const enableActions = decideEnableAutoMerge(eligiblePRs, {
+      enabled: true,
+      mergeMethodPreference: settings.mergeMethodPreference,
+      optOutRepos: settings.autoMergeOptOutRepos,
+    });
+    actions.push(...enableActions);
+    if (settings.mergeCleanPRsImmediately) {
+      // The would-enable set is a SUPERSET of the PRs that would actually
+      // direct-merge (clean-status is unknowable read-only). Never call
+      // decideDirectMerge in preview.
+      directMergeCandidatePRIds = enableActions.map((a) => a.prId);
+    }
+  }
+
+  if (settings.autoDeleteMergedBranch) {
+    const mergedPRs = buildMergedPRInputs(prs, prDetails);
+    const outcomes = await decideDeleteMergedBranch(
+      mergedPRs,
+      { enabled: true, optOutRepos: settings.autoDeleteOptOutRepos },
+      { getRepo: github.getRepo },
+    );
+    for (const o of outcomes) {
+      if (o.kind === 'delete-branch') actions.push(o.action);
+      // `already-handled` is NOT a planned action (GitHub auto-deletes) — omit.
+    }
+  }
+
+  if (settings.autoResolveOutdatedThreads) {
+    const threadActions = await decideResolveObsoleteThreads(
+      prs.map(toPRRef),
+      { enabled: true, optOutRepos: settings.autoResolveOptOutRepos },
+      opts.resolvedThreads,
+      { listThreads: github.listThreads },
+    );
+    actions.push(...threadActions);
+  }
+
+  const counts: Record<PlannedActionKind, number> = {
+    'enable-auto-merge': 0,
+    'direct-merge': 0,
+    'delete-branch': 0,
+    'resolve-thread': 0,
+  };
+  for (const a of actions) counts[a.kind]++;
+
+  return {
+    actions,
+    counts,
+    directMergePreviewable: false,
+    directMergeCandidatePRIds,
+    generatedAt: Date.now(),
+  };
 }
 
 export async function runAllAutomations(opts: OrchestratorOpts): Promise<OrchestratorResult> {
   const { prs, prDetails, settings, github } = opts;
+
+  // PREVIEW-1 — read-only preview branch: build the projection and return BEFORE
+  // any executor block. No mutating dep is touched.
+  if (opts.mode === 'preview') {
+    const preview = await runPreview(opts);
+    return {
+      summary: { ranAt: Date.now(), rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
+      prUpdates: [],
+      resolvedThreads: { ...opts.resolvedThreads },
+      autoMergeMethodByPRId: {},
+      failedAutoMergeEntries: [],
+      skippedAutoMergeEntries: [],
+      mergedNowEntries: [],
+      resolvedThreadEntries: [],
+      failedThreadEntries: [],
+      preview,
+    };
+  }
 
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
