@@ -34,11 +34,11 @@ describe('triageActionFor — reason→action mapping (hard-literal hrefs)', () 
     ).toEqual({ reason: 'staleApproval', label: 're-request review', href: URL });
   });
 
-  it('conflict → open conflicts (/conflicts deep link)', () => {
+  it('conflict → open conflicts (links to the PR page, not /conflicts)', () => {
     expect(triageActionFor(pr({ state: 'conflict' }), settings())).toEqual({
       reason: 'conflict',
       label: 'open conflicts',
-      href: `${URL}/conflicts`,
+      href: URL,
     });
   });
 
@@ -50,11 +50,11 @@ describe('triageActionFor — reason→action mapping (hard-literal hrefs)', () 
     });
   });
 
-  it('rebase-rejected → resolve conflict (/conflicts deep link)', () => {
+  it('rebase-rejected → resolve conflict (links to the PR page, not /conflicts)', () => {
     expect(triageActionFor(pr({ state: 'rebase-rejected' }), settings())).toEqual({
       reason: 'rebase-rejected',
       label: 'resolve conflict',
-      href: `${URL}/conflicts`,
+      href: URL,
     });
   });
 
