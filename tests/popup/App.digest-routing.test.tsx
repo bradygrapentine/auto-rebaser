@@ -1,5 +1,8 @@
-// DIGEST-1 — App routing: PRListView's digest trigger navigates to DigestView,
-// and DigestView is reachable end-to-end. useDigest mocked → routing test only.
+// DIGEST-1 — HIDDEN from the release (2026-06-01 scope trim). App no longer
+// wires `onDigest`, so the "this week" trigger doesn't render and `d` is a
+// no-op. The DigestView/useDigest/computeDigest code stays on main; this file
+// pins the HIDE so it can't silently regress (re-enable → restore the prop +
+// flip these assertions back). useDigest mocked → routing-level test only.
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -45,24 +48,18 @@ beforeEach(() => {
   });
 });
 
-describe('App — digest routing', () => {
-  it('clicking the "this week" trigger navigates to DigestView', () => {
+describe('App — digest hidden from release', () => {
+  it('the "this week" trigger is NOT rendered', () => {
     render(<App />);
+    expect(screen.queryByTestId('digest-link')).not.toBeInTheDocument();
     expect(screen.queryByTestId('digest-view')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('digest-link'));
-    expect(screen.getByTestId('digest-view')).toBeInTheDocument();
   });
 
-  it('the `d` keyboard shortcut navigates to DigestView', () => {
+  it('the `d` keyboard shortcut does NOT navigate to DigestView (no-op)', () => {
     render(<App />);
     fireEvent.keyDown(window, { key: 'd' });
-    expect(screen.getByTestId('digest-view')).toBeInTheDocument();
-  });
-
-  it('back from DigestView returns to the PR list', () => {
-    render(<App />);
-    fireEvent.click(screen.getByTestId('digest-link'));
-    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    expect(screen.queryByTestId('digest-view')).not.toBeInTheDocument();
+    // Still on the PR list.
     expect(screen.getByText(/no open prs found/i)).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**PREVIEW-7/8/9 shipped** — gate-cluster follow-ups: #272 shared adapters + preview-only `getRepo` degradation, #273 a11y live-region, #271 usePreview coverage (coverage gate green, funcs 88.17%); baseline `/sprint`, 3 opus cycles incl. Gate-2 "fix first" re-scope. **Ready=0** — §1 queue empty; next work needs fresh scoping. **Blocked=0.** **Shipped=88.** §5: PREVIEW-3/4/5/6 (enhancements) + PREVIEW-10 (deferred execute degradation) + TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (**PREVIEW-7/8/9 shipped** — gate-cluster follow-ups: #272 shared adapters + preview-only `getRepo` degradation, #273 a11y live-region, #271 usePreview coverage (coverage gate green, funcs 88.17%); baseline `/sprint`, 3 opus cycles incl. Gate-2 "fix first" re-scope. **Ready=0.** **Blocked=0.** **Shipped=88.** **Scope trim 2026-06-01:** preview stays basic (PREVIEW-3/4/5/6/10 → 🧊), DIGEST hidden from the release, TRIAGE frozen. **Next: release the post-v2.0.0 batch** (still unreleased on main: CT-3 filters, CT-5/OPS-3/TEST-1, TRIAGE-1/2, PREVIEW-1 dry-run) — needs live-test → version bump → store submission. Remaining §5 candidates: TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -21,7 +21,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 ## §1 Ready
 
-_v1.2 "PR command center" direction. The SPIKE-1 build queue is fully shipped: **PREVIEW-1** (4-PR wave), **DIGEST-1** (#269), and the **PREVIEW-7/8/9** gate-cluster follow-ups (#271/#272/#273) all → §7. **§1 is empty** — the next sprint needs fresh scoping (candidates live in §5: PREVIEW enhancements 3/4/5/6, deferred PREVIEW-10, plus CT/SEC follow-ups). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
+_**§1 is empty by design after the 2026-06-01 scope trim.** A large batch of features sits on `main`, unreleased since v2.0.0 — that, not new features, is the priority: **live-test the post-v2.0.0 batch → bump version → submit to stores.** Scope trimmed: preview stays basic (PREVIEW-3/4/5/6/10 → 🧊), DIGEST hidden from the release, TRIAGE frozen (ship-as-is, no more triage work). Remaining §5 candidates are polish/audit follow-ups (TRIAGE-POLISH, SEC-11/CT-6/CT-7/CT-3c). OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
 
 ## §2 In progress
 _(none)_
@@ -35,15 +35,12 @@ _(none — SPIKE-1 cleared the queue: PREVIEW-1/DIGEST-1 → §1 Ready, OPS-5/RE
 ## §5 Future / unscoped
 _Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
-_**PREVIEW enhancements (cut from PREVIEW-1 chunk, plan §6) — all read-only-safe, low priority:**_
-- _**PREVIEW-3** — Dedicated Preview view + per-PR inline "would-act" badges in `PRRow` (instead of the single grouped list), diff-style before/after._
-- _**PREVIEW-4** — Multi-account preview: aggregate `PreviewProjection` across all signed-in accounts (MVP previews the active account only — `gatherPreviewInputs` resolves only `getActiveAccountId`)._
-- _**PREVIEW-5** — Persist last preview + timestamp so re-opening the popup shows the prior projection without a re-poll (`usePreview` currently holds ephemeral state only)._
-- _**PREVIEW-6** — Opt-in "probe direct-merge eligibility": a deliberate user-initiated button that DOES fire `enableAutoMerge` (a write) to resolve clean-status, turning `directMergeCandidatePRIds` (surfaced as not-previewable in PREVIEW-1) into concrete `direct-merge` rows. Crosses the no-mutation boundary → own UX confirmation + SEC review._
+_**Scope decision 2026-06-01 — preview stays BASIC.** The dry-run preview ships as-is (just enough that users find the page and see what's there). No further preview work for now → **PREVIEW-3/4/5/6 and PREVIEW-10 deferred to 🧊** (dedicated-view/inline-badges, multi-account aggregate, persist-last-preview, opt-in direct-merge probe, execute-path per-PR `getRepo` degradation). The PREVIEW-7/8/9 gate-cluster follow-ups SHIPPED (§7); report `.claude/state/gate-cluster-review-preview-1-dry-run.md`._
+- _13 residual gate-report nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) — sweep opportunistically when nearby files are next touched; none block._
 
-_**PREVIEW-1 post-wave `--deep` gate-cluster follow-ups (2026-06-01):** PREVIEW-7 (#272), PREVIEW-8 (#273), PREVIEW-9 (#271) all SHIPPED → §7. Report: `.claude/state/gate-cluster-review-preview-1-dry-run.md`. Remaining:_
-- _**PREVIEW-10** — execute-path per-PR `getRepo` degradation (deferred from PREVIEW-7). PREVIEW-7 scoped the per-PR `getRepo` catch to **preview only** (a `degradePerPR` flag on `buildEligiblePRs`, default `false`); execute keeps its all-or-nothing behavior byte-identical (the char wall PREVIEW-7 leans on). So execute still has the wart: one repo's `getRepo` 5xx aborts the WHOLE auto-enable step (the `autoEnableAutoMerge` outer `try/catch` swallows the rejected `Promise.all`, skipping every PR's enable, not just the failing one). PREVIEW-10 flips execute to `degradePerPR: true` (or equivalent per-PR isolation) so a single bad repo drops only that PR. **Real execute behavior change** → must update the T0 char wall deliberately; own plan + review. Low priority (transient-5xx-only exposure; self-heals next poll)._
-- _13 residual nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) recorded in the gate report; sweep opportunistically when nearby files are next touched — none block._
+_**DIGEST-1 — hidden from the release (2026-06-01 scope trim).** Deemed not necessary for now. The `App.tsx` `onDigest` wiring is commented out so the "this week" footer button + `d` shortcut don't render; `DigestView`/`useDigest`/`computeDigest`/`'digest'` route all remain on main — re-enable by restoring the one prop._
+
+_**TRIAGE — frozen (2026-06-01 scope trim).** TRIAGE-1/2 ("Needs you" surface + skip-reason) ship as-is; NO further triage work and no commitment to the broader "command center" direction until deliberately revisited. (Flagged as serious long-term scope.)_
 
 _**CT-3c** (follow-up from CT-3, #248) — label-filter autocomplete. CT-3's include/exclude label inputs are free-text (a typo'd label just never matches — fails safe). Scoped 2026-06-01: source suggestions from the LOCAL PR store (CT-3 T3 already persists name-only `labels`) via a `useKnownLabels()` hook + a `<datalist>` on `LabelList` — no new GitHub endpoint/permission, mirrors `useKnownRepos`→`RepoOptOutList`. Low priority._
 
