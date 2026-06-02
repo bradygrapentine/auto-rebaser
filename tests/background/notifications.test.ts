@@ -285,4 +285,39 @@ describe('notification click-to-open', () => {
     expect(fired).toBe(true);
     expect(chrome.notifications.create).toHaveBeenCalledOnce();
   });
+
+  // ── SEC-11 — unsafe URLs never get stored or opened ──────────────────────
+  function setEnterpriseHost(host: string | undefined) {
+    chrome.storage.sync.get = vi.fn(async () => (host ? { global_settings: { enterpriseHost: host } } : {})) as unknown as typeof chrome.storage.sync.get;
+  }
+
+  it.each(['data:text/html,x', 'javascript:alert(1)', 'http://github.com/org/repo/pull/42', 'https://evil.example.com/x'])(
+    'does NOT persist a hostile/off-host URL %s (fires, but no click target)',
+    async (url) => {
+      setEnterpriseHost(undefined);
+      const fired = await notify(payload({ url }), NOTIF_SETTINGS, 1_000_000);
+      expect(fired).toBe(true); // notification still fires
+      expect(clickMap()).toEqual({}); // but no clickable target stored
+    },
+  );
+
+  it('persists a valid github.com https URL (control)', async () => {
+    setEnterpriseHost(undefined);
+    await notify(payload({ url: 'https://github.com/org/repo/pull/42' }), NOTIF_SETTINGS, 1_000_000);
+    expect(clickMap()).toEqual({ nid_1: 'https://github.com/org/repo/pull/42' });
+  });
+
+  it('persists a URL on the configured enterprise host', async () => {
+    setEnterpriseHost('github.acme.corp');
+    await notify(payload({ url: 'https://github.acme.corp/org/repo/pull/42' }), NOTIF_SETTINGS, 1_000_000);
+    expect(clickMap()).toEqual({ nid_1: 'https://github.acme.corp/org/repo/pull/42' });
+  });
+
+  it('sink re-validates: a pre-stored unsafe URL does NOT open and is purged', async () => {
+    setEnterpriseHost(undefined);
+    local.data[CLICK_TARGETS_KEY] = { nid_1: 'javascript:alert(1)' };
+    await handleNotificationClick('nid_1');
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+    expect(clickMap()).toEqual({}); // bad entry purged
+  });
 });

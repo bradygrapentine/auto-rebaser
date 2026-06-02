@@ -10,8 +10,9 @@
 // block the poll cycle.
 
 import type { AutomationSettings } from '../core/automations-types';
-import { readAccountKey, writeAccountKey } from '../core/storage/multi-account';
+import { readAccountKey, writeAccountKey, getGlobalSetting } from '../core/storage/multi-account';
 import type { AccountScope } from '../core/account-scope';
+import { isSafeExternalUrl } from '../core/url-safety';
 
 export type NotifEvent =
   | 'rebased'
@@ -193,8 +194,15 @@ async function readClickTargets(): Promise<Record<string, string>> {
 
 /** Persist `id → url`, bounded to the most-recent CLICK_TARGETS_MAX entries.
  *  chrome-generated ids are unique, so each call appends a fresh key → object
- *  insertion order is fire order; slicing the last N drops the oldest. */
+ *  insertion order is fire order; slicing the last N drops the oldest.
+ *
+ *  SEC-11 — only store URLs that are safe to open later: https: on github.com or
+ *  the configured enterprise host. On github.com the URL is always the trusted
+ *  `html_url`, but a hostile GHES API response could supply a data:/javascript:/
+ *  off-host URL; dropping it here keeps it out of `chrome.tabs.create`. */
 async function persistClickTarget(id: string, url: string): Promise<void> {
+  const enterpriseHost = await getGlobalSetting('enterpriseHost');
+  if (!isSafeExternalUrl(url, enterpriseHost)) return;
   const current = await readClickTargets();
   const merged = { ...current, [id]: url };
   const entries = Object.entries(merged);
@@ -215,6 +223,15 @@ export async function handleNotificationClick(notificationId: string): Promise<v
     const targets = await readClickTargets();
     const url = targets[notificationId];
     if (!url) return;
+    // SEC-11 defense-in-depth — re-validate at the sink before opening, so a
+    // URL stored before this guard existed (or a tampered storage entry) still
+    // can't open an unsafe scheme/host.
+    const enterpriseHost = await getGlobalSetting('enterpriseHost');
+    if (!isSafeExternalUrl(url, enterpriseHost)) {
+      const { [notificationId]: _bad, ...rest } = targets;
+      await chrome.storage.local.set({ [CLICK_TARGETS_KEY]: rest });
+      return;
+    }
     chrome.tabs?.create?.({ url });
     chrome.notifications?.clear?.(notificationId);
     const { [notificationId]: _gone, ...rest } = targets;
