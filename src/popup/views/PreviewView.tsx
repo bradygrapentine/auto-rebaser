@@ -65,6 +65,10 @@ export function PreviewView({ onBack }: Props) {
           DRY RUN — nothing was changed
         </div>
 
+        {/* Polite live region: announces the async PREVIEW_NOW result when it
+            replaces "computing…". Kept SEPARATE from the banner's role="status"
+            (a sibling, not a wrapper) so the two don't double-announce. */}
+        <div aria-live="polite" data-testid="preview-live">
         {loading && <p className="preview-status" data-testid="preview-loading">computing…</p>}
         {error && (
           <p className="preview-status preview-status--error" role="alert" data-testid="preview-error">
@@ -87,9 +91,9 @@ export function PreviewView({ onBack }: Props) {
               if (rows.length === 0) return null;
               return (
                 <section key={kind} className="preview-group" data-testid={`preview-group-${kind}`}>
-                  <h3 className="preview-group__title">
+                  <h2 className="preview-group__title">
                     {KIND_LABEL[kind]} <span className="preview-group__count">({rows.length})</span>
-                  </h3>
+                  </h2>
                   <ul className="preview-group__list">
                     {rows.map((a, i) => (
                       <li key={i} className="preview-row" data-testid={`preview-row-${kind}`}>
@@ -97,6 +101,7 @@ export function PreviewView({ onBack }: Props) {
                         {DESTRUCTIVE.has(a.kind) && (
                           <span className="preview-row__destructive" data-testid="preview-destructive">
                             DESTRUCTIVE
+                            <span className="sr-only"> — this action permanently deletes the branch</span>
                           </span>
                         )}
                       </li>
@@ -109,7 +114,7 @@ export function PreviewView({ onBack }: Props) {
             {projection.directMergePreviewable === false
               && projection.directMergeCandidatePRIds.length > 0 && (
                 <section className="preview-group preview-group--notice" data-testid="preview-directmerge-notice">
-                  <h3 className="preview-group__title">{KIND_LABEL['direct-merge']}</h3>
+                  <h2 className="preview-group__title">{KIND_LABEL['direct-merge']}</h2>
                   <p className="preview-notice">
                     Direct-merge cannot be previewed without contacting GitHub —{' '}
                     {projection.directMergeCandidatePRIds.length} candidate PR(s); clean-status is
@@ -119,6 +124,7 @@ export function PreviewView({ onBack }: Props) {
               )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

@@ -1619,3 +1619,18 @@ code, .mono {
 .digest-row__total { color: var(--term-fg); font-weight: 600; }
 .digest-row__failed { color: var(--term-red); font-size: 11px; }
 .digest-row__skipped { color: var(--term-fg-dim); font-size: 11px; }
+
+/* Visually-hidden but screen-reader-available (standard clip-rect pattern).
+   Used by PREVIEW-8 to give the DESTRUCTIVE badge a text association not
+   conveyed by color/position alone. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

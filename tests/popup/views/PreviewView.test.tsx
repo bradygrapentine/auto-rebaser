@@ -48,6 +48,20 @@ describe('PreviewView', () => {
     expect(screen.getByTestId('preview-group-delete-branch')).toContainElement(destructive[0]);
   });
 
+  it('(PREVIEW-8 a11y) the results region is a polite live region and groups are h2', () => {
+    render(<PreviewView onBack={() => {}} />);
+    expect(screen.getByTestId('preview-live')).toHaveAttribute('aria-live', 'polite');
+    // Group titles are h2 (the view has no h1 — a flat h2 hierarchy, no skipped level).
+    const headings = screen.getAllByRole('heading', { level: 2 });
+    expect(headings.length).toBeGreaterThanOrEqual(1);
+    expect(headings.map((h) => h.className)).toContain('preview-group__title');
+  });
+
+  it('(PREVIEW-8 a11y) the DESTRUCTIVE badge carries a screen-reader text association', () => {
+    render(<PreviewView onBack={() => {}} />);
+    expect(screen.getByTestId('preview-destructive')).toHaveTextContent(/permanently deletes the branch/i);
+  });
+
   it('shows the direct-merge not-previewable notice with the candidate count and NO direct-merge rows', () => {
     mockUsePreview.mockReturnValue({
       projection: projection({ actions: [], counts: { 'enable-auto-merge': 0, 'direct-merge': 0, 'delete-branch': 0, 'resolve-thread': 0 }, directMergePreviewable: false, directMergeCandidatePRIds: [7, 8, 9] }),
