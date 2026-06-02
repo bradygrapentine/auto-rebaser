@@ -98,11 +98,22 @@ export interface OrchestratorResult {
  * Build the auto-merge-eligible PR list: one `getRepo` read per PR to attach its
  * allowed merge methods. A READ (no mutation) — shared by the execute path and
  * the preview branch (both must feed `decide*` the same adapted objects).
+ *
+ * `degradePerPR` controls how a failing `getRepo` is handled:
+ *  - `false` (DEFAULT — the execute path): the throw propagates out of
+ *    `Promise.all`, so a single repo's 5xx rejects the whole build. Execute's
+ *    caller catches it and aborts the entire enable step — the established
+ *    all-or-nothing behavior, preserved byte-for-byte.
+ *  - `true` (the PREVIEW branch only): each `getRepo` is wrapped so a failing
+ *    repo drops only THAT PR (filtered out below) instead of blanking the whole
+ *    preview. Read-only; never changes execute. (Execute gaining per-PR
+ *    degradation is deferred to PREVIEW-10.)
  */
 async function buildEligiblePRs(
   prs: PRRecord[],
   prDetails: Map<number, PullRequestDetail>,
   getRepo: OrchestratorDeps['getRepo'],
+  degradePerPR = false,
 ): Promise<EligiblePR[]> {
   return (
     await Promise.all(
@@ -111,7 +122,16 @@ async function buildEligiblePRs(
         if (!detail) return null;
         const [owner, name] = pr.repo.split('/');
         if (!owner || !name) return null;
-        const repoInfo = await getRepo(owner, name);
+        let repoInfo;
+        if (degradePerPR) {
+          try {
+            repoInfo = await getRepo(owner, name);
+          } catch {
+            return null; // preview-only: one flaky repo drops this PR, not all
+          }
+        } else {
+          repoInfo = await getRepo(owner, name); // execute: throw propagates
+        }
         if (!repoInfo) return null;
         return toEligiblePR(pr, detail, {
           squash: repoInfo.allow_squash_merge,
@@ -149,9 +169,10 @@ async function runPreview(opts: OrchestratorOpts): Promise<PreviewProjection> {
   let directMergeCandidatePRIds: number[] = [];
 
   if (settings.autoEnableAutoMerge) {
-    // Reproduce the execute path's eligiblePRs build (getRepo reads) so the
-    // predicates receive identical adapted input.
-    const eligiblePRs = await buildEligiblePRs(prs, prDetails, github.getRepo);
+    // Same shared build the execute path uses, so the predicates receive
+    // identical adapted input — but with per-PR degradation ON: a flaky repo's
+    // getRepo drops only that PR instead of blanking the whole preview.
+    const eligiblePRs = await buildEligiblePRs(prs, prDetails, github.getRepo, true);
     const enableActions = decideEnableAutoMerge(eligiblePRs, {
       enabled: true,
       mergeMethodPreference: settings.mergeMethodPreference,
@@ -246,23 +267,12 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   if (settings.autoEnableAutoMerge) {
     try {
       // Fetch each PR's repo (cached) so we know which merge methods are allowed.
-      const eligiblePRs = (
-        await Promise.all(
-          prs.map(async (pr) => {
-            const detail = prDetails.get(pr.id);
-            if (!detail) return null;
-            const [owner, name] = pr.repo.split('/');
-            if (!owner || !name) return null;
-            const repoInfo = await github.getRepo(owner, name);
-            if (!repoInfo) return null;
-            return toEligiblePR(pr, detail, {
-              squash: repoInfo.allow_squash_merge,
-              merge: repoInfo.allow_merge_commit,
-              rebase: repoInfo.allow_rebase_merge,
-            });
-          }),
-        )
-      ).filter((x): x is NonNullable<typeof x> => x !== null);
+      // Shared with the preview branch via buildEligiblePRs so both feed `decide*`
+      // provably-identical adapted objects. Execute keeps the default
+      // (degradePerPR=false): a getRepo throw propagates out of Promise.all and is
+      // caught by this step's outer try/catch — the whole enable step aborts, the
+      // pre-PREVIEW-7 all-or-nothing behavior, byte-identical.
+      const eligiblePRs = await buildEligiblePRs(prs, prDetails, github.getRepo);
 
       const result = await runEnableAutoMerge(
         eligiblePRs,
@@ -332,7 +342,7 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
         // later. Re-attempt every poll; log dedup belongs at the activity layer.
         // decideDirectMerge picks ONE method up-front (mirrors resolveMergeMethod
         // discipline) so a transient 405 never silently shifts to a lower method.
-        const directMergeActions = decideDirectMerge(eligiblePRs, prDetails, prs, settings, cleanIds);
+        const directMergeActions = decideDirectMerge(eligiblePRs, prDetails, settings, cleanIds);
         const consumedSkipIds = new Set<number>();
         for (const action of directMergeActions) {
           const { prId, owner, name, sha: headSha, method: chosenMethod } = action;
@@ -466,19 +476,11 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   // ── Step 2: deleteMergedBranch ──────────────────────────────────────────────
   if (settings.autoDeleteMergedBranch) {
     try {
-      // Only PRs whose state transitioned to merged this cycle.
-      // We use PRRecord state: 'branch-deleted' means already done; we target
-      // those that have mergedAt set but branchDeleted not yet set.
-      const mergedPRs = prs
-        .filter(pr => {
-          const extended = pr as PRRecord & PRRecordPhaseTwo;
-          return extended.mergedAt != null && !extended.branchDeleted;
-        })
-        .map(pr => {
-          const detail = prDetails.get(pr.id);
-          return detail ? toMergedPRInput(pr, detail) : null;
-        })
-        .filter((x): x is NonNullable<typeof x> => x !== null);
+      // Only PRs whose state transitioned to merged this cycle (mergedAt set,
+      // branch not yet deleted). Shared with the preview branch via
+      // buildMergedPRInputs so both feed the delete-branch decision identical
+      // adapted objects.
+      const mergedPRs = buildMergedPRInputs(prs, prDetails);
 
       const result = await runDeleteMergedBranch(
         mergedPRs,
