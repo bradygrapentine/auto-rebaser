@@ -40,7 +40,10 @@ export function DigestView({ onBack }: Props) {
         </span>
       </header>
 
-      <div className="view-body digest-view">
+      {/* Polite live region on the body wrapper announces the loading→loaded
+          swap. The inner headline keeps its role="status" as-is — no NEW nested
+          live region around it (that would double-announce). */}
+      <div className="view-body digest-view" aria-live="polite">
         {loading && <p className="digest-status" data-testid="digest-loading">loading…</p>}
 
         {!loading && digest.totalActions === 0 && (

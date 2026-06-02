@@ -60,6 +60,12 @@ describe('DigestView', () => {
     expect(screen.getByTestId('digest-loading')).toBeInTheDocument();
   });
 
+  it('(PREVIEW-8 a11y) the body wrapper is a polite live region for the loading→loaded swap', () => {
+    const { container } = render(<DigestView onBack={() => {}} />);
+    const body = container.querySelector('.view-body.digest-view');
+    expect(body).toHaveAttribute('aria-live', 'polite');
+  });
+
   it('back button + Escape call onBack', () => {
     const onBack = vi.fn();
     render(<DigestView onBack={onBack} />);
