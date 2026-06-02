@@ -1,5 +1,5 @@
 # Auto-Rebaser — Backlog
-_Last `/backlog-sync`: 2026-06-01 (**SPIKE-1 shipped** — deferred-feature triage verdict doc `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`; cleared the §4 queue: PREVIEW-1 + DIGEST-1 → **build** (§1 Ready), OPS-5 defer / REVIEWER-3 + REVIEWER-4 drop → 🧊. **Ready=2** (PREVIEW-1, DIGEST-1). **Blocked=0.** **Shipped=83.** §5: TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c + 11 audit nits, flaky-e2e (unfiled).)_
+_Last `/backlog-sync`: 2026-06-01 (**PREVIEW-1 shipped** — dry-run/preview mode, 4-PR `--ultracode` wave #263/#264/#265/#266; post-wave `--deep` gate cluster verdict **ship-with-todo** 0 must-fix / 9 should-fix / 13 nit → 3 follow-up rows PREVIEW-7/8/9 filed in §5. **Ready=1** (DIGEST-1). **Blocked=0.** **Shipped=84.** §5: PREVIEW-3/4/5/6 (enhancements) + PREVIEW-7/8/9 (gate-cluster follow-ups) + TRIAGE-POLISH + SEC-11/CT-6/CT-7/CT-3c, flaky-e2e (unfiled).)_
 
 Stories are numbered to match roadmap features (1.x). Sections §0–§5 track current work; §7 is the shipped log; 🧊 is deferred/dropped. Original story specs (technical details + acceptance criteria) live below the divider as a frozen v1 reference.
 
@@ -9,26 +9,19 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 
 | Status | Count |
 |---|---|
-| 🟢 Ready | 2 |
+| 🟢 Ready | 1 |
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
 | ⏸ Held | 0 |
-| ✅ Shipped | 83 |
+| ✅ Shipped | 84 |
 | 🧊 Deferred / dropped | 6 |
 
 ---
 
 ## §1 Ready
 
-_v1.2 "PR command center" direction. TRIAGE-1/TRIAGE-2 shipped (#256–#259, see §7). SPIKE-1 shipped (verdict doc `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`) → these two `build` verdicts promoted; OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
-
-### PREVIEW-1 — Dry-run / preview mode for automations
-**Status:** 🟢 Ready
-**Verdict source:** SPIKE-1 → **build** (`docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`).
-**Why:** Highest indirect value of the assessed five — a "show what would happen without acting" dry-run is the trust unlock that lets cautious users enable the already-built aggressive automations (direct-merge, auto-delete-branch). Read-only by definition (no blast).
-**How:** `orchestrator.ts:87 runAllAutomations()` interleaves decision + execution inline across all four automation blocks — there's no separable predicate today. PREVIEW-1 needs a **prep refactor** factoring each automation's decision out of its execution so preview and execution share one predicate, THEN an explain-only render of projected actions. Size as its own multi-track sprint (refactor track first), not a single PR. The decision/execution split is also reusable test scaffolding.
-**Done when:** each automation's decision predicate is callable independently of execution; the orchestrator runs in explain-only mode; the popup renders projected actions; no GitHub mutation fires in preview.
+_v1.2 "PR command center" direction. TRIAGE-1/TRIAGE-2 shipped (#256–#259, see §7). SPIKE-1 shipped (verdict doc `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`) → both `build` verdicts promoted; **PREVIEW-1 shipped** (4-PR wave, see §7); DIGEST-1 remains. OPS-5/REVIEWER-3/REVIEWER-4 → 🧊._
 
 ### DIGEST-1 — Activity history / weekly digest view
 **Status:** 🟢 Ready
@@ -48,6 +41,18 @@ _(none — SPIKE-1 cleared the queue: PREVIEW-1/DIGEST-1 → §1 Ready, OPS-5/RE
 
 ## §5 Future / unscoped
 _Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
+
+_**PREVIEW enhancements (cut from PREVIEW-1 chunk, plan §6) — all read-only-safe, low priority:**_
+- _**PREVIEW-3** — Dedicated Preview view + per-PR inline "would-act" badges in `PRRow` (instead of the single grouped list), diff-style before/after._
+- _**PREVIEW-4** — Multi-account preview: aggregate `PreviewProjection` across all signed-in accounts (MVP previews the active account only — `gatherPreviewInputs` resolves only `getActiveAccountId`)._
+- _**PREVIEW-5** — Persist last preview + timestamp so re-opening the popup shows the prior projection without a re-poll (`usePreview` currently holds ephemeral state only)._
+- _**PREVIEW-6** — Opt-in "probe direct-merge eligibility": a deliberate user-initiated button that DOES fire `enableAutoMerge` (a write) to resolve clean-status, turning `directMergeCandidatePRIds` (surfaced as not-previewable in PREVIEW-1) into concrete `direct-merge` rows. Crosses the no-mutation boundary → own UX confirmation + SEC review._
+
+_**PREVIEW-1 post-wave `--deep` gate-cluster follow-ups (2026-06-01, ship-with-todo should-fix; report `.claude/state/gate-cluster-review-preview-1-dry-run.md`):**_
+- _**PREVIEW-7** — unify execute/preview input adapters + per-PR `getRepo` degradation. Route the execute path through `buildEligiblePRs`/`buildMergedPRInputs` instead of re-inlining the byte-equivalent build (oop S1: restores the shared-adapter invariant), drop the redundant `prs` param from `decideDirectMerge` (S2), and add a per-PR `getRepo` catch so one repo's 5xx degrades that PR instead of blanking the whole preview (robust S3) — pin with a `preview-mode` partial-failure test (S4). Same files/helper; one fix._
+- _**PREVIEW-8** — a11y: live-region the dry-run preview (`aria-live=polite` so async results AND the always-present DRY-RUN banner are announced — both WCAG 4.1.3) + `h3→h2` heading hierarchy (1.3.1) + visually-hidden destructive association (`PreviewView.tsx`)._
+- _**PREVIEW-9** — test the shipped-untested `usePreview` hook (`usePreview.test.ts`: ok / !ok / throw / mount-fires-once, covering the `PREVIEW_FAILED` default branch + extract it to a shared constant) and assert `gatherPreviewInputs` invokes none of `deleteRef`/`enableAutoMerge`/`resolveThread`/`mergePR`._
+- _13 residual nits (loop-var names, double-negative guard, dead label arm, stale comments, unmount setState, uncapped `getPR` fan-out, etc.) recorded in the gate report; sweep opportunistically when PREVIEW-7/8/9 touch the same files — none block._
 
 _**CT-3c** (follow-up from CT-3, #248) — label-filter autocomplete. CT-3's include/exclude label inputs are free-text (a typo'd label just never matches — fails safe). Scoped 2026-06-01: source suggestions from the LOCAL PR store (CT-3 T3 already persists name-only `labels`) via a `useKnownLabels()` hook + a `<datalist>` on `LabelList` — no new GitHub endpoint/permission, mirrors `useKnownRepos`→`RepoOptOutList`. Low priority._
 
@@ -73,6 +78,10 @@ _(Shipped 2026-05-14 to §7: SEC-1, SEC-2, SEC-3, SEC-4, SEC-6, SEC-8. SEC-9 par
 ## §7 Shipped log
 
 PR numbers are GitHub PR IDs in this repo. Pre-PR-1 stories landed in the `feat: initial commit — auto-rebaser v0.1.0 …` baseline (commit `1fef878`).
+
+### 2026-06-01 — PREVIEW-1 (dry-run / preview mode)
+_Planned via `--ultracode` (judge-panel plan + refute panel; 1 must-fix CRITICAL-2 closed pre-gate — store-merged delete-branch under-report — + 8 should-fix/9 nit applied). Shipped as a strictly-serial 4-track wave (total file overlap forbade parallel). Post-wave `--deep` gate cluster (5 role-primed reviewers): **ship-with-todo, 0 must-fix / 9 should-fix / 13 nit** → 3 follow-up rows (PREVIEW-7/8/9, §5). Report: `docs/plans/2026-06-01-preview-1-dry-run.md`, gate artifacts `.claude/state/gate-cluster-review-preview-1-dry-run.md`._
+- **PREVIEW-1** Read-only "dry run" showing exactly which automation actions WOULD fire without touching GitHub. The load-bearing invariant — **preview computes the EXACT action set execution would perform** — is structural, not asserted-after-the-fact: each automation gained a `decide*` predicate backed by a single shared per-PR decision the `run*` execute path also calls, so the two provably cannot drift. **T0 #263** — characterization wall (36 byte-identical literal tests pinning each automation's decision+bookkeeping pre-refactor; the git-show divergence guard). **T1a #264** — extracted `selectAutomationCandidates` (suspended-owner + `evaluateAutoActionFilter` suppression) into `src/core/automations-filter.ts`, one shared definition for poll-cycle + preview. **T1b #265** — the decision/execution split: `decideEnableAutoMerge`/`decideDeleteMergedBranch`/`decideResolveObsoleteThreads`/`decideDirectMerge` + `planned-action.ts` seam (`PlannedAction` union, `PreviewProjection`); the provably-dead MERGE-2 null-method branch dropped. **T2 #266** — `runAllAutomations({mode:'preview'})` read-only branch (never calls `decideDirectMerge`; flags direct-merge `directMergePreviewable:false` + candidate-id superset since clean-status is unknowable read-only); `preview-gather.ts` read-only assembler (open-search ∪ store-merged-pending-deletion through the shared candidate filter — closes input divergence both directions, incl. the CRITICAL-2 store-merged inclusion); `PREVIEW_NOW` message (existing SEC-1 gate covers it); `PreviewView` + `usePreview` (ephemeral state, sidesteps the settings-read mock ripple) + footer "dry run" button / `p` shortcut / `'preview'` routing. +18 tests (read-only 4-mutating-dep-throw proof, normalized preview≡execute equivalence, direct-merge superset, both-direction gather parity, messages routing, view render, App routing). Full suite 1210 green; char wall byte-identical; Chrome + Firefox build.
 
 ### 2026-06-01 — SPIKE-1 (deferred-feature triage)
 _Read-only investigation spike (baseline `/sprint`: judge-free single-pass plan, 1 opus-on-opus cycle — 0 must-fix, 3 should-fix applied pre-gate). Verdict doc: `docs/decisions/2026-06-01-spike-1-deferred-feature-verdicts.md`._
