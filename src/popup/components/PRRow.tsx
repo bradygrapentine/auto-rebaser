@@ -3,6 +3,7 @@ import type { PRRecordPhaseTwo } from '../../core/automations-types';
 import { StatusBadge } from './StatusBadge';
 import { formatIdleDays } from '../../core/staleness';
 import { isSafeExternalUrl } from '../../core/url-safety';
+import { capCiList } from '../../core/ci-format';
 import { useSettings } from '../hooks/useSettings';
 
 interface Props {
@@ -62,6 +63,9 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
     && extended.staleApproval != null
     && extended.staleApproval.approvers.length > 0;
   const idleLabel = staleness && showStaleBadge ? formatIdleDays(staleness.idleDays) : null;
+  // TRIAGE-POLISH (b) — shared first-N + "+K more" cap (over failure objects,
+  // since each is rendered with its own link-folding below).
+  const { shown: shownCiFailures, extra: extraCiFailures } = capCiList(extended.ciFailures ?? []);
   const showError = pr.state === 'error' && pr.errorMessage;
   const isAppNotInstalled = pr.errorMessage === APP_NOT_INSTALLED_HINT;
 
@@ -79,6 +83,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
           <span
             className="pr-row__attention-dot"
             data-testid="pr-row-attention-dot"
+            role="img"
             aria-label="needs attention"
             title="Needs attention"
           />
@@ -171,7 +176,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
             title="CI is failing — auto-rebase is paused until it's green."
           >
             ci failed:{' '}
-            {extended.ciFailures.slice(0, 2).map((f, i) => (
+            {shownCiFailures.map((f, i) => (
               <span key={`${f.name}-${i}`}>
                 {i > 0 ? ', ' : ''}
                 {f.url && isSafeExternalUrl(f.url, appSettings.enterpriseHost) ? (
@@ -191,7 +196,7 @@ export function PRRow({ pr, focused, showStaleBadge, pingState, onPing, rereques
                 )}
               </span>
             ))}
-            {extended.ciFailures.length > 2 ? ` +${extended.ciFailures.length - 2} more` : ''}
+            {extraCiFailures > 0 ? ` +${extraCiFailures} more` : ''}
           </span>
         )}
         {directMergeFailure && !noAllowedMethod && (

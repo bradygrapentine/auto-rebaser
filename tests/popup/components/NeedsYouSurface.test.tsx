@@ -69,4 +69,26 @@ describe('NeedsYouSurface', () => {
     );
     expect(screen.getByTestId('needs-you-ci').textContent).toBe('build, lint +1 more');
   });
+
+  // TRIAGE-POLISH (d) — boundary at EXACTLY the cap (2): no "+N more" trailer.
+  // The prior test uses 3 names; this guards the off-by-one at the cap edge.
+  it('renders exactly 2 CI names with NO "+N more" at the cap boundary', () => {
+    render(
+      <NeedsYouSurface
+        prs={[
+          pr({
+            id: 4,
+            number: 4,
+            state: 'conflict',
+            ciFailures: [
+              { name: 'build', url: null },
+              { name: 'lint', url: null },
+            ],
+          }),
+        ]}
+        settings={settings}
+      />,
+    );
+    expect(screen.getByTestId('needs-you-ci').textContent).toBe('build, lint');
+  });
 });

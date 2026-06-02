@@ -4,7 +4,10 @@
 // current inline logic, as hard-coded LITERAL assertions, BEFORE T1 factors the
 // decision out into `decideDeleteMergedBranch`. If T1 changes any decision or any
 // tally (`deleted`/`skipped`/`branchDeletedPRs`/`failed`), these go red. The T1
-// refactor must keep these literals byte-identical (git-show byte-identity gate).
+// refactor must keep these literals unchanged. (N.B. "byte-identical" is a
+// reviewer/CI discipline enforced by reading the diff — NOT something any
+// assertion in this file checks; these tests pin BEHAVIOR, the diff review pins
+// the bytes.)
 //
 // Drives the REAL module (no mocks of the unit under test); only the injected
 // deps (`getRepo`/`deleteRef`) are spies, recording the actual call tuples.

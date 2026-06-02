@@ -6,16 +6,13 @@
 import type { PRRecord } from '../../core/types';
 import type { PRRecordPhaseTwo, AutomationSettings } from '../../core/automations-types';
 import { triageActionFor } from '../../core/triage-actions';
+import { capCiList } from '../../core/ci-format';
 import { StatusBadge } from './StatusBadge';
 
 interface Props {
   prs: Array<PRRecord & Partial<PRRecordPhaseTwo>>;
   settings: AutomationSettings;
 }
-
-/** Per-row cap on rendered failing-check names (distinct from the ≤5 storage
- *  bound in T2) so a wide PR doesn't blow out the surface. */
-const MAX_RENDERED_CI_NAMES = 2;
 
 export function NeedsYouSurface({ prs, settings }: Props) {
   // Explicit typed build (NOT `.filter(Boolean) as T[]`) — triageActionFor
@@ -34,8 +31,7 @@ export function NeedsYouSurface({ prs, settings }: Props) {
       <ul className="needs-you__list">
         {items.map(({ pr, action }) => {
           const ciNames = pr.ciFailures?.map((c) => c.name) ?? [];
-          const shownCi = ciNames.slice(0, MAX_RENDERED_CI_NAMES);
-          const extraCi = ciNames.length - shownCi.length;
+          const { shown: shownCi, extra: extraCi } = capCiList(ciNames);
           return (
             <li key={pr.id} className="needs-you__item" data-testid="needs-you-item">
               <StatusBadge state={pr.state} />
