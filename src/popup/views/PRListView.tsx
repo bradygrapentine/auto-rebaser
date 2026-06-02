@@ -30,8 +30,6 @@ interface Props {
   onSettings: () => void;
   onSignOut: () => void;
   onHelp?: () => void;
-  /** PREVIEW-1 — open the dry-run preview view. */
-  onPreview?: () => void;
   /** DIGEST-1 — open the weekly activity digest view. */
   onDigest?: () => void;
   onPing?: (pr: PRRecord) => void;
@@ -43,7 +41,7 @@ interface Props {
 }
 
 export function PRListView({
-  user, authMethod, installations, onSettings, onSignOut, onHelp, onPreview, onDigest, onPing, onRerequest, onOpenActivity, onAddAccount,
+  user, authMethod, installations, onSettings, onSignOut, onHelp, onDigest, onPing, onRerequest, onOpenActivity, onAddAccount,
 }: Props) {
   const { accounts, activeId, switchTo, signOut, signOutAll } = useAccounts();
   const authoredStore = usePRStore();
@@ -197,7 +195,6 @@ export function PRListView({
     bindings: {
       r: handlePollNow,
       s: onSettings,
-      p: () => onPreview?.(),
       d: () => onDigest?.(),
       '?': () => onHelp?.(),
       j: () => moveFocus(1),
@@ -335,17 +332,6 @@ export function PRListView({
             Support the project
           </a>
         </div>
-        {onPreview && (
-          <button
-            type="button"
-            className="btn popup-footer__shortcuts-btn"
-            onClick={onPreview}
-            data-testid="preview-link"
-            aria-label="Preview automations (dry run)"
-          >
-            dry run
-          </button>
-        )}
         {onDigest && (
           <button
             type="button"
