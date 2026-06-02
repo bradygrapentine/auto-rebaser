@@ -32,6 +32,8 @@ interface Props {
   onHelp?: () => void;
   /** PREVIEW-1 — open the dry-run preview view. */
   onPreview?: () => void;
+  /** DIGEST-1 — open the weekly activity digest view. */
+  onDigest?: () => void;
   onPing?: (pr: PRRecord) => void;
   /** Story 5.2-A — invoked when a PR's `! re-review` badge is clicked. */
   onRerequest?: (pr: PRRecord, approvers: string[]) => void;
@@ -41,7 +43,7 @@ interface Props {
 }
 
 export function PRListView({
-  user, authMethod, installations, onSettings, onSignOut, onHelp, onPreview, onPing, onRerequest, onOpenActivity, onAddAccount,
+  user, authMethod, installations, onSettings, onSignOut, onHelp, onPreview, onDigest, onPing, onRerequest, onOpenActivity, onAddAccount,
 }: Props) {
   const { accounts, activeId, switchTo, signOut, signOutAll } = useAccounts();
   const authoredStore = usePRStore();
@@ -196,6 +198,7 @@ export function PRListView({
       r: handlePollNow,
       s: onSettings,
       p: () => onPreview?.(),
+      d: () => onDigest?.(),
       '?': () => onHelp?.(),
       j: () => moveFocus(1),
       k: () => moveFocus(-1),
@@ -341,6 +344,17 @@ export function PRListView({
             aria-label="Preview automations (dry run)"
           >
             dry run
+          </button>
+        )}
+        {onDigest && (
+          <button
+            type="button"
+            className="btn popup-footer__shortcuts-btn"
+            onClick={onDigest}
+            data-testid="digest-link"
+            aria-label="Weekly activity digest"
+          >
+            this week
           </button>
         )}
         {onHelp && (
