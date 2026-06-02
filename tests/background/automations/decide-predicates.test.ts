@@ -8,7 +8,6 @@ import { decideDeleteMergedBranch, type MergedPRInput } from '../../../src/backg
 import { decideResolveObsoleteThreads, type ReviewThread, type PRRef } from '../../../src/background/automations/resolve-obsolete-threads';
 import { decideDirectMerge } from '../../../src/background/automations/merge-clean';
 import type { PullRequestDetail } from '../../../src/background/automations/adapters';
-import type { PRRecord } from '../../../src/core/types';
 
 const ALL = { squash: true, merge: true, rebase: true };
 
@@ -96,22 +95,24 @@ describe('decideDirectMerge → direct-merge actions (cleanIds is load-bearing)'
     autoMergeEnabled: false, unsupported: false, allowedMethods: ALL, ...o,
   });
   const detail = (sha = 's1'): PullRequestDetail => ({ head: { sha } } as unknown as PullRequestDetail);
-  const prRec = (id: number, number: number): PRRecord => ({ id, number, repo: 'o/r', title: 't', url: 'u', state: 'current', lastUpdated: 0 } as PRRecord);
   const settings = { mergeMethodPreference: ['SQUASH' as const], mergeCleanPRsOptOutRepos: [] };
 
   it('PR in cleanIds → a direct-merge action with the resolved method + head sha', () => {
-    const out = decideDirectMerge([eligible({ id: 1, number: 10 })], new Map([[1, detail('SHA')]]), [prRec(1, 10)], settings, new Set([1]));
-    expect(out).toEqual([{ kind: 'direct-merge', prId: 1, owner: 'o', name: 'r', number: 10, sha: 'SHA', method: 'SQUASH', repo: 'o/r' }]);
+    // Distinctive number 77 pins that the action.number is read from
+    // `eligible.number` (PREVIEW-7 dropped the redundant `prs` param) — a
+    // regression in that derivation would surface here, not pass silently.
+    const out = decideDirectMerge([eligible({ id: 1, number: 77 })], new Map([[1, detail('SHA')]]), settings, new Set([1]));
+    expect(out).toEqual([{ kind: 'direct-merge', prId: 1, owner: 'o', name: 'r', number: 77, sha: 'SHA', method: 'SQUASH', repo: 'o/r' }]);
   });
 
   it('SAME fixture but empty cleanIds → [] (proves cleanIds gates the decision)', () => {
-    const out = decideDirectMerge([eligible({ id: 1, number: 10 })], new Map([[1, detail('SHA')]]), [prRec(1, 10)], settings, new Set());
+    const out = decideDirectMerge([eligible({ id: 1, number: 10 })], new Map([[1, detail('SHA')]]), settings, new Set());
     expect(out).toEqual([]);
   });
 
   it('opt-out repo / missing head sha → omitted', () => {
     const noSha = { head: {} } as unknown as PullRequestDetail;
-    expect(decideDirectMerge([eligible({ id: 1 })], new Map([[1, noSha]]), [prRec(1, 10)], settings, new Set([1]))).toEqual([]);
-    expect(decideDirectMerge([eligible({ id: 1 })], new Map([[1, detail()]]), [prRec(1, 10)], { ...settings, mergeCleanPRsOptOutRepos: ['o/r'] }, new Set([1]))).toEqual([]);
+    expect(decideDirectMerge([eligible({ id: 1 })], new Map([[1, noSha]]), settings, new Set([1]))).toEqual([]);
+    expect(decideDirectMerge([eligible({ id: 1 })], new Map([[1, detail()]]), { ...settings, mergeCleanPRsOptOutRepos: ['o/r'] }, new Set([1]))).toEqual([]);
   });
 });

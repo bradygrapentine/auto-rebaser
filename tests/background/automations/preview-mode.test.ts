@@ -193,6 +193,64 @@ describe('preview ≡ execute for the previewable kinds (normalized)', () => {
   });
 });
 
+// ── PREVIEW-7: per-PR getRepo degradation is PREVIEW-ONLY. Preview drops a
+// flaky repo's PR and keeps the rest; execute keeps its all-or-nothing abort
+// (the degradePerPR flag defaults false). These two tests pin BOTH halves — the
+// char wall provably does NOT exercise the getRepo-throw-through-enable path.
+describe('PREVIEW-7: flaky getRepo degrades preview per-PR, execute unchanged', () => {
+  const prs = [
+    makePR({ id: 1, number: 101, repo: 'o/good' }),
+    makePR({ id: 2, number: 102, repo: 'o/bad' }),
+  ];
+  const prDetails = new Map<number, PullRequestDetail>([
+    [1, makeDetail({ id: 1, number: 101, node_id: 'N1', base: { repo: { full_name: 'o/good' } }, head: { ref: 'fa', sha: 's1', repo: { full_name: 'o/good' } } })],
+    [2, makeDetail({ id: 2, number: 102, node_id: 'N2', base: { repo: { full_name: 'o/bad' } }, head: { ref: 'fb', sha: 's2', repo: { full_name: 'o/bad' } } })],
+  ]);
+  const st = settings({ autoEnableAutoMerge: true });
+
+  /** getRepo that rejects for `o/bad`, resolves for everything else. */
+  const getRepoThrowingForBad = (): OrchestratorDeps['getRepo'] =>
+    vi.fn(async (owner: string, name: string) => {
+      if (`${owner}/${name}` === 'o/bad') throw new Error('getRepo 5xx');
+      return REPO_OK;
+    });
+
+  it('preview: one repo getRepo throws → healthy PR still previewed, failing PR omitted, NOT blank', async () => {
+    const github: OrchestratorDeps = {
+      ...throwingDeps(vi.fn().mockResolvedValue([])),
+      getRepo: getRepoThrowingForBad(),
+    };
+    const prev = await runAllAutomations({ prs, prDetails, settings: st, resolvedThreads: {}, github, mode: 'preview' });
+    const p = prev.preview!;
+    // Healthy PR (id 1) is previewed; the flaky-repo PR (id 2) is silently dropped — no throw, no blank.
+    const enables = p.actions.filter((a) => a.kind === 'enable-auto-merge');
+    expect(enables.map((a) => (a.kind === 'enable-auto-merge' ? a.prId : -1))).toEqual([1]);
+    expect(p.counts['enable-auto-merge']).toBe(1);
+  });
+
+  it('execute: same flaky getRepo aborts the WHOLE enable step (degradation is preview-only)', async () => {
+    const enableSpy = vi.fn().mockResolvedValue({ enabled: true, unsupported: false });
+    const github: OrchestratorDeps = {
+      getRepo: getRepoThrowingForBad(),
+      listThreads: vi.fn().mockResolvedValue([]),
+      deleteRef: vi.fn().mockResolvedValue('deleted'),
+      enableAutoMerge: enableSpy,
+      resolveThread: vi.fn().mockResolvedValue(undefined),
+      mergePR: vi.fn().mockResolvedValue({ merged: true, sha: 'x' }),
+    };
+    const result = await runAllAutomations({ prs, prDetails, settings: st, resolvedThreads: {}, github });
+
+    // The outer try/catch IS entered (errors incremented) — proves the catch ran,
+    // not that the build merely returned empty.
+    expect(result.summary.errors).toBeGreaterThanOrEqual(1);
+    // The healthy PR's enable is NOT called either — execute aborts the whole step,
+    // exactly as before PREVIEW-7. No preview-style per-PR degradation leaked in.
+    expect(enableSpy).not.toHaveBeenCalled();
+    expect(result.summary.autoMergeEnabled).toBe(0);
+    expect(result.preview).toBeUndefined();
+  });
+});
+
 describe('direct-merge is not previewable (honest carve-out + superset)', () => {
   it('execute direct-merges D; preview flags it undeterminable and lists D+E as candidates', async () => {
     // D direct-merges (clean-status rejection + mergeCleanPRsImmediately); E would-enable but does NOT direct-merge.

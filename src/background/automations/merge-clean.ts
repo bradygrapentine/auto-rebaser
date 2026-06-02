@@ -8,7 +8,6 @@
 // never calls this (a read-only preview cannot know clean-status); it sets
 // `directMergePreviewable: false` instead. See the plan §0 CRITICAL CONSTRAINT.
 
-import type { PRRecord } from '../../core/types';
 import type { AutomationSettings } from '../../core/automations-types';
 import { resolveMergeMethod, type EligiblePR } from './enable-auto-merge';
 import type { PullRequestDetail } from './adapters';
@@ -20,7 +19,9 @@ type DirectMergeAction = Extract<PlannedAction, { kind: 'direct-merge' }>;
  * The PRs that WOULD direct-merge this cycle, with the method they'd use. A PR is
  * a direct-merge action iff: it is in `cleanIds`, its repo is not in
  * `mergeCleanPRsOptOutRepos`, it has a head SHA, its repo splits to owner/name,
- * it exists in `prs`, AND a merge method resolves from the preference list.
+ * AND a merge method resolves from the preference list. (The PR `number` rides on
+ * `eligible` — populated by `toEligiblePR` at adapters.ts:78 — so no `prs` lookup
+ * is needed; `eligible` was itself built from a `prs` member.)
  *
  * The method ALWAYS resolves here for a cleanIds member: cleanIds membership
  * implies the same `resolveMergeMethod(preference, allowedMethods)` was non-null
@@ -31,7 +32,6 @@ type DirectMergeAction = Extract<PlannedAction, { kind: 'direct-merge' }>;
 export function decideDirectMerge(
   eligiblePRs: EligiblePR[],
   prDetails: Map<number, PullRequestDetail>,
-  prs: PRRecord[],
   settings: Pick<AutomationSettings, 'mergeMethodPreference' | 'mergeCleanPRsOptOutRepos'>,
   cleanIds: Set<number>,
 ): DirectMergeAction[] {
@@ -46,8 +46,6 @@ export function decideDirectMerge(
     if (!headSha) continue;
     const [owner, name] = eligible.repo.split('/');
     if (!owner || !name) continue;
-    const pr = prs.find((p) => p.id === eligible.id);
-    if (!pr) continue;
 
     const chosenMethod = resolveMergeMethod(settings.mergeMethodPreference, eligible.allowedMethods);
     if (chosenMethod === null) continue; // unreachable for cleanIds members (see doc)
@@ -57,7 +55,7 @@ export function decideDirectMerge(
       prId: eligible.id,
       owner,
       name,
-      number: pr.number,
+      number: eligible.number,
       sha: headSha,
       method: chosenMethod,
       repo: eligible.repo,
