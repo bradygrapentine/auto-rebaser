@@ -163,7 +163,10 @@ export function App() {
           onSignOut={auth.signOut}
           onHelp={() => setView('help')}
           onPreview={() => setView('preview')}
-          onDigest={() => setView('digest')}
+          // DIGEST-1 hidden from the release (not necessary for now). The
+          // DigestView + 'digest' route + useDigest + computeDigest all stay on
+          // main — re-enable by restoring this one prop. (Scope trim 2026-06-01.)
+          // onDigest={() => setView('digest')}
           onPing={(pr) => {
             setPingTarget(pr);
             setView('ping-confirm');
