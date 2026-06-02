@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 interface Props {
   label: string;
@@ -6,14 +6,19 @@ interface Props {
   onChange: (next: string[]) => void;
   disabled?: boolean;
   placeholder?: string;
+  /** CT-3c — known label names for `<datalist>` autocomplete; already-added
+   *  values are filtered out. Mirrors RepoOptOutList's `suggestions`. */
+  suggestions?: string[];
 }
 
 // CT-3 — a controlled free-text chip list for label names. Unlike
 // RepoOptOutList (whose REPO_RE rejects anything that isn't `owner/repo`),
 // labels are arbitrary strings, so this primitive trims + dedupes only. A
 // typo'd label simply never matches a PR → fails safe (PR not filtered).
-export function LabelList({ label, values, onChange, disabled, placeholder = 'label name' }: Props) {
+export function LabelList({ label, values, onChange, disabled, placeholder = 'label name', suggestions = [] }: Props) {
   const [input, setInput] = useState('');
+  const listId = useId();
+  const filteredSuggestions = suggestions.filter((s) => !values.includes(s));
 
   const add = () => {
     const trimmed = input.trim();
@@ -39,6 +44,7 @@ export function LabelList({ label, values, onChange, disabled, placeholder = 'la
           aria-label={`${label} input`}
           placeholder={placeholder}
           disabled={disabled}
+          list={filteredSuggestions.length > 0 ? listId : undefined}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -49,6 +55,13 @@ export function LabelList({ label, values, onChange, disabled, placeholder = 'la
           className="input input--small"
           style={{ flex: 1 }}
         />
+        {filteredSuggestions.length > 0 && (
+          <datalist id={listId}>
+            {filteredSuggestions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        )}
         <button type="button" disabled={disabled} onClick={add} className="btn" style={{ marginLeft: 4 }}>
           Add
         </button>
