@@ -662,8 +662,8 @@ async function runPollCycleInner(scope?: AccountScope): Promise<number> {
   // Story 4.5 — suspended-installation PRs display but never write; CT-3 Seam 2 —
   // exclude PRs the global filter suppresses (from the PERSISTED record, fail-open
   // via DEFAULT_AUTOMATION_SETTINGS). Both now live in the shared
-  // `selectAutomationCandidates` seam (PREVIEW-1 T1) so preview selects the SAME
-  // set. Byte-identical to the prior inline filter.
+  // `selectAutomationCandidates` seam so the candidate set is single-sourced.
+  // Byte-identical to the prior inline filter.
   const automationCandidates = selectAutomationCandidates(processedPRs, {
     suspendedOwnerSet,
     settings: staleSettings ?? DEFAULT_AUTOMATION_SETTINGS,

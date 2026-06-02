@@ -1,6 +1,6 @@
 // DIGEST-1 — the "this week" activity digest. Aggregates the existing
 // activity-log store into per-action counts over a rolling window (default 7
-// days). Read-only, visibility-only; mirrors the PreviewView/HelpView shape.
+// days). Read-only, visibility-only; mirrors the HelpView shape.
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useDigest } from '../hooks/useDigest';

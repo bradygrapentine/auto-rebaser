@@ -35,36 +35,3 @@ export type PlannedActionKind = PlannedAction['kind'];
 export type DecideDeleteOutcome =
   | { kind: 'delete-branch'; action: Extract<PlannedAction, { kind: 'delete-branch' }> }
   | { kind: 'already-handled'; prId: number };
-
-/** Which kinds the popup labels DESTRUCTIVE (irreversible) so a cautious user sees the risk. */
-export const DESTRUCTIVE_KINDS = ['direct-merge', 'delete-branch'] as const;
-
-/** What the popup shows in preview mode. One row per PlannedAction, grouped by kind. */
-export interface PreviewProjection {
-  /**
-   * The previewable actions. In `mode:'preview'` this NEVER contains a
-   * `direct-merge` action — direct-merge eligibility (clean-status) is only
-   * knowable by firing the enable-auto-merge mutation, which preview is
-   * forbidden to do. It may contain `enable-auto-merge` / `delete-branch` /
-   * `resolve-thread` actions.
-   */
-  actions: PlannedAction[];
-  /** Per-automation count for the summary header; 0 when its toggle is off. */
-  counts: Record<PlannedActionKind, number>;
-  /**
-   * Direct-merge honesty marker. `false` whenever `mergeCleanPRsImmediately` is
-   * on but preview could not determine clean-status (always the case in
-   * `mode:'preview'`). When `false`, the popup renders a "cannot be previewed
-   * without contacting GitHub" notice instead of direct-merge rows.
-   */
-  directMergePreviewable: boolean;
-  /**
-   * The PR ids that ENTER the auto-merge-enable set this cycle. A deliberate
-   * SUPERSET of the PRs that would actually direct-merge (the true set is this
-   * narrowed by cleanIds / mergeCleanSkipSet / headSha / owner-split, all
-   * unknowable read-only). Popup copy must say "up to N candidate(s)", never
-   * "N will direct-merge". Empty when `mergeCleanPRsImmediately` is off.
-   */
-  directMergeCandidatePRIds: number[];
-  generatedAt: number;
-}

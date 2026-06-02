@@ -788,3 +788,38 @@ describe('runAllAutomations', () => {
     expect(result.resolvedThreads).toEqual(updatedStore);
   });
 });
+
+// Moved from the (deleted) preview-mode.test.ts: the char wall does NOT exercise
+// a getRepo throw through the enable step, so this pins execute's all-or-nothing
+// behavior — one flaky repo's getRepo rejects buildEligiblePRs' Promise.all and
+// the enable step's outer try/catch aborts the WHOLE step.
+describe('execute — getRepo failure aborts the whole enable step (all-or-nothing)', () => {
+  it('a flaky getRepo throws → step aborts, errors incremented, runEnableAutoMerge never reached', async () => {
+    const prs = [
+      makePR({ id: 1, number: 11, repo: 'o/good' }),
+      makePR({ id: 2, number: 12, repo: 'o/bad' }),
+    ];
+    const prDetails = new Map<number, PullRequestDetail>([
+      [1, makeDetail({ id: 1, number: 11, base: { repo: { full_name: 'o/good' } }, head: { ref: 'fa', repo: { full_name: 'o/good' } } })],
+      [2, makeDetail({ id: 2, number: 12, base: { repo: { full_name: 'o/bad' } }, head: { ref: 'fb', repo: { full_name: 'o/bad' } } })],
+    ]);
+    const github = makeGithubDeps();
+    // One repo's getRepo rejects → buildEligiblePRs' Promise.all rejects as a whole.
+    github.getRepo = vi.fn(async (owner: string, name: string) => {
+      if (`${owner}/${name}` === 'o/bad') throw new Error('getRepo 5xx');
+      return { delete_branch_on_merge: false, allow_squash_merge: true, allow_merge_commit: true, allow_rebase_merge: true };
+    });
+    // Isolate the enable step.
+    const settings = { ...ALL_ON_SETTINGS, autoDeleteMergedBranch: false, autoResolveOutdatedThreads: false };
+
+    const result = await runAllAutomations({ prs, prDetails, settings, resolvedThreads: {}, github });
+
+    // The outer try/catch IS entered — proves the catch ran, not that the build
+    // merely returned empty.
+    expect(result.summary.errors).toBeGreaterThanOrEqual(1);
+    // The healthy PR's enable is NOT attempted either — the whole step aborted
+    // before reaching runEnableAutoMerge.
+    expect(mockEnableAutoMerge).not.toHaveBeenCalled();
+    expect(result.summary.autoMergeEnabled).toBe(0);
+  });
+});

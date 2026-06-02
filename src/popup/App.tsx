@@ -8,11 +8,10 @@ import { ActivityLogView } from './views/ActivityLogView';
 import { HelpView } from './views/HelpView';
 import { PingConfirmView } from './views/PingConfirmView';
 import { RerequestConfirmView } from './views/RerequestConfirmView';
-import { PreviewView } from './views/PreviewView';
 import { DigestView } from './views/DigestView';
 import type { PRRecord } from '../core/types';
 
-type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'rerequest-confirm' | 'add-account' | 'preview' | 'digest';
+type View = 'list' | 'settings' | 'activity-log' | 'help' | 'ping-confirm' | 'rerequest-confirm' | 'add-account' | 'digest';
 
 export function App() {
   const auth = useAuth();
@@ -96,8 +95,6 @@ export function App() {
       );
     case 'help':
       return <HelpView onBack={() => setView('list')} />;
-    case 'preview':
-      return <PreviewView onBack={() => setView('list')} />;
     case 'digest':
       return <DigestView onBack={() => setView('list')} />;
     case 'add-account':
@@ -162,7 +159,6 @@ export function App() {
           onSettings={() => setView('settings')}
           onSignOut={auth.signOut}
           onHelp={() => setView('help')}
-          onPreview={() => setView('preview')}
           // DIGEST-1 hidden from the release (not necessary for now). The
           // DigestView + 'digest' route + useDigest + computeDigest all stay on
           // main — re-enable by restoring this one prop. (Scope trim 2026-06-01.)

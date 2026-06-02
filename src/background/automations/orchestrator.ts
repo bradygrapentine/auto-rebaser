@@ -5,11 +5,10 @@ import type {
   PRRecordPhaseTwo,
   PollSummary,
 } from '../../core/automations-types';
-import { runEnableAutoMerge, decideEnableAutoMerge, type EligiblePR, type MergeMethod } from './enable-auto-merge';
-import { runDeleteMergedBranch, decideDeleteMergedBranch, type MergedPRInput } from './delete-merged-branch';
-import { runResolveObsoleteThreads, decideResolveObsoleteThreads } from './resolve-obsolete-threads';
+import { runEnableAutoMerge, type EligiblePR, type MergeMethod } from './enable-auto-merge';
+import { runDeleteMergedBranch, type MergedPRInput } from './delete-merged-branch';
+import { runResolveObsoleteThreads } from './resolve-obsolete-threads';
 import { decideDirectMerge } from './merge-clean';
-import type { PlannedAction, PlannedActionKind, PreviewProjection } from './planned-action';
 import {
   toEligiblePR,
   toMergedPRInput,
@@ -49,12 +48,6 @@ export interface OrchestratorOpts {
   settings: AutomationSettings;
   resolvedThreads: ResolvedThreadsStore;
   github: OrchestratorDeps;
-  /**
-   * PREVIEW-1 — `'preview'` runs the shared `decide*` predicates and returns a
-   * `PreviewProjection` WITHOUT firing any mutation (strictly read-only). Default
-   * `'execute'` is the unchanged, behavior-preserving path.
-   */
-  mode?: 'execute' | 'preview';
 }
 
 export interface OrchestratorResult {
@@ -90,30 +83,19 @@ export interface OrchestratorResult {
   resolvedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number }>;
   /** Story 2.8 — per-thread failure detail for activity-log entries. */
   failedThreadEntries: Array<{ threadId: string; repo: string; prNumber: number; error: string }>;
-  /** PREVIEW-1 — populated ONLY when `mode === 'preview'`; undefined in execute. */
-  preview?: PreviewProjection;
 }
 
 /**
  * Build the auto-merge-eligible PR list: one `getRepo` read per PR to attach its
- * allowed merge methods. A READ (no mutation) — shared by the execute path and
- * the preview branch (both must feed `decide*` the same adapted objects).
- *
- * `degradePerPR` controls how a failing `getRepo` is handled:
- *  - `false` (DEFAULT — the execute path): the throw propagates out of
- *    `Promise.all`, so a single repo's 5xx rejects the whole build. Execute's
- *    caller catches it and aborts the entire enable step — the established
- *    all-or-nothing behavior, preserved byte-for-byte.
- *  - `true` (the PREVIEW branch only): each `getRepo` is wrapped so a failing
- *    repo drops only THAT PR (filtered out below) instead of blanking the whole
- *    preview. Read-only; never changes execute. (Execute gaining per-PR
- *    degradation is deferred to PREVIEW-10.)
+ * allowed merge methods. A READ (no mutation). A failing `getRepo` throw
+ * propagates out of `Promise.all`, so a single repo's 5xx rejects the whole
+ * build; the enable step's outer try/catch then aborts the entire step (the
+ * established all-or-nothing behavior).
  */
 async function buildEligiblePRs(
   prs: PRRecord[],
   prDetails: Map<number, PullRequestDetail>,
   getRepo: OrchestratorDeps['getRepo'],
-  degradePerPR = false,
 ): Promise<EligiblePR[]> {
   return (
     await Promise.all(
@@ -122,16 +104,7 @@ async function buildEligiblePRs(
         if (!detail) return null;
         const [owner, name] = pr.repo.split('/');
         if (!owner || !name) return null;
-        let repoInfo;
-        if (degradePerPR) {
-          try {
-            repoInfo = await getRepo(owner, name);
-          } catch {
-            return null; // preview-only: one flaky repo drops this PR, not all
-          }
-        } else {
-          repoInfo = await getRepo(owner, name); // execute: throw propagates
-        }
+        const repoInfo = await getRepo(owner, name);
         if (!repoInfo) return null;
         return toEligiblePR(pr, detail, {
           squash: repoInfo.allow_squash_merge,
@@ -157,96 +130,8 @@ function buildMergedPRInputs(prs: PRRecord[], prDetails: Map<number, PullRequest
     .filter((x): x is MergedPRInput => x !== null);
 }
 
-/**
- * PREVIEW-1 — the read-only preview path. Runs the shared `decide*` predicates and
- * renders projected actions WITHOUT firing any mutation. Direct-merge is never
- * previewable read-only (clean-status needs the enable mutation) — we set
- * `directMergePreviewable:false` and list the would-enable candidate ids instead.
- */
-async function runPreview(opts: OrchestratorOpts): Promise<PreviewProjection> {
-  const { prs, prDetails, settings, github } = opts;
-  const actions: PlannedAction[] = [];
-  let directMergeCandidatePRIds: number[] = [];
-
-  if (settings.autoEnableAutoMerge) {
-    // Same shared build the execute path uses, so the predicates receive
-    // identical adapted input — but with per-PR degradation ON: a flaky repo's
-    // getRepo drops only that PR instead of blanking the whole preview.
-    const eligiblePRs = await buildEligiblePRs(prs, prDetails, github.getRepo, true);
-    const enableActions = decideEnableAutoMerge(eligiblePRs, {
-      enabled: true,
-      mergeMethodPreference: settings.mergeMethodPreference,
-      optOutRepos: settings.autoMergeOptOutRepos,
-    });
-    actions.push(...enableActions);
-    if (settings.mergeCleanPRsImmediately) {
-      // The would-enable set is a SUPERSET of the PRs that would actually
-      // direct-merge (clean-status is unknowable read-only). Never call
-      // decideDirectMerge in preview.
-      directMergeCandidatePRIds = enableActions.map((a) => a.prId);
-    }
-  }
-
-  if (settings.autoDeleteMergedBranch) {
-    const mergedPRs = buildMergedPRInputs(prs, prDetails);
-    const outcomes = await decideDeleteMergedBranch(
-      mergedPRs,
-      { enabled: true, optOutRepos: settings.autoDeleteOptOutRepos },
-      { getRepo: github.getRepo },
-    );
-    for (const o of outcomes) {
-      if (o.kind === 'delete-branch') actions.push(o.action);
-      // `already-handled` is NOT a planned action (GitHub auto-deletes) — omit.
-    }
-  }
-
-  if (settings.autoResolveOutdatedThreads) {
-    const threadActions = await decideResolveObsoleteThreads(
-      prs.map(toPRRef),
-      { enabled: true, optOutRepos: settings.autoResolveOptOutRepos },
-      opts.resolvedThreads,
-      { listThreads: github.listThreads },
-    );
-    actions.push(...threadActions);
-  }
-
-  const counts: Record<PlannedActionKind, number> = {
-    'enable-auto-merge': 0,
-    'direct-merge': 0,
-    'delete-branch': 0,
-    'resolve-thread': 0,
-  };
-  for (const a of actions) counts[a.kind]++;
-
-  return {
-    actions,
-    counts,
-    directMergePreviewable: false,
-    directMergeCandidatePRIds,
-    generatedAt: Date.now(),
-  };
-}
-
 export async function runAllAutomations(opts: OrchestratorOpts): Promise<OrchestratorResult> {
   const { prs, prDetails, settings, github } = opts;
-
-  // PREVIEW-1 — read-only preview branch: build the projection and return BEFORE
-  // any executor block. No mutating dep is touched.
-  if (opts.mode === 'preview') {
-    const preview = await runPreview(opts);
-    return {
-      summary: { ranAt: Date.now(), rebased: 0, branchesDeleted: 0, autoMergeEnabled: 0, threadsResolved: 0, errors: 0 },
-      prUpdates: [],
-      resolvedThreads: { ...opts.resolvedThreads },
-      autoMergeMethodByPRId: {},
-      failedAutoMergeEntries: [],
-      skippedAutoMergeEntries: [],
-      mergedNowEntries: [],
-      resolvedThreadEntries: [],
-      failedThreadEntries: [],
-      preview,
-    };
-  }
 
   const prUpdates: Array<{ prId: number; patch: Partial<PRRecord & PRRecordPhaseTwo> }> = [];
   const autoMergeMethodByPRId: Record<number, MergeMethod> = {};
@@ -267,11 +152,9 @@ export async function runAllAutomations(opts: OrchestratorOpts): Promise<Orchest
   if (settings.autoEnableAutoMerge) {
     try {
       // Fetch each PR's repo (cached) so we know which merge methods are allowed.
-      // Shared with the preview branch via buildEligiblePRs so both feed `decide*`
-      // provably-identical adapted objects. Execute keeps the default
-      // (degradePerPR=false): a getRepo throw propagates out of Promise.all and is
-      // caught by this step's outer try/catch — the whole enable step aborts, the
-      // pre-PREVIEW-7 all-or-nothing behavior, byte-identical.
+      // A getRepo throw propagates out of buildEligiblePRs' Promise.all and is
+      // caught by this step's outer try/catch — the whole enable step aborts
+      // (all-or-nothing).
       const eligiblePRs = await buildEligiblePRs(prs, prDetails, github.getRepo);
 
       const result = await runEnableAutoMerge(
