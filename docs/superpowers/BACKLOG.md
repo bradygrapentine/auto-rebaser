@@ -13,7 +13,7 @@ Stories are numbered to match roadmap features (1.x). Sections §0–§5 track c
 | ⚡ In progress | 0 |
 | 🔎 In review | 0 |
 | 🚧 Blocked | 0 |
-| ⏸ Held | 0 |
+| ⏸ Held | 1 |
 | ✅ Shipped | 88 |
 | 🧊 Deferred / dropped | 6 |
 
@@ -36,6 +36,7 @@ _(none — SPIKE-1 cleared the queue: PREVIEW-1/DIGEST-1 → §1 Ready, OPS-5/RE
 _Open for v1.2+ planning. Add new stories here with `Status: 🟢 Ready` once spec'd._
 
 - _**OPS-6** 🟢 Ready — Chrome store package must strip the manifest `key`. `manifest.json` carries a `"key"` (committed since 1fef878, used for a stable `load unpacked` dev ID). The Chrome Web Store now **hard-rejects** an upload whose `key` doesn't match the published item's store key ("key field value in the manifest doesn't match the current item") — hit during the v2.1.0 submission (v2.0.0 slipped through when CWS silently ignored the field). Add a `package:chrome` npm script that: builds (`vite build`), copies `dist/`→staging, removes `key` from the staged `manifest.json` (`jq 'del(.key)'`/python), zips the staged **contents** (manifest at root, `-x '*.map'`) to `auto-rebaser-chrome-<version>.zip`. Keep `key` in the repo manifest (dev) and in the Firefox/source zips (Firefox ignores it; source must be true). Mirror as `package:firefox` for symmetry (no key-strip needed there). Acceptance: `unzip -p auto-rebaser-chrome-*.zip manifest.json | grep -c '"key"'` → 0; version + `manifest_version` intact; CWS upload succeeds. Low effort, prevents a recurring manual fix each release._
+- _**REL-1** ⏸ Held (trigger: **after 2026-06-09**) — Confirm v2.1.0 is **live on both stores**. The v2.1.0 release runbook (`docs/runbooks/2026-06-02-v2.1.0-release.md`) was completed 2026-06-02: tag pushed, GitHub release published with corrected store zips, Chrome + Firefox AMO submissions filed (store review is async — Chrome usually hours, AMO can take days). On/after 2026-06-09, verify both listings show 2.1.0 as the live published version. Chrome: <https://chromewebstore.google.com/detail/auto-rebaser/fcbanfgcfcjmhnoanachedlpbopiodpi>. Firefox AMO: <https://addons.mozilla.org/firefox/addon/auto-rebaser/>. Acceptance: both stores report 2.1.0 live → update memory `project_v2_pending_approval.md` and BACKLOG §0; if either is still pending/rejected, capture the reviewer reason and file a follow-up. (Also outstanding from the runbook: AMO listing-copy refresh per `marketing/store-listing-description.md`.)_
 
 _**Scope decision 2026-06-01 — preview stays BASIC.** The dry-run preview ships as-is (just enough that users find the page and see what's there). No further preview work for now → **PREVIEW-3/4/5/6 and PREVIEW-10 deferred to 🧊** (dedicated-view/inline-badges, multi-account aggregate, persist-last-preview, opt-in direct-merge probe, execute-path per-PR `getRepo` degradation). The PREVIEW-7/8/9 gate-cluster follow-ups SHIPPED (§7); report `.claude/state/gate-cluster-review-preview-1-dry-run.md`._
 - _~~13 residual gate-report nits~~ RESOLVED 2026-06-02: **11 of 13 were dead** (N1–N6, N8–N12 + most of N13 targeted `runPreview`/`PreviewView`/`usePreview`/`preview-gather`, all DELETED in #277). N13b (char-test "byte-identity" comment over-claim) shipped #285. N7 dropped — mis-described (comment at `merge-clean.ts:30`, not :42; `merge-clean.char.test.ts` exists, greps fine)._
